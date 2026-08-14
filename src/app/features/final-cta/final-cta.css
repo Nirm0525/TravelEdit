@@ -1,0 +1,67 @@
+.final-cta {
+  position: relative;
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-burgundy) 70%, black);
+}
+
+.final-cta__bg {
+  position: absolute;
+  inset: 0;
+}
+
+.final-cta__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+}
+
+.final-cta__content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-block: var(--space-2xl);
+}
+
+.final-cta__title {
+  font-size: var(--size-display);
+  color: var(--color-cream);
+  margin-bottom: var(--space-xs);
+}
+
+.final-cta__text {
+  font-family: var(--font-ui);
+  font-size: 1.0625rem;
+  font-weight: 300;
+  color: color-mix(in srgb, var(--color-cream) 88%, transparent);
+  margin-bottom: var(--space-md);
+}
+
+.final-cta__links {
+  margin-top: var(--space-lg);
+  display: flex;
+  gap: 2rem;
+}
+
+.final-cta__links a {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--color-cream) 80%, transparent);
+  transition: color 0.25s var(--ease-editorial);
+}
+
+.final-cta__links a:hover {
+  color: var(--color-gold);
+}

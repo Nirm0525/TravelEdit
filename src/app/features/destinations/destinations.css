@@ -1,0 +1,77 @@
+.destinations {
+  background: var(--color-cream);
+  padding-block: var(--space-2xl) var(--space-xl);
+  overflow: hidden;
+}
+
+.destinations__header {
+  margin-bottom: var(--space-lg);
+}
+
+.destinations__support {
+  margin: 0;
+}
+
+.destinations__viewport {
+  overflow: hidden;
+  padding-left: clamp(1.25rem, 4vw, 4rem);
+  cursor: grab;
+}
+
+.destinations__track {
+  display: flex;
+  gap: clamp(1rem, 2vw, 1.75rem);
+  list-style: none;
+  margin: 0;
+  padding: 0 clamp(1.25rem, 4vw, 4rem) 0.5rem 0;
+  width: max-content;
+  will-change: transform;
+}
+
+.destinations__track li {
+  display: flex;
+}
+
+.destinations__controls {
+  margin-top: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.destinations__arrow {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  transition: background 0.3s var(--ease-editorial), color 0.3s var(--ease-editorial), border-color 0.3s var(--ease-editorial);
+}
+
+.destinations__arrow:hover:not(:disabled) {
+  background: var(--color-burgundy);
+  border-color: var(--color-burgundy);
+  color: var(--color-cream);
+}
+
+.destinations__arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.destinations__progress {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-ink) 15%, transparent);
+}
+
+.destinations__progress-fill {
+  height: 100%;
+  background: var(--color-burgundy);
+  transition: width 0.1s linear;
+}

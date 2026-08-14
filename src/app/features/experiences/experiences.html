@@ -1,0 +1,49 @@
+<section class="experiences" id="experiencias" aria-labelledby="experiences-title">
+  <div class="container">
+    <app-section-title eyebrow="Experiences" align="center">
+      How do you<br />want to feel?
+      <p support>We design around what matters most to you.</p>
+    </app-section-title>
+
+    <div class="experiences__desktop">
+      <div class="experiences__tabs" role="tablist" aria-label="Tipos de experiencia">
+        @for (experience of experiences; track experience.slug; let i = $index) {
+          <button
+            type="button"
+            role="tab"
+            class="experiences__tab"
+            [class.experiences__tab--active]="activeIndex() === i"
+            [attr.aria-selected]="activeIndex() === i"
+            (mouseenter)="setActive(i)"
+            (focus)="setActive(i)"
+          >
+            <span class="experiences__tab-icon" aria-hidden="true">
+              <app-experience-icon [type]="experience.icon" />
+            </span>
+            <span class="experiences__tab-name font-display">{{ experience.name }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="experiences__stage" data-cursor="view">
+        @for (experience of experiences; track experience.slug; let i = $index) {
+          <img
+            [src]="experience.image"
+            [alt]="experience.alt"
+            [title]="experience.alt"
+            class="experiences__stage-image"
+            [class.experiences__stage-image--active]="activeIndex() === i"
+            loading="lazy"
+            decoding="async"
+          />
+        }
+      </div>
+    </div>
+
+    <div class="experiences__mobile">
+      @for (experience of experiences; track experience.slug) {
+        <app-experience-card [experience]="experience" />
+      }
+    </div>
+  </div>
+</section>

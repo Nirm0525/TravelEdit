@@ -1,0 +1,26 @@
+<section class="about" id="about" aria-labelledby="about-title">
+  <div class="about__media">
+    <img [src]="image.url" [alt]="image.alt" [title]="image.alt" loading="lazy" decoding="async" />
+  </div>
+
+  <div class="about__content">
+    <div class="container about__inner">
+      <p class="eyebrow">Our Story</p>
+      <h2 id="about-title" class="about__title font-display" appRevealOnScroll>
+        Travel should<br />feel personal.
+      </h2>
+
+      <p class="about__text">
+        The Travel Edit nació para crear viajes que se sientan únicos, personales y cuidadosamente diseñados.
+      </p>
+      <p class="about__text">No creemos en viajar simplemente para marcar destinos en un mapa.</p>
+      <p class="about__text">Creemos en experiencias que tengan significado.</p>
+
+      <ul class="about__words">
+        @for (word of words; track word; let i = $index) {
+          <li [appRevealOnScroll]="i * 0.15">{{ word }}</li>
+        }
+      </ul>
+    </div>
+  </div>
+</section>

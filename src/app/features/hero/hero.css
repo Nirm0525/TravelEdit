@@ -1,0 +1,130 @@
+.hero {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  color: var(--color-cream);
+}
+
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.hero__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: hero-zoom 22s ease-in-out infinite alternate;
+}
+
+@keyframes hero-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0.35) 0%, rgba(22, 17, 15, 0.55) 55%, rgba(22, 17, 15, 0.8) 100%);
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  padding-bottom: clamp(3rem, 8vw, 6rem);
+  max-width: 52rem;
+}
+
+.hero__eyebrow {
+  margin-bottom: var(--space-sm);
+}
+
+.hero__title {
+  font-size: var(--size-display);
+  color: var(--color-cream);
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+
+.hero__word-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.hero__word {
+  display: block;
+}
+
+.hero__subtitle {
+  font-size: var(--size-lead);
+  font-style: italic;
+  font-weight: 300;
+  color: var(--color-cream);
+  margin-bottom: var(--space-sm);
+}
+
+.hero__lead {
+  font-family: var(--font-ui);
+  font-size: 1.0625rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--color-cream) 88%, transparent);
+  max-width: 32rem;
+  margin-bottom: var(--space-md);
+}
+
+.hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.hero__explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--color-cream);
+}
+
+.hero__scroll-indicator {
+  position: absolute;
+  right: clamp(1.25rem, 4vw, 4rem);
+  bottom: clamp(1.25rem, 4vw, 2.5rem);
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-cream) 55%, transparent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-cream);
+  text-decoration: none;
+  animation: hero-bounce 2.4s ease-in-out infinite;
+}
+
+@keyframes hero-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(0.4rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__bg img,
+  .hero__scroll-indicator {
+    animation: none;
+  }
+}

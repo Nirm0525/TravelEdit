@@ -1,0 +1,75 @@
+:host {
+  display: inline-block;
+}
+
+.animated-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.75rem;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--color-burgundy);
+  color: var(--color-cream);
+  border: 1px solid var(--color-burgundy);
+  border-radius: 0;
+  transition: background 0.35s var(--ease-editorial), color 0.35s var(--ease-editorial), border-color 0.35s var(--ease-editorial);
+}
+
+.animated-button:hover {
+  background: rgba(128, 0, 32, 0.82);
+  border-color: rgba(128, 0, 32, 0.82);
+}
+
+.animated-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.animated-button .star {
+  transition: transform 0.5s var(--ease-editorial);
+}
+
+.animated-button:hover .star {
+  transform: rotate(90deg);
+}
+
+.animated-button--outline {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
+.animated-button--outline:hover {
+  background: var(--color-ink);
+  color: var(--color-cream);
+  border-color: var(--color-ink);
+}
+
+.animated-button--outline.animated-button--dark {
+  color: var(--color-cream);
+  border-color: var(--color-gold);
+}
+
+.animated-button--outline.animated-button--dark:hover {
+  background: var(--color-gold);
+  color: var(--color-ink);
+  border-color: var(--color-gold);
+}
+
+.animated-button--dark:not(.animated-button--outline) {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  border-color: var(--color-cream);
+}
+
+.animated-button--dark:not(.animated-button--outline):hover {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: var(--color-ink);
+}

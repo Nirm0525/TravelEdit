@@ -1,0 +1,7 @@
+@if (active()) {
+  <div class="custom-cursor" [class.custom-cursor--labeled]="label()" #cursor aria-hidden="true">
+    @if (label()) {
+      <span class="custom-cursor__label">{{ label() }}</span>
+    }
+  </div>
+}

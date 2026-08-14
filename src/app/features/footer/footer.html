@@ -1,0 +1,64 @@
+<footer class="site-footer">
+  <div class="container site-footer__top">
+    <div class="site-footer__brand">
+      <img
+        src="images/logos/thetraveledit2.png"
+        alt="The Travel Edit"
+        class="site-footer__logo"
+        width="160"
+        height="60"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+
+    <nav class="site-footer__column" aria-label="Explore">
+      <h3 class="site-footer__heading">Explore</h3>
+      <a href="#destinos">Destinations</a>
+      <a href="#experiencias">Experiences</a>
+      <a href="#the-edit">The Edit</a>
+    </nav>
+
+    <nav class="site-footer__column" aria-label="Company">
+      <h3 class="site-footer__heading">Company</h3>
+      <a href="#about">About Us</a>
+      <a href="mailto:nora.rivas@traveldiunsa.com">Contact</a>
+    </nav>
+
+    <nav class="site-footer__column" aria-label="Follow">
+      <h3 class="site-footer__heading">Follow</h3>
+      <a href="#">Instagram</a>
+      <a href="#">Pinterest</a>
+      <a href="#">TikTok</a>
+    </nav>
+
+    <form class="site-footer__newsletter" (submit)="onSubmit($event)">
+      <h3 class="site-footer__heading">Travel inspiration, thoughtfully edited.</h3>
+      <div class="site-footer__newsletter-row">
+        <label class="visually-hidden" for="footer-email">Your email</label>
+        <input
+          id="footer-email"
+          #emailInput
+          type="email"
+          name="email"
+          placeholder="Your email"
+          autocomplete="email"
+          required
+          [disabled]="state() === 'loading'"
+        />
+        <app-animated-button type="submit" [disabled]="state() === 'loading'" [withStar]="false">JOIN →</app-animated-button>
+      </div>
+      @if (message[state()]) {
+        <p class="site-footer__newsletter-message" role="status">{{ message[state()] }}</p>
+      }
+    </form>
+  </div>
+
+  <div class="container site-footer__bottom">
+    <p>© The Travel Edit {{ year }}</p>
+    <div class="site-footer__legal">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+    </div>
+  </div>
+</footer>

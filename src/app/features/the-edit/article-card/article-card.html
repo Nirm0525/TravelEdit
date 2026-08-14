@@ -1,0 +1,12 @@
+<article class="article-card" appRevealOnScroll>
+  <div class="article-card__frame" data-cursor="view">
+    <img [src]="article().image" [alt]="article().alt" [title]="article().alt" loading="lazy" decoding="async" />
+    <div class="article-card__overlay" aria-hidden="true"></div>
+    <div class="article-card__content">
+      <p class="eyebrow eyebrow--on-dark">{{ article().category }}</p>
+      <h3 class="article-card__title font-display">{{ article().title }}</h3>
+      <p class="article-card__excerpt">{{ article().excerpt }}</p>
+      <span class="article-card__link">LEER MÁS <span aria-hidden="true">→</span></span>
+    </div>
+  </div>
+</article>

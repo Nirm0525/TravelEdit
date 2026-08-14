@@ -1,0 +1,32 @@
+<section class="hero" id="top" #section>
+  <div class="hero__bg" #bg>
+    <img [src]="image.url" [alt]="image.alt" [title]="image.alt" loading="lazy" />
+    <div class="hero__overlay" aria-hidden="true"></div>
+  </div>
+
+  <div class="container hero__content">
+    <p class="eyebrow eyebrow--on-dark hero__eyebrow">Bespoke Travel Experiences</p>
+
+    <h1 class="hero__title font-display">
+      <span class="hero__word-mask"><span class="hero__word" #word>THE</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>TRAVEL</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>EDIT</span></span>
+    </h1>
+
+    <p class="hero__subtitle font-display" #subtitle>Because luxury is personal.</p>
+
+    <p class="hero__lead" #lead>
+      Diseñamos viajes con intención.<br />
+      Menos turismo masivo, más experiencias con sentido.
+    </p>
+
+    <div class="hero__actions" #actions>
+      <app-animated-button href="#final-cta">DISEÑA TU VIAJE</app-animated-button>
+      <a class="hero__explore" href="#destinos" data-cursor="explore">EXPLORE <span aria-hidden="true">↓</span></a>
+    </div>
+  </div>
+
+  <a class="hero__scroll-indicator" href="#destinos" aria-label="Desplázate para explorar el sitio">
+    <span aria-hidden="true">↓</span>
+  </a>
+</section>

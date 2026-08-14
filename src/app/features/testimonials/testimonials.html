@@ -1,0 +1,26 @@
+<section class="testimonials" aria-label="Testimonios de viajeros">
+  <div class="container testimonials__inner" appRevealOnScroll>
+    <span class="testimonials__mark font-display" aria-hidden="true">&ldquo;</span>
+
+    <div class="testimonials__panel" #panel>
+      <blockquote class="testimonials__quote font-display">
+        {{ current.quote }}
+      </blockquote>
+
+      <div class="testimonials__meta">
+        <span class="testimonials__avatar" aria-hidden="true">{{ initials(current.author) }}</span>
+        <div>
+          <p class="testimonials__author">— {{ current.author }}</p>
+          <p class="testimonials__location">{{ current.location }}</p>
+        </div>
+      </div>
+    </div>
+
+    @if (testimonials.length > 1) {
+      <div class="testimonials__controls">
+        <button type="button" (click)="previous()" aria-label="Testimonio anterior">←</button>
+        <button type="button" (click)="next()" aria-label="Siguiente testimonio">→</button>
+      </div>
+    }
+  </div>
+</section>

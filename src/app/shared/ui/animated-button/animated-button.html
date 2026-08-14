@@ -1,0 +1,33 @@
+<ng-template #inner>
+  <span class="animated-button__label"><ng-content></ng-content></span>
+  @if (withStar()) {
+    <span class="star" aria-hidden="true">✦</span>
+  }
+</ng-template>
+
+@if (href(); as link) {
+  <a
+    [href]="link"
+    class="animated-button"
+    [class.animated-button--outline]="variant() === 'outline'"
+    [class.animated-button--dark]="theme() === 'dark'"
+    appMagnetic
+    data-cursor="explore"
+  >
+    <ng-container [ngTemplateOutlet]="inner"></ng-container>
+  </a>
+} @else {
+  <button
+    type="button"
+    [disabled]="disabled()"
+    class="animated-button"
+    [class.animated-button--outline]="variant() === 'outline'"
+    [class.animated-button--dark]="theme() === 'dark'"
+    appMagnetic
+    data-cursor="explore"
+    title="Button"
+    (click)="buttonClick.emit()"
+  >
+    <ng-container [ngTemplateOutlet]="inner"></ng-container>
+  </button>
+}

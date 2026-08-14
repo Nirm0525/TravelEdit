@@ -1,0 +1,111 @@
+.site-footer {
+  background: var(--color-ink);
+  color: color-mix(in srgb, var(--color-cream) 75%, transparent);
+  padding-top: var(--space-xl);
+}
+
+.site-footer__top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-xl);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-cream) 15%, transparent);
+}
+
+@media (min-width: 64rem) {
+  .site-footer__top {
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1.6fr;
+  }
+}
+
+.site-footer__logo {
+  width: 9rem;
+  height: auto;
+}
+
+.site-footer__column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.site-footer__column a {
+  text-decoration: none;
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--color-cream) 75%, transparent);
+  transition: color 0.25s var(--ease-editorial);
+}
+
+.site-footer__column a:hover {
+  color: var(--color-gold);
+}
+
+.site-footer__heading {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  margin-bottom: 0.25rem;
+}
+
+.site-footer__newsletter .site-footer__heading {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 300;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-cream);
+}
+
+.site-footer__newsletter-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.site-footer__newsletter-row input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-cream) 35%, transparent);
+  color: var(--color-cream);
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  padding-block: 0.75rem;
+}
+
+.site-footer__newsletter-row input::placeholder {
+  color: color-mix(in srgb, var(--color-cream) 45%, transparent);
+}
+
+.site-footer__newsletter-message {
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--color-gold);
+}
+
+.site-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-block: var(--space-md);
+  font-size: 0.8125rem;
+}
+
+.site-footer__legal {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.site-footer__legal a {
+  text-decoration: none;
+  color: color-mix(in srgb, var(--color-cream) 60%, transparent);
+}
+
+.site-footer__legal a:hover {
+  color: var(--color-gold);
+}

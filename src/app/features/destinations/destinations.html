@@ -1,0 +1,42 @@
+<section class="destinations" id="destinos" aria-labelledby="destinations-title">
+  <div class="container destinations__header">
+    <app-section-title eyebrow="Destinations">
+      Where will<br />your story<br />begin?
+      <p support class="destinations__support">Handpicked places. Timeless beauty.<br />Yours, to discover.</p>
+    </app-section-title>
+  </div>
+
+  <div class="destinations__viewport" #viewport data-cursor="drag">
+    <ul class="destinations__track" #track>
+      <template>
+        @for (destination of destinations; track destination.slug) {
+          <li>
+            <app-destination-card [destination]="destination" />
+          </li>
+        }
+      </template>
+    </ul>
+  </div>
+
+  <div class="container destinations__controls">
+    <button
+      type="button"
+      class="destinations__arrow"
+      (click)="scrollBy(-1)"
+      [disabled]="atStart()"
+      aria-label="Destino anterior"
+    >←</button>
+
+    <div class="destinations__progress" aria-hidden="true">
+      <div class="destinations__progress-fill" [style.width.%]="progress() * 100"></div>
+    </div>
+
+    <button
+      type="button"
+      class="destinations__arrow"
+      (click)="scrollBy(1)"
+      [disabled]="atEnd()"
+      aria-label="Siguiente destino"
+    >→</button>
+  </div>
+</section>

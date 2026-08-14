@@ -1,0 +1,30 @@
+import { Component, HostListener, signal } from '@angular/core';
+import { NAV_ITEMS } from '../../core/data/nav';
+import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
+
+@Component({
+  selector: 'app-header',
+  standalone: true,
+  imports: [AnimatedButton],
+  templateUrl: './header.html',
+  styleUrl: './header.css'
+})
+export class Header {
+  readonly navItems = NAV_ITEMS;
+  readonly scrolled = signal(false);
+  readonly menuOpen = signal(false);
+  readonly hoveredImage = signal<string | null>(null);
+
+  @HostListener('window:scroll')
+  onScroll(): void {
+    this.scrolled.set(window.scrollY > 60);
+  }
+
+  toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+}

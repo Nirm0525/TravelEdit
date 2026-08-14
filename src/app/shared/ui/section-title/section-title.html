@@ -1,0 +1,11 @@
+<div class="section-title" [class.section-title--center]="align() === 'center'" [class.section-title--dark]="theme() === 'dark'">
+  @if (eyebrow()) {
+    <p class="eyebrow" [class.eyebrow--on-dark]="theme() === 'dark'">{{ eyebrow() }}</p>
+  }
+  <h2 class="section-title__heading font-display" [appRevealOnScroll]="0.1">
+    <ng-content></ng-content>
+  </h2>
+  <div class="section-title__support">
+    <ng-content select="[support]"></ng-content>
+  </div>
+</div>

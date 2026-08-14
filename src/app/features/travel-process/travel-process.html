@@ -1,0 +1,39 @@
+<section class="travel-process" aria-labelledby="travel-process-title">
+  <div class="container">
+    <h2 id="travel-process-title" class="travel-process__title font-display" appRevealOnScroll>
+      Not a trip.
+      <em class="font-display--emphasis">Your edit.</em>
+    </h2>
+
+    <ol class="travel-process__steps">
+      @for (step of steps; track step.number; let i = $index) {
+        <li class="travel-process__step" [appRevealOnScroll]="i * 0.15">
+          <span class="travel-process__number">{{ step.number }}</span>
+          <span class="travel-process__icon" aria-hidden="true">
+            @switch (step.icon) {
+              @case ('person') {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25">
+                  <circle cx="12" cy="8" r="3.25" />
+                  <path d="M5.5 20c1.2-4 3.8-6 6.5-6s5.3 2 6.5 6" stroke-linecap="round" />
+                </svg>
+              }
+              @case ('curate') {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25">
+                  <path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke-linecap="round" />
+                  <path d="M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5L15 9M9 15l-2.5 2.5" stroke-linecap="round" />
+                </svg>
+              }
+              @case ('plane') {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25">
+                  <path d="M3 13l7-2 4-7 1.5.5-2 7 6 1-1 2-6.5.5-3 5-1.5-.5 1.5-5-6-.5z" stroke-linejoin="round" />
+                </svg>
+              }
+            }
+          </span>
+          <h3 class="travel-process__step-title font-display">{{ step.title }}</h3>
+          <p class="travel-process__step-text">{{ step.text }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

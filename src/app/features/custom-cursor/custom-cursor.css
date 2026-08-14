@@ -1,0 +1,35 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-burgundy);
+  mix-blend-mode: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.3s var(--ease-editorial), height 0.3s var(--ease-editorial), background 0.3s var(--ease-editorial);
+}
+
+.custom-cursor--labeled {
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--color-ink);
+}
+
+.custom-cursor__label {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: var(--color-cream);
+}

@@ -1,0 +1,49 @@
+<header class="site-header" [class.site-header--scrolled]="scrolled()">
+  <div class="container site-header__inner">
+    <a href="#top" class="site-header__logo">
+      <img
+        src="images/logos/thetraveledit2.png"
+        alt="The Travel Edit"
+        width="150"
+        height="56"
+      />
+    </a>
+
+    <nav class="site-header__nav" aria-label="Principal">
+      @for (item of navItems; track item.href) {
+        <a
+          [href]="item.href"
+          (mouseenter)="hoveredImage.set(item.image)"
+          (mouseleave)="hoveredImage.set(null)"
+        >{{ item.label }}</a>
+      }
+    </nav>
+
+    <div class="site-header__cta">
+      <app-animated-button href="#final-cta">DISEÑA TU VIAJE</app-animated-button>
+    </div>
+
+    <button type="button" class="site-header__menu-toggle" (click)="toggleMenu()" aria-haspopup="true" [attr.aria-expanded]="menuOpen()">
+      MENU
+    </button>
+
+    @if (hoveredImage(); as image) {
+      <div class="site-header__preview" aria-hidden="true">
+        <img [src]="image" alt="" />
+      </div>
+    }
+  </div>
+</header>
+
+@if (menuOpen()) {
+  <div class="mobile-menu" role="dialog" aria-modal="true" aria-label="Menú">
+    <button type="button" class="mobile-menu__close" (click)="closeMenu()" aria-label="Cerrar menú">✕</button>
+    <ol class="mobile-menu__list">
+      <li><a href="#destinos" (click)="closeMenu()"><span>01</span> Destinos</a></li>
+      <li><a href="#experiencias" (click)="closeMenu()"><span>02</span> Experiencias</a></li>
+      <li><a href="#the-edit" (click)="closeMenu()"><span>03</span> The Edit</a></li>
+      <li><a href="#about" (click)="closeMenu()"><span>04</span> About Us</a></li>
+      <li><a href="#final-cta" (click)="closeMenu()"><span>05</span> Diseña tu viaje</a></li>
+    </ol>
+  </div>
+}

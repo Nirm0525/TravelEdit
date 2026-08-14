@@ -1,1 +1,158 @@
-/* You can add global styles to this file, and also import other style files */
+/* ==========================================================================
+   The Travel Edit — Design tokens
+   Fuente: Manual de Marca v1.0 — 2026
+   ========================================================================== */
+
+:root {
+  /* Tipografía */
+  --font-display: "Cormorant", serif;
+  --font-ui: "Poppins", sans-serif;
+
+  /* Escala tipográfica (desktop, ratio 1.35 — clamp() para mobile-first) */
+  --size-display: clamp(2.75rem, 1.6rem + 5vw, 6.5rem);   /* 104px */
+  --size-h1: clamp(2.25rem, 1.5rem + 3.2vw, 4.5rem);       /* 72px */
+  --size-h2: clamp(1.875rem, 1.4rem + 2vw, 3.375rem);      /* 54px */
+  --size-lead: clamp(1.375rem, 1.1rem + 1.2vw, 2.75rem);   /* 44px italic */
+  --size-body: clamp(1.0625rem, 0.95rem + 0.5vw, 2rem);    /* 32px */
+  --size-label: clamp(0.8125rem, 0.7rem + 0.4vw, 1.625rem);/* 26px */
+  --track-label: 0.34em;
+
+  /* Paleta — cinco roles, sin excepciones */
+  --color-burgundy: #7A2338;   /* Acción y cierres */
+  --color-ink: #16110F;        /* Texto y fondos oscuros */
+  --color-cream: #F6EFE6;      /* Fondo principal */
+  --color-gold: #C79A5B;       /* Acentos e iconos */
+  --color-stone: #8A7F76;      /* Texto secundario */
+  --color-white: #FFFFFF;      /* Reversado sobre borgoña/tinta */
+
+  /* Espaciado editorial */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 2rem;
+  --space-lg: 4rem;
+  --space-xl: 7rem;
+  --space-2xl: 10rem;
+
+  --measure: 62ch; /* 45–70 caracteres por línea */
+  --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1, h2, h3, h4, blockquote, p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* Tipografía editorial: un titular por bloque, medida controlada, sin negritas/subrayados */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.font-display--emphasis {
+  font-style: italic;
+  color: var(--color-burgundy);
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-burgundy);
+}
+
+.eyebrow--on-dark {
+  color: var(--color-gold);
+}
+
+.star {
+  display: inline-block;
+  color: var(--color-gold);
+}
+
+.container {
+  width: 100%;
+  max-width: 90rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 4rem);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+/* Cursor personalizado: solo en dispositivos con puntero fino */
+@media (hover: hover) and (pointer: fine) {
+  body.has-custom-cursor,
+  body.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

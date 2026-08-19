@@ -3,9 +3,17 @@
    Fuente: Manual de Marca v1.0 — 2026
    ========================================================================== */
 
+@font-face {
+  font-family: "Ws Paradose";
+  src: url("/fonts/Ws Paradose Italic.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   /* Tipografía */
-  --font-display: "Cormorant", serif;
+  --font-display: "Ws Paradose", "Cormorant", serif;
   --font-ui: "Poppins", sans-serif;
 
   /* Escala tipográfica (desktop, ratio 1.35 — clamp() para mobile-first) */

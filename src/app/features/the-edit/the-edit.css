@@ -3,6 +3,19 @@
   padding-block: var(--space-2xl);
 }
 
+.the-edit ::ng-deep .eyebrow--on-dark {
+  color: var(--color-burgundy);
+}
+
+.the-edit ::ng-deep .animated-button--outline.animated-button--dark {
+  border-color: var(--color-burgundy);
+}
+
+.the-edit ::ng-deep .animated-button--outline.animated-button--dark:hover {
+  background: var(--color-burgundy);
+  border-color: var(--color-burgundy);
+}
+
 .the-edit__layout {
   display: flex;
   flex-direction: column;

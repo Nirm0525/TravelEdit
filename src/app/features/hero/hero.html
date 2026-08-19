@@ -1,6 +1,6 @@
 <section class="hero" id="top" #section>
   <div class="hero__bg" #bg>
-    <img [src]="image.url" [alt]="image.alt" [title]="image.alt" loading="lazy" />
+    <img [src]="image.url" alt="{{ image.alt }}" title="{{ image.alt }}" loading="lazy" />
     <div class="hero__overlay" aria-hidden="true"></div>
   </div>
 
@@ -8,12 +8,10 @@
     <p class="eyebrow eyebrow--on-dark hero__eyebrow">Bespoke Travel Experiences</p>
 
     <h1 class="hero__title font-display">
-      <span class="hero__word-mask"><span class="hero__word" #word>THE</span></span>
-      <span class="hero__word-mask"><span class="hero__word" #word>TRAVEL</span></span>
-      <span class="hero__word-mask"><span class="hero__word" #word>EDIT</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>Because</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>luxury</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>is personal.</span></span>
     </h1>
-
-    <p class="hero__subtitle font-display" #subtitle>Because luxury is personal.</p>
 
     <p class="hero__lead" #lead>
       Diseñamos viajes con intención.<br />

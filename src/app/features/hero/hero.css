@@ -38,6 +38,7 @@
 .hero__content {
   position: relative;
   z-index: 2;
+  padding-top: clamp(7rem, 14vw, 9rem);
   padding-bottom: clamp(3rem, 8vw, 6rem);
   max-width: 52rem;
 }
@@ -49,7 +50,7 @@
 .hero__title {
   font-size: var(--size-display);
   color: var(--color-cream);
-  text-transform: uppercase;
+  font-style: italic;
   margin-bottom: var(--space-sm);
 }
 
@@ -75,7 +76,7 @@
   font-size: 1.0625rem;
   font-weight: 300;
   line-height: 1.6;
-  color: color-mix(in srgb, var(--color-cream) 88%, transparent);
+  color: rgba(246, 239, 230, 0.88);
   max-width: 32rem;
   margin-bottom: var(--space-md);
 }
@@ -107,7 +108,7 @@
   z-index: 2;
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid color-mix(in srgb, var(--color-cream) 55%, transparent);
+  border: 1px solid rgba(246, 239, 230, 0.55);
   border-radius: 50%;
   display: flex;
   align-items: center;

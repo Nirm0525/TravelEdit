@@ -42,5 +42,5 @@
 }
 
 .section-title--dark .section-title__support {
-  color: color-mix(in srgb, var(--color-cream) 70%, transparent);
+  color: rgba(246, 239, 230, 0.7);
 }

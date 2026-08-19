@@ -102,14 +102,18 @@ button {
 }
 
 .eyebrow--on-dark {
-  color: var(--color-gold);
+  color: #ffffff;
 }
 
 .star {
   display: inline-block;
-  color: var(--color-gold);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  line-height: 1;
+  margin-inline: 0.25rem;
 }
 
+   
 .container {
   width: 100%;
   max-width: 90rem;

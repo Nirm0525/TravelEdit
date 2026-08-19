@@ -9,8 +9,8 @@
 
 .site-header--scrolled {
   background: color-mix(in srgb, var(--color-ink) 78%, transparent);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 .site-header__inner {
@@ -152,7 +152,7 @@
 .mobile-menu__list a span {
   font-size: 0.9rem;
   font-family: var(--font-ui);
-  color: color-mix(in srgb, var(--color-cream) 60%, transparent);
+  color: rgba(246, 239, 230, 0.6);
 }
 
 @media (min-width: 64rem) {

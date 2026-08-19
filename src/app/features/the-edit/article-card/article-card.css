@@ -1,6 +1,6 @@
 .article-card__frame {
   position: relative;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 3 / 5;
   overflow: hidden;
 }
 
@@ -47,7 +47,7 @@
   font-family: var(--font-ui);
   font-size: 0.875rem;
   font-weight: 300;
-  color: color-mix(in srgb, var(--color-cream) 85%, transparent);
+  color: rgba(246, 239, 230, 0.85);
 }
 
 .article-card__link {
@@ -56,5 +56,5 @@
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.18em;
-  color: var(--color-gold);
+  color: var(--color-burgundy);
 }

@@ -6,15 +6,17 @@
     </app-section-title>
   </div>
 
-  <div class="destinations__viewport" #viewport data-cursor="drag">
+  <div
+    class="destinations__viewport"
+    #viewport
+    data-cursor="drag"
+    (mousemove)="onViewportPointerMove($event)"
+    (mouseleave)="onViewportPointerLeave()"
+  >
     <ul class="destinations__track" #track>
-      <template>
-        @for (destination of destinations; track destination.slug) {
-          <li>
-            <app-destination-card [destination]="destination" />
-          </li>
-        }
-      </template>
+      <li *ngFor="let destination of destinations; trackBy: trackBySlug">
+        <app-destination-card [destination]="destination" />
+      </li>
     </ul>
   </div>
 
@@ -26,10 +28,6 @@
       [disabled]="atStart()"
       aria-label="Destino anterior"
     >←</button>
-
-    <div class="destinations__progress" aria-hidden="true">
-      <div class="destinations__progress-fill" [style.width.%]="progress() * 100"></div>
-    </div>
 
     <button
       type="button"

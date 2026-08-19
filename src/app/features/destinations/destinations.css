@@ -63,15 +63,3 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
-
-.destinations__progress {
-  flex: 1;
-  height: 1px;
-  background: color-mix(in srgb, var(--color-ink) 15%, transparent);
-}
-
-.destinations__progress-fill {
-  height: 100%;
-  background: var(--color-burgundy);
-  transition: width 0.1s linear;
-}

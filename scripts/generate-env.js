@@ -6,9 +6,10 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
 const envDir = path.join(__dirname, '..', 'src', 'environments');
 const targetFile = path.join(envDir, 'environment.ts');
 const devTargetFile = path.join(envDir, 'environment.development.ts');
+const prodTargetFile = path.join(envDir, 'environment.prod.ts');
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  if (fs.existsSync(targetFile)) {
+  if (fs.existsSync(targetFile) || fs.existsSync(prodTargetFile)) {
     console.log('SUPABASE_URL/SUPABASE_ANON_KEY no definidas, se usan los archivos de environment existentes.');
     process.exit(0);
   }
@@ -25,4 +26,5 @@ const template = (production) => `export const environment = {
 
 fs.writeFileSync(targetFile, template(true));
 fs.writeFileSync(devTargetFile, template(false));
+fs.writeFileSync(prodTargetFile, template(true));
 console.log('Archivos de environment generados a partir de variables de entorno.');

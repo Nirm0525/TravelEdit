@@ -24,6 +24,7 @@ const template = (production) => `export const environment = {
 };
 `;
 
+fs.mkdirSync(envDir, { recursive: true });
 fs.writeFileSync(targetFile, template(true));
 fs.writeFileSync(devTargetFile, template(false));
 fs.writeFileSync(prodTargetFile, template(true));

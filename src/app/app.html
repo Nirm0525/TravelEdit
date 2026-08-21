@@ -7,9 +7,12 @@
   <app-travel-process />
   <app-experiences />
   <app-the-edit />
-  <app-testimonials />
   <app-about />
   <app-final-cta />
 </main>
 
 <app-footer />
+
+@defer (when travelEditFormRequested()) {
+  <app-travel-edit-form />
+}

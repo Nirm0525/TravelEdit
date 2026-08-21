@@ -1,0 +1,94 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (lead(); as l) {
+  <header class="lead-detail__header">
+    <div>
+      <p class="eyebrow">Solicitud</p>
+      <h1 class="page-title">{{ l.name }}</h1>
+      <p class="lead-detail__contact">
+        <a [href]="'mailto:' + l.email">{{ l.email }}</a>
+        @if (l.phone) {
+          · <a [href]="'tel:' + l.phone">{{ l.phone }}</a>
+        }
+      </p>
+    </div>
+
+    <div class="lead-detail__assign">
+      @if (assignedToName(); as name) {
+        <span>Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
+      } @else {
+        <button type="button" (click)="assignToMe()">Asignarme esta solicitud</button>
+      }
+    </div>
+  </header>
+
+  <div class="lead-detail__status-pipeline" role="group" aria-label="Estado de la solicitud">
+    @for (option of statusOptions; track option.value) {
+      <button
+        type="button"
+        [class.is-active]="l.status === option.value"
+        (click)="setStatus(option.value)"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+
+  <div class="lead-detail__grid">
+    <section class="lead-detail__section">
+      <h2 class="section-title">Su viaje</h2>
+      @if (l.destinationInterestText) {
+        <p class="lead-detail__field"><strong>Destino de interés:</strong> {{ l.destinationInterestText }}</p>
+      }
+      @if (l.message) {
+        <p class="lead-detail__field"><strong>Mensaje:</strong> {{ l.message }}</p>
+      }
+      @for (field of detailFields; track field.label) {
+        @if (field.value(); as value) {
+          <p class="lead-detail__field"><strong>{{ field.label }}:</strong> {{ value }}</p>
+        }
+      }
+    </section>
+
+    <section class="lead-detail__section">
+      <h2 class="section-title">Notas internas</h2>
+
+      @if (notes().length === 0) {
+        <p class="lead-detail__empty-notes">Sin notas todavía.</p>
+      } @else {
+        <ul class="lead-detail__notes">
+          @for (note of notes(); track note.id) {
+            <li>
+              <p class="lead-detail__note-meta">{{ authorName(note.authorId) }} · {{ note.createdAt | date: 'd MMM y, HH:mm' }}</p>
+              <p class="lead-detail__note-body">{{ note.body }}</p>
+            </li>
+          }
+        </ul>
+      }
+
+      <form class="lead-detail__note-form" (ngSubmit)="addNote()">
+        <label class="visually-hidden" for="new-note">Agregar nota</label>
+        <textarea
+          id="new-note"
+          rows="2"
+          [value]="newNote()"
+          (input)="onNoteInput($event)"
+          placeholder="Agregar una nota interna…"
+        ></textarea>
+        <button type="submit" [disabled]="!newNote().trim() || savingNote()">
+          {{ savingNote() ? 'Guardando…' : 'Agregar nota' }}
+        </button>
+      </form>
+    </section>
+  </div>
+
+  @if (isAdmin()) {
+    <section class="lead-detail__danger">
+      <button type="button" (click)="requestDelete()">
+        {{ deleteConfirming() ? '¿Seguro? Confirmar eliminación' : 'Eliminar solicitud' }}
+      </button>
+    </section>
+  }
+} @else {
+  <p>No se encontró la solicitud.</p>
+}

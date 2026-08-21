@@ -1,0 +1,87 @@
+<header class="dashboard__header">
+  <p class="eyebrow">The Travel Edit — Panel</p>
+  <h1 class="page-title">
+    @if (profile(); as staff) {
+      Hola, {{ staff.fullName }}.
+    }
+  </h1>
+</header>
+
+@if (loading()) {
+  <div class="dashboard__skeleton" aria-hidden="true">
+    @for (row of [1, 2, 3]; track row) {
+      <div class="dashboard__skeleton-card"></div>
+    }
+  </div>
+} @else if (data(); as d) {
+  <div class="dashboard__grid">
+    <section class="dashboard__card">
+      <h2 class="section-title">Solicitudes sin responder</h2>
+
+      @if (d.newLeads.length === 0) {
+        <p class="dashboard__empty">No hay solicitudes nuevas pendientes — al día.</p>
+      } @else {
+        <ul class="dashboard__list">
+          @for (lead of d.newLeads; track lead.id) {
+            <li [class.dashboard__list-item--stale]="isStale(lead.createdAt)">
+              <a [routerLink]="['/solicitudes', lead.id]">{{ lead.name }}</a>
+              <span class="dashboard__list-meta">
+                {{ lead.destinationInterestText || 'Sin destino especificado' }} · hace {{ ageInDays(lead.createdAt) }} día(s)
+                @if (isStale(lead.createdAt)) {
+                  <strong class="dashboard__attention">· &gt;48h</strong>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <a class="dashboard__see-all" routerLink="/solicitudes">Ver todas las solicitudes →</a>
+    </section>
+
+    <section class="dashboard__card">
+      <h2 class="section-title">Borradores sin tocar</h2>
+
+      @if (d.stalledDrafts.length === 0) {
+        <p class="dashboard__empty">No hay destinos en borrador esperando terminarse.</p>
+      } @else {
+        <ul class="dashboard__list">
+          @for (draft of d.stalledDrafts; track draft.id) {
+            <li>
+              <a [routerLink]="['/destinos', draft.id, 'general']">{{ draft.title }}</a>
+              <span class="dashboard__list-meta">sin cambios hace {{ ageInDays(draft.updatedAt) }} día(s)</span>
+            </li>
+          }
+        </ul>
+      }
+
+      <a class="dashboard__see-all" routerLink="/destinos">Ver todos los destinos →</a>
+    </section>
+
+    <section class="dashboard__card">
+      <h2 class="section-title">Este mes</h2>
+
+      <dl class="dashboard__stats">
+        <div>
+          <dt>Solicitudes recibidas</dt>
+          <dd>{{ d.monthly.totalLeads }}</dd>
+        </div>
+        <div>
+          <dt>Tasa de respuesta</dt>
+          <dd>{{ d.monthly.responseRate }}%</dd>
+        </div>
+      </dl>
+
+      @if (d.monthly.topDestinations.length > 0) {
+        <p class="dashboard__stats-label">Destinos más pedidos</p>
+        <ol class="dashboard__top-destinations">
+          @for (item of d.monthly.topDestinations; track item.label) {
+            <li>{{ item.label }} <span>({{ item.count }})</span></li>
+          }
+        </ol>
+      } @else {
+        <p class="dashboard__empty">Todavía no hay suficientes solicitudes este mes para mostrar un top de destinos.</p>
+      }
+    </section>
+  </div>
+}

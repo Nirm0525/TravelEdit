@@ -1,0 +1,48 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (destination(); as d) {
+  <p class="preview__disclaimer">Así se vería en el sitio público — esto no publica nada, solo es una vista previa.</p>
+
+  <article class="preview">
+    @if (coverUrl(); as cover) {
+      <div class="preview__cover">
+        <img [src]="cover" alt="" />
+      </div>
+    }
+
+    <div class="preview__body">
+      <p class="preview__eyebrow">{{ tripTypeLabel() }} · {{ d.countryRegion }}</p>
+      <h2 class="preview__title">{{ d.title }}</h2>
+      <p class="preview__meta">{{ d.durationDays }} días · {{ priceRangeLabel() }}</p>
+      <p class="preview__short">{{ d.shortDescription }}</p>
+
+      <div class="preview__long" [innerHTML]="d.longDescription"></div>
+
+      @if (days().length > 0) {
+        <h3 class="preview__section-title">Itinerario</h3>
+        <ol class="preview__days">
+          @for (day of days(); track day.id) {
+            <li>
+              <strong>{{ day.title }}</strong>
+              <p>{{ day.description }}</p>
+              @if (day.accommodation) {
+                <p class="preview__accommodation">Alojamiento: {{ day.accommodation }}</p>
+              }
+            </li>
+          }
+        </ol>
+      }
+
+      @if (images().length > 0) {
+        <h3 class="preview__section-title">Galería</h3>
+        <div class="preview__gallery">
+          @for (image of images(); track image.id) {
+            <img [src]="publicUrl(image)" [alt]="image.altText" />
+          }
+        </div>
+      }
+    </div>
+  </article>
+} @else {
+  <p>No se encontró el destino.</p>
+}

@@ -1,7 +1,32 @@
 .travel-process {
-  background: var(--color-ink);
+  position: relative;
   color: var(--color-cream);
   padding-block: var(--space-2xl);
+  overflow: hidden;
+}
+
+.travel-process__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.travel-process__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.travel-process__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0.72), rgba(22, 17, 15, 0.85));
+}
+
+.travel-process > .container {
+  position: relative;
+  z-index: 1;
 }
 
 .travel-process__title {
@@ -52,7 +77,7 @@
 .travel-process__number {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 2.5rem;
+  font-size: clamp(3rem, 2.4rem + 2vw, 5rem);
   color: rgba(255, 253, 246, 0.5);
 }
 
@@ -66,6 +91,12 @@
   justify-content: center;
   color: var(--color-cream);
   margin-block: 0.5rem;
+  transition: transform 0.35s var(--ease-editorial), box-shadow 0.35s var(--ease-editorial);
+}
+
+.travel-process__step:hover .travel-process__icon {
+  transform: scale(1.12);
+  box-shadow: 0 0.5rem 1.75rem rgba(122, 35, 56, 0.55);
 }
 
 .travel-process__icon svg {
@@ -74,13 +105,20 @@
 }
 
 .travel-process__step-title {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 400;
   color: var(--color-cream);
 }
 
 .travel-process__step-text {
-  font-size: 0.9375rem;
-  color: rgba(255, 253, 246, 0.65);
-  max-width: 20rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: rgba(255, 253, 246, 0.7);
+  max-width: 22rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .travel-process__icon {
+    transition: none;
+  }
 }

@@ -1,0 +1,147 @@
+/* ==========================================================================
+   The Travel Edit — Admin — Design tokens
+   Deliberadamente distinto del sitio público: superficies planas, densidad
+   de datos, color reservado a estados y acciones destructivas.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Ws Paradose";
+  src: url("/fonts/Ws Paradose Italic.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  /* Tipografía: serif de marca solo en títulos de página/sección; Inter para todo el trabajo */
+  --font-display: "Ws Paradose", "Cormorant", serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+
+  --size-page-title: clamp(1.15rem, 1rem + 0.5vw, 1.6rem);
+  --size-section-title: clamp(1rem, 0.92rem + 0.3vw, 1.25rem);
+  --size-body: 0.9375rem;
+  --size-small: 0.8125rem;
+  --size-eyebrow: 0.75rem;
+  --track-eyebrow: 0.08em;
+
+  /* Paleta */
+  --ink-900: #1B1815;
+  --canvas-100: #F1EEE9;
+  --surface-000: #FFFFFF;
+  --line-200: #E1DCD5;
+  --brand-600: #7A2338;
+  --brand-600-contrast: #FFFFFF;
+  --attention-600: #B4791F;
+  --success-600: #2F6B45;
+  --danger-600: #B3261E;
+  --text-secondary: #6B6259;
+
+  /* Espaciado: escala fija en rem, no fluida — una UI densa debe ser predecible */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100svh;
+  margin: 0;
+  background: var(--canvas-100);
+  color: var(--ink-900);
+  font-family: var(--font-ui);
+  font-size: var(--size-body);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1, h2, h3, h4, p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--size-page-title);
+  letter-spacing: -0.01em;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--size-section-title);
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
 import { NgFor } from '@angular/common';
 import { DESTINATIONS, Destination } from '../../core/data/destinations';
 import { DestinationCard } from './destination-card/destination-card';
@@ -25,10 +25,6 @@ export class Destinations implements AfterViewInit, OnDestroy {
   private readonly track = viewChild<ElementRef<HTMLElement>>('track');
   private draggable?: Draggable;
 
-  readonly progress = signal(0);
-  readonly atStart = computed(() => this.progress() <= 0.001);
-  readonly atEnd = computed(() => this.progress() >= 0.999);
-
   private bounds = () => ({ minX: 0, maxX: 0 });
   private hoverDirection = 0;
   private hoverSpeed = 0;
@@ -54,9 +50,7 @@ export class Destinations implements AfterViewInit, OnDestroy {
       type: 'x',
       inertia: !this.reducedMotion.reduced(),
       bounds: this.bounds(),
-      edgeResistance: 0.85,
-      onDrag: () => this.updateProgress(),
-      onThrowUpdate: () => this.updateProgress()
+      edgeResistance: 0.85
     });
 
     gsap.ticker.add(this.tickHover);
@@ -113,36 +107,5 @@ export class Destinations implements AfterViewInit, OnDestroy {
 
     gsap.set(trackEl, { x: next });
     draggable.update();
-    this.updateProgress();
-  }
-
-  scrollBy(direction: 1 | -1): void {
-    const draggable = this.draggable;
-    const trackEl = this.track()?.nativeElement;
-    const viewportEl = this.viewport()?.nativeElement;
-    if (!draggable || !trackEl || !viewportEl) {
-      return;
-    }
-
-    const { minX, maxX } = this.bounds();
-    const step = viewportEl.clientWidth * 0.9;
-    const target = gsap.utils.clamp(minX, maxX, draggable.x - direction * step);
-
-    gsap.to(trackEl, {
-      x: target,
-      duration: this.reducedMotion.reduced() ? 0 : 0.6,
-      ease: 'power3.out',
-      onUpdate: () => {
-        draggable.update();
-        this.updateProgress();
-      }
-    });
-  }
-
-  private updateProgress(): void {
-    const { minX } = this.bounds();
-    const range = -minX;
-    const value = range <= 0 ? 0 : -(this.draggable?.x ?? 0) / range;
-    this.progress.set(Math.min(1, Math.max(0, value)));
   }
 }

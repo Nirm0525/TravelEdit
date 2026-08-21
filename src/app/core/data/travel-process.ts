@@ -8,20 +8,20 @@ export interface ProcessStep {
 export const TRAVEL_PROCESS_STEPS: ProcessStep[] = [
   {
     number: '01',
-    title: 'Tell us who you are',
-    text: 'Share your dreams, passions and travel style.',
+    title: 'We get to know you',
+    text: 'Tell us how you love to travel. Your style, pace, interests and what matters most to you.',
     icon: 'person'
   },
   {
     number: '02',
-    title: 'We curate',
-    text: 'We design a bespoke journey just for you.',
+    title: 'We create your Travel Edit',
+    text: 'First, we design the journey. Then we curate the stays, experiences and details that bring it to life.',
     icon: 'curate'
   },
   {
     number: '03',
-    title: 'You experience',
-    text: 'Live every moment. We handle the rest.',
+    title: 'You experience it',
+    text: 'Everything thoughtfully arranged. You simply travel, experience and enjoy.',
     icon: 'plane'
   }
 ];

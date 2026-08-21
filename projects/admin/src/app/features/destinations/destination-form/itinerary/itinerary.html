@@ -1,0 +1,52 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (days().length === 0) {
+  <div class="itinerary__empty">
+    <p>Todavía no hay días en este itinerario.</p>
+    <button type="button" (click)="addDay()">Agregar el primer día</button>
+  </div>
+} @else {
+  <ol class="itinerary__list" cdkDropList (cdkDropListDropped)="drop($event)">
+    @for (day of days(); track day.id) {
+      <li class="itinerary__day" cdkDrag>
+        <span class="itinerary__day-handle" cdkDragHandle aria-label="Arrastrar para reordenar">⠿</span>
+
+        <div class="itinerary__day-fields">
+          <input
+            type="text"
+            class="itinerary__day-title"
+            [value]="day.title"
+            (blur)="onFieldBlur(day, 'title', $event)"
+            placeholder="Título del día"
+          />
+          <textarea
+            rows="2"
+            [value]="day.description"
+            (blur)="onFieldBlur(day, 'description', $event)"
+            placeholder="Descripción"
+          ></textarea>
+          <input
+            type="text"
+            [value]="day.accommodation ?? ''"
+            (blur)="onFieldBlur(day, 'accommodation', $event)"
+            placeholder="Alojamiento sugerido"
+          />
+          <input
+            type="text"
+            [value]="day.includedExperiences.join(', ')"
+            (blur)="onExperiencesBlur(day, $event)"
+            placeholder="Experiencias incluidas, separadas por coma"
+          />
+        </div>
+
+        <button type="button" class="itinerary__day-remove" (click)="removeDay(day)" aria-label="Eliminar día">✕</button>
+      </li>
+    }
+  </ol>
+
+  <button type="button" class="itinerary__add" (click)="addDay()">+ Agregar día</button>
+
+  @if (savingOrder()) {
+    <p class="itinerary__saving">Guardando orden…</p>
+  }
+}

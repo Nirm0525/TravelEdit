@@ -14,12 +14,13 @@
     </h1>
 
     <p class="hero__lead" #lead>
-      Diseñamos viajes con intención.<br />
-      Menos turismo masivo, más experiencias con sentido.
+      Viajes diseñados a tu manera.<br />
+      Cuidando cada detalle para que cada experiencia.
+      Se sienta realmente tuya.
     </p>
 
     <div class="hero__actions" #actions>
-      <app-animated-button href="#final-cta">DISEÑA TU VIAJE</app-animated-button>
+      <app-animated-button (buttonClick)="openTravelEditForm()">DISEÑA TU VIAJE</app-animated-button>
       <a class="hero__explore" href="#destinos" data-cursor="explore">EXPLORE <span aria-hidden="true">↓</span></a>
     </div>
   </div>

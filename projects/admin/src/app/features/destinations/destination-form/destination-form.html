@@ -1,0 +1,53 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (destination(); as d) {
+  <header class="destination-form__header">
+    <div>
+      <p class="eyebrow">{{ statusLabel[d.status] }}</p>
+      <h1 class="page-title">{{ d.title }}</h1>
+    </div>
+
+    <div class="destination-form__actions">
+      @if (d.status !== 'published') {
+        <button type="button" class="is-primary" (click)="setStatus('published')">Publicar destino</button>
+      }
+      @if (d.status === 'published') {
+        <button type="button" (click)="setStatus('archived')">Archivar</button>
+      }
+      @if (d.status === 'archived') {
+        <button type="button" (click)="setStatus('draft')">Volver a borrador</button>
+      }
+    </div>
+  </header>
+
+  <nav class="destination-form__tabs" aria-label="Secciones del destino">
+    <a routerLink="general" routerLinkActive="is-active">General</a>
+    <a routerLink="itinerario" routerLinkActive="is-active">Itinerario</a>
+    <a routerLink="galeria" routerLinkActive="is-active">Galería</a>
+    <a routerLink="vista-previa" routerLinkActive="is-active">Vista previa</a>
+  </nav>
+
+  <div class="destination-form__content">
+    <router-outlet />
+  </div>
+
+  @if (isAdmin()) {
+    <section class="destination-form__danger">
+      <h2 class="section-title">Eliminar destino</h2>
+      <p>Escribe <strong>{{ d.title }}</strong> para confirmar. Esta acción no se puede deshacer.</p>
+      <div class="destination-form__danger-row">
+        <input
+          type="text"
+          [value]="deleteConfirmText()"
+          (input)="onDeleteConfirmInput($event)"
+          [attr.aria-label]="'Escribe ' + d.title + ' para confirmar'"
+        />
+        <button type="button" [disabled]="!canDelete() || deleting()" (click)="remove()">
+          {{ deleting() ? 'Eliminando…' : 'Eliminar definitivamente' }}
+        </button>
+      </div>
+    </section>
+  }
+} @else {
+  <p>No se encontró el destino.</p>
+}

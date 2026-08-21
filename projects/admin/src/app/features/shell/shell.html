@@ -1,0 +1,23 @@
+<div class="shell">
+  <header class="shell__header">
+    <p class="eyebrow">The Travel Edit — Panel</p>
+
+    <nav class="shell__nav" aria-label="Secciones del panel">
+      <a routerLink="/dashboard" routerLinkActive="is-active">Dashboard</a>
+      <a routerLink="/destinos" routerLinkActive="is-active">Destinos</a>
+      <a routerLink="/solicitudes" routerLinkActive="is-active">Solicitudes</a>
+    </nav>
+
+    @if (profile(); as staff) {
+      <div class="shell__user">
+        <span class="shell__user-name">{{ staff.fullName }}</span>
+        <span class="shell__user-role">{{ staff.role === 'admin' ? 'Admin' : 'Editor' }}</span>
+        <button type="button" class="shell__signout" (click)="signOut()">Cerrar sesión</button>
+      </div>
+    }
+  </header>
+
+  <main class="shell__content">
+    <router-outlet />
+  </main>
+</div>

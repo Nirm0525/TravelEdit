@@ -1,0 +1,265 @@
+.travel-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(22 17 15 / 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  z-index: 700;
+}
+
+.travel-edit-panel {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+  max-height: 90svh;
+  overflow-y: auto;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  border-radius: 0.5rem;
+  padding: clamp(1.75rem, 4vw, 3rem);
+}
+
+.travel-edit-panel__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1rem;
+  color: var(--color-stone);
+  width: 2rem;
+  height: 2rem;
+}
+
+.travel-edit-panel__close:hover {
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.travel-edit-panel__progress {
+  margin-bottom: var(--space-md);
+}
+
+.travel-edit-panel__progress-bar {
+  height: 2px;
+  background: color-mix(in srgb, var(--color-stone) 30%, transparent);
+  border-radius: 999px;
+}
+
+.travel-edit-panel__progress-fill {
+  height: 100%;
+  background: var(--color-burgundy);
+  border-radius: 999px;
+  transition: width 0.3s var(--ease-editorial);
+}
+
+.travel-edit-form h2 {
+  margin: 0.5rem 0 1.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.tef-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.tef-field-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 28rem) {
+  .tef-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.tef-field input,
+.tef-field textarea {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-stone);
+  border-radius: 0.25rem;
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.tef-field textarea {
+  resize: vertical;
+}
+
+.tef-field input:focus-visible,
+.tef-field textarea:focus-visible {
+  outline: 2px solid var(--color-burgundy);
+  outline-offset: 1px;
+}
+
+.tef-field__hint {
+  color: var(--color-burgundy);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.tef-section-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-stone);
+  margin: 0 0 0.75rem;
+}
+
+.tef-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  margin-bottom: 1.25rem;
+}
+
+.tef-choice-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tef-choice-group--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+
+.tef-choice-group legend {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.tef-note {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-stone);
+}
+
+.tef-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--color-stone);
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.tef-choice:has(input:checked) {
+  border-color: var(--color-burgundy);
+  background: color-mix(in srgb, var(--color-burgundy) 6%, var(--color-white));
+}
+
+.tef-choice input {
+  margin-top: 0.15rem;
+  accent-color: var(--color-burgundy);
+}
+
+.tef-choice--described strong {
+  font-weight: 700;
+}
+
+.tef-turnstile {
+  margin: 1rem 0;
+  min-height: 65px;
+}
+
+.tef-error {
+  color: var(--color-burgundy);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.travel-edit-form__nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-stone);
+}
+
+.tef-back {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-stone);
+}
+
+.tef-back:hover {
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.tef-continue,
+.tef-submit {
+  margin-left: auto;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-burgundy);
+  color: var(--color-white);
+  border-radius: 0.25rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.tef-submit:disabled {
+  opacity: 0.6;
+}
+
+.tef-continue:hover,
+.tef-submit:not(:disabled):hover {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.travel-edit-panel__success {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.travel-edit-panel__success h2 {
+  margin: 0.75rem 0 1rem;
+}
+
+.travel-edit-panel__success-text {
+  color: var(--color-stone);
+  max-width: 28rem;
+  margin: 0 auto 1.5rem;
+  line-height: 1.6;
+}
+
+.travel-edit-panel__done {
+  padding: 0.75rem 1.75rem;
+  background: var(--color-burgundy);
+  color: var(--color-white);
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.travel-edit-panel__done:hover {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .travel-edit-panel__progress-fill {
+    transition: none;
+  }
+}

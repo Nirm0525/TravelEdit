@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Política de Privacidad — The Travel Edit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;1,400&family=Poppins:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    @font-face {
+      font-family: "Ws Paradose";
+      src: url("/fonts/Ws Paradose Italic.ttf") format("truetype");
+      font-style: italic;
+      font-weight: 400;
+      font-display: swap;
+    }
+
+    :root {
+      --color-burgundy: #7a2338;
+      --color-ink: #16110f;
+      --color-cream: #f6efe6;
+      --color-stone: #8a7f76;
+      --font-display: "Ws Paradose", "Cormorant", serif;
+      --font-ui: "Poppins", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--color-cream);
+      color: var(--color-ink);
+      font-family: var(--font-ui);
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .container {
+      max-width: 48rem;
+      margin-inline: auto;
+      padding: clamp(1.5rem, 5vw, 4rem) clamp(1.25rem, 4vw, 2rem);
+    }
+
+    header.site {
+      display: flex;
+      align-items: center;
+      padding: 1.25rem clamp(1.25rem, 4vw, 2rem);
+      border-bottom: 1px solid rgba(22, 17, 15, 0.1);
+    }
+
+    header.site a {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 1.5rem;
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      margin: 0 0 0.5rem;
+    }
+
+    .updated {
+      color: var(--color-stone);
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+
+    .notice {
+      background: #ffffff;
+      border: 1px solid rgba(122, 35, 56, 0.25);
+      border-left: 3px solid var(--color-burgundy);
+      border-radius: 0.25rem;
+      padding: 1rem 1.25rem;
+      font-size: 0.9375rem;
+      color: var(--color-ink);
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 1.25rem;
+      margin: 2.25rem 0 0.75rem;
+    }
+
+    p, li {
+      font-size: 1rem;
+    }
+
+    a { color: var(--color-burgundy); }
+
+    ul { padding-left: 1.25rem; }
+
+    footer.site {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.875rem;
+      color: var(--color-stone);
+    }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <a href="/">the travel edit</a>
+  </header>
+
+  <main class="container">
+    <h1>Política de Privacidad</h1>
+    <p class="updated">Última actualización: agosto de 2026</p>
+
+    <div class="notice">
+      Este documento es un borrador de referencia redactado para orientar el contenido y la estructura de la
+      página. No sustituye asesoría legal — antes de publicarlo, debe ser revisado por un abogado familiarizado
+      con las leyes de protección de datos y protección al consumidor aplicables en Honduras y en los países
+      donde operan los proveedores de viaje.
+    </div>
+
+    <h2>1. Quiénes somos</h2>
+    <p>
+      The Travel Edit es una marca operada por Travel Diunsa, dedicada a diseñar viajes de lujo a medida. Esta
+      política explica qué información recopilamos a través de <strong>thetravel-edit.com</strong>, para qué la
+      usamos y qué derechos tienes sobre ella.
+    </p>
+
+    <h2>2. Qué información recopilamos</h2>
+    <p>Recopilamos la información que nos compartes voluntariamente al completar el formulario "Diseña tu viaje" o al suscribirte a nuestro boletín:</p>
+    <ul>
+      <li>Nombre, correo electrónico y teléfono / WhatsApp.</li>
+      <li>Preferencias de viaje: destinos de interés, fechas, número de viajeros, estilo de viaje, presupuesto orientativo y cualquier otro detalle que decidas compartir en el formulario.</li>
+      <li>Tu dirección IP, de forma anónima (convertida en un valor sin poder identificarte directamente), únicamente para prevenir el uso abusivo del formulario.</li>
+    </ul>
+    <p>No solicitamos números de pasaporte, tarjetas de crédito ni otra información sensible a través de este sitio.</p>
+
+    <h2>3. Cómo usamos tu información</h2>
+    <ul>
+      <li>Para contactarte y diseñar una propuesta de viaje a tu medida.</li>
+      <li>Para darle seguimiento a tu solicitud dentro de nuestro equipo.</li>
+      <li>Para enviarte contenido editorial si te suscribes voluntariamente a nuestro boletín — puedes darte de baja en cualquier momento.</li>
+    </ul>
+    <p>No vendemos ni alquilamos tu información a terceros con fines publicitarios.</p>
+
+    <h2>4. Con quién la compartimos</h2>
+    <p>Tu información se almacena en Supabase (proveedor de infraestructura de base de datos) y puede ser procesada por los siguientes servicios, únicamente para el fin descrito:</p>
+    <ul>
+      <li><strong>Cloudflare Turnstile</strong>, para verificar que el formulario lo completa una persona y no un sistema automatizado.</li>
+      <li><strong>Resend</strong>, para el envío de notificaciones internas por correo cuando recibimos una nueva solicitud.</li>
+    </ul>
+
+    <h2>5. Seguridad</h2>
+    <p>
+      Aplicamos controles de acceso a nivel de base de datos (row level security) para que solo el personal
+      autorizado de The Travel Edit pueda ver las solicitudes recibidas.
+    </p>
+
+    <h2>6. Tus derechos</h2>
+    <p>
+      Puedes solicitarnos en cualquier momento acceder, corregir o eliminar tu información de contacto,
+      escribiendo a <a href="mailto:marcela@travelinternational.org">marcela@travelinternational.org</a>.
+    </p>
+
+    <h2>7. Cambios a esta política</h2>
+    <p>Podemos actualizar esta política ocasionalmente. La fecha de la última actualización se indica al inicio de este documento.</p>
+
+    <h2>8. Contacto</h2>
+    <p>
+      Para cualquier duda sobre esta política, escríbenos a
+      <a href="mailto:marcela@travelinternational.org">marcela@travelinternational.org</a>.
+    </p>
+  </main>
+
+  <footer class="site">
+    © The Travel Edit · <a href="/">Volver al sitio</a>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<div class="rich-text-editor" [class.rich-text-editor--disabled]="disabled()">
+  <div class="rich-text-editor__toolbar" role="toolbar" aria-label="Formato de texto">
+    <button type="button" [class.is-active]="active().bold" (click)="toggleBold()" aria-label="Negrita">
+      <strong>B</strong>
+    </button>
+    <button type="button" [class.is-active]="active().italic" (click)="toggleItalic()" aria-label="Cursiva">
+      <em>I</em>
+    </button>
+    <button type="button" [class.is-active]="active().heading" (click)="toggleHeading()" aria-label="Subtítulo">
+      H2
+    </button>
+    <button type="button" [class.is-active]="active().bulletList" (click)="toggleBulletList()" aria-label="Lista con viñetas">
+      Lista
+    </button>
+    <button type="button" [class.is-active]="active().orderedList" (click)="toggleOrderedList()" aria-label="Lista numerada">
+      1. Lista
+    </button>
+    <button type="button" [class.is-active]="active().blockquote" (click)="toggleBlockquote()" aria-label="Cita">
+      Cita
+    </button>
+  </div>
+  <div class="rich-text-editor__surface" #editorHost></div>
+</div>

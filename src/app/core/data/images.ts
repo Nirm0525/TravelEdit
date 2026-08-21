@@ -17,25 +17,40 @@ export const IMAGES = {
     alt: 'Pueblo de la Costa Amalfitana construido sobre los acantilados frente al mar Mediterráneo',
     credit: 'Letizia Agosta / Unsplash'
   },
-  destinationParis: {
-    url: 'https://images.unsplash.com/photo-1637851059418-25af92e003bf?q=80&w=900&h=1200&fit=crop&auto=format',
-    alt: 'Vista elevada de la Torre Eiffel y los tejados de París al atardecer',
-    credit: 'Bastien Nvs / Unsplash'
-  },
-  destinationSantorini: {
-    url: 'https://images.unsplash.com/photo-1536253253742-6c8195fd0c1e?q=80&w=900&h=1200&fit=crop&auto=format',
-    alt: 'Cúpulas azules tradicionales de Santorini con vista al mar Egeo al atardecer',
-    credit: 'Héctor J. Rivas / Unsplash'
-  },
-  destinationBali: {
-    url: 'https://images.unsplash.com/photo-1557093793-d149a38a1be8?q=80&w=900&h=1200&fit=crop&auto=format',
-    alt: 'Terrazas de arroz de Tegalalang en Bali bañadas por luz dorada',
-    credit: 'Radoslav Bali / Unsplash'
-  },
   destinationMaldives: {
     url: 'https://images.unsplash.com/photo-1470214203634-e436a8848e23?q=80&w=900&h=1200&fit=crop&auto=format',
     alt: 'Vista aérea de villas sobre el agua turquesa en un resort de Maldivas',
     credit: 'Ishan / Unsplash'
+  },
+  destinationKyoto: {
+    url: 'https://images.unsplash.com/photo-1702564492961-3643703480c2?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Sendero entre los altos tallos verdes del bosque de bambú de Arashiyama, en Kyoto',
+    credit: 'Marisca Kadharmestan / Unsplash'
+  },
+  destinationSerengeti: {
+    url: 'https://images.unsplash.com/photo-1689479665299-0b31481ada35?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Jirafa en la sabana del Serengeti, Tanzania',
+    credit: 'Crystal McClernon / Unsplash'
+  },
+  destinationPatagonia: {
+    url: 'https://images.unsplash.com/photo-1681506511777-72980adfb815?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Lago rodeado de montañas en la Patagonia argentina, cerca de El Calafate',
+    credit: 'Maria Samartino / Unsplash'
+  },
+  destinationDolomites: {
+    url: 'https://images.unsplash.com/photo-1694630515448-344264b30507?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Cadena montañosa de los Dolomitas iluminada por la luz del atardecer',
+    credit: 'Marek Piwnicki / Unsplash'
+  },
+  destinationIceland: {
+    url: 'https://images.unsplash.com/photo-1476610182048-b716b8518aae?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Cascada de Seljalandsfoss en un paisaje idílico de Islandia',
+    credit: 'Robert Lukeman / Unsplash'
+  },
+  destinationIstanbul: {
+    url: 'https://images.unsplash.com/photo-1759347171702-e9cae049bc01?q=80&w=900&h=1200&fit=crop&auto=format',
+    alt: 'Mezquita de Ortaköy junto al estrecho del Bósforo, en Istanbul',
+    credit: 'Musa Ortaç / Unsplash'
   },
   experienceRomance: {
     url: 'https://images.pexels.com/photos/28408459/pexels-photo-28408459.jpeg?auto=compress&cs=tinysrgb&w=1400',
@@ -67,10 +82,10 @@ export const IMAGES = {
     alt: 'Paisaje de montañas verdes visto a través de la ventana de un tren en movimiento',
     credit: 'Soham Banerjee / Unsplash'
   },
-  articleParisWeekend: {
-    url: 'https://images.unsplash.com/photo-1632606469465-d148fd8e148d?q=80&w=1200&h=800&fit=crop&auto=format',
-    alt: 'Vista desde un balcón parisino hacia los edificios de estilo Haussmanniano',
-    credit: 'Fiona Murray-deGraaff / Unsplash'
+  articleItaly: {
+    url: 'https://images.unsplash.com/photo-1702742910382-76c82eca9b55?q=80&w=1200&h=800&fit=crop&auto=format',
+    alt: 'Vista aérea de un pueblo en la campiña de la Toscana, Italia',
+    credit: 'Laura Chouette / Unsplash'
   },
   articleBaliHiddenGems: {
     url: 'https://images.unsplash.com/photo-1575573333701-d644e92a5160?q=80&w=1200&h=800&fit=crop&auto=format',
@@ -78,9 +93,8 @@ export const IMAGES = {
     credit: 'Khamkéo / Unsplash'
   },
   about: {
-    url: 'https://images.unsplash.com/photo-1755920214570-df0f27f574fb?q=80&w=1000&h=1250&fit=crop&auto=format',
-    alt: 'Silueta de una persona contemplando el paisaje desde un balcón, en actitud reflexiva de viaje',
-    credit: 'Adrian Kusznirewicz / Unsplash'
+    url: '/images/The%20Travel%20Edit-16.jpg',
+    alt: 'Retrato de la fundadora de The Travel Edit, sonriendo en un ambiente cálido y acogedor'
   },
   finalCta: {
     url: 'https://images.unsplash.com/photo-1601445862636-aa4cae12f5c3?q=80&w=2400&h=1200&fit=crop&auto=format',

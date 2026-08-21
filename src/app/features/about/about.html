@@ -1,6 +1,6 @@
 <section class="about" id="about" aria-labelledby="about-title">
   <div class="about__media">
-    <img [src]="image.url" [alt]="image.alt" [title]="image.alt" loading="lazy" decoding="async" />
+    <img [src]="image.url" [alt]="image.alt" loading="lazy" decoding="async" />
   </div>
 
   <div class="about__content">
@@ -11,10 +11,17 @@
       </h2>
 
       <p class="about__text">
-        The Travel Edit nació para crear viajes que se sientan únicos, personales y cuidadosamente diseñados.
+        The Travel Edit nació de una forma diferente de entender los viajes: creemos que el lujo no está en hacer
+        más, sino en elegir mejor.
       </p>
-      <p class="about__text">No creemos en viajar simplemente para marcar destinos en un mapa.</p>
-      <p class="about__text">Creemos en experiencias que tengan significado.</p>
+      <p class="about__text">
+        En conocer lugares extraordinarios, vivir experiencias auténticas y tener el tiempo para realmente
+        disfrutarlas.
+      </p>
+      <p class="about__text">
+        Por eso, cada viaje comienza contigo. Con lo que te inspira, lo que disfrutas y la forma en que quieres
+        descubrir el mundo.
+      </p>
 
       <ul class="about__words">
         @for (word of words; track word; let i = $index) {

@@ -1,0 +1,99 @@
+.destination-form__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.destination-form__actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.destination-form__actions button {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  font-weight: 600;
+  font-size: var(--size-small);
+}
+
+.destination-form__actions button:hover {
+  cursor: pointer;
+}
+
+.destination-form__actions button.is-primary {
+  background: var(--brand-600);
+  color: var(--brand-600-contrast);
+  border-color: var(--brand-600);
+}
+
+.destination-form__tabs {
+  display: flex;
+  gap: var(--space-lg);
+  border-bottom: 1px solid var(--line-200);
+  margin-bottom: var(--space-lg);
+}
+
+.destination-form__tabs a {
+  padding: var(--space-sm) 0;
+  font-size: var(--size-small);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.destination-form__tabs a:hover {
+  color: var(--ink-900);
+}
+
+.destination-form__tabs a.is-active {
+  color: var(--brand-600);
+  border-bottom-color: var(--brand-600);
+}
+
+.destination-form__danger {
+  margin-top: var(--space-2xl);
+  padding: var(--space-lg);
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+}
+
+.destination-form__danger p {
+  color: var(--text-secondary);
+  margin: var(--space-2xs) 0 var(--space-md);
+}
+
+.destination-form__danger-row {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.destination-form__danger-row input {
+  flex: 1;
+  min-width: 14rem;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.destination-form__danger-row button {
+  padding: var(--space-xs) var(--space-md);
+  background: var(--danger-600);
+  color: var(--brand-600-contrast);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.destination-form__danger-row button:disabled {
+  opacity: 0.4;
+}
+
+.destination-form__danger-row button:not(:disabled):hover {
+  cursor: pointer;
+}

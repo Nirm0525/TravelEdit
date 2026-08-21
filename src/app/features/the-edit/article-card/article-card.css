@@ -14,7 +14,7 @@
 .article-card__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(22, 17, 15, 0.1) 30%, rgba(22, 17, 15, 0.85) 100%);
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0.15) 0%, rgba(22, 17, 15, 0.35) 40%, rgba(22, 17, 15, 0.92) 100%);
   transition: opacity 0.4s var(--ease-editorial);
 }
 
@@ -29,8 +29,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 0.5rem;
-  padding: var(--space-md);
+  gap: 0.625rem;
+  padding: var(--space-lg);
   transition: transform 0.4s var(--ease-editorial);
 }
 
@@ -39,22 +39,24 @@
 }
 
 .article-card__title {
-  font-size: 1.625rem;
+  font-size: clamp(1.625rem, 1.4rem + 1vw, 2.25rem);
   color: var(--color-cream);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
 }
 
 .article-card__excerpt {
   font-family: var(--font-ui);
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 300;
   color: rgba(246, 239, 230, 0.85);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
 }
 
 .article-card__link {
   margin-top: 0.5rem;
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.18em;
-  color: var(--color-burgundy);
+  color: var(--color-warm-beige);
 }

@@ -10,6 +10,8 @@
 
 .destinations__support {
   margin: 0;
+  font-size: 1.375rem;
+  line-height: 1.5;
 }
 
 .destinations__viewport {
@@ -32,34 +34,3 @@
   display: flex;
 }
 
-.destinations__controls {
-  margin-top: var(--space-lg);
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.destinations__arrow {
-  flex-shrink: 0;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  color: var(--color-ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  transition: background 0.3s var(--ease-editorial), color 0.3s var(--ease-editorial), border-color 0.3s var(--ease-editorial);
-}
-
-.destinations__arrow:hover:not(:disabled) {
-  background: var(--color-burgundy);
-  border-color: var(--color-burgundy);
-  color: var(--color-cream);
-}
-
-.destinations__arrow:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}

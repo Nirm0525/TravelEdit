@@ -1,0 +1,102 @@
+<div class="leads-list">
+  <header class="leads-list__header">
+    <h1 class="page-title">Solicitudes</h1>
+    <button type="button" class="leads-list__export" [disabled]="exporting() || total() === 0" (click)="exportCsv()">
+      {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
+    </button>
+  </header>
+
+  <form class="leads-list__filters" (ngSubmit)="applyFilters()">
+    <label class="leads-list__filter">
+      <span>Estado</span>
+      <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" name="status">
+        <option value="">Todos</option>
+        @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="leads-list__filter">
+      <span>Origen</span>
+      <select [ngModel]="originFilter()" (ngModelChange)="originFilter.set($event)" name="origin">
+        <option value="">Todos</option>
+        @for (entry of originLabel | keyvalue; track entry.key) {
+          <option [value]="entry.key">{{ entry.value }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="leads-list__filter">
+      <span>Destino de interés</span>
+      <input
+        type="text"
+        [ngModel]="destinationSearch()"
+        (ngModelChange)="destinationSearch.set($event)"
+        name="destinationSearch"
+        placeholder="Buscar…"
+      />
+    </label>
+
+    <label class="leads-list__filter">
+      <span>Desde</span>
+      <input type="date" [ngModel]="createdFrom()" (ngModelChange)="createdFrom.set($event)" name="createdFrom" />
+    </label>
+
+    <label class="leads-list__filter">
+      <span>Hasta</span>
+      <input type="date" [ngModel]="createdTo()" (ngModelChange)="createdTo.set($event)" name="createdTo" />
+    </label>
+
+    <button type="submit" class="leads-list__apply">Filtrar</button>
+  </form>
+
+  @if (loading()) {
+    <div class="leads-list__skeleton" aria-hidden="true">
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+        <div class="leads-list__skeleton-row"></div>
+      }
+    </div>
+  } @else if (items().length === 0) {
+    <div class="leads-list__empty">
+      <p>No hay solicitudes con estos filtros.</p>
+      <p>En cuanto alguien complete el formulario "Diseña tu viaje" del sitio, va a aparecer aquí.</p>
+    </div>
+  } @else {
+    <table class="leads-list__table">
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Destino de interés</th>
+          <th scope="col">Origen</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Creado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr [class.leads-list__row--stale]="isStale(item)">
+            <td data-label="Nombre">
+              <a [routerLink]="['/solicitudes', item.id]">{{ item.name }}</a>
+              @if (isStale(item)) {
+                <span class="leads-list__stale-badge">&gt;48h sin responder</span>
+              }
+            </td>
+            <td data-label="Destino de interés">{{ item.destinationInterestText || '—' }}</td>
+            <td data-label="Origen">{{ originLabel[item.origin] }}</td>
+            <td data-label="Estado">
+              <span class="leads-list__status" [attr.data-status]="item.status">{{ statusLabel[item.status] }}</span>
+            </td>
+            <td data-label="Creado">{{ item.createdAt | date: 'd MMM y, HH:mm' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div class="leads-list__pagination">
+      <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
+      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} solicitudes</span>
+      <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
+    </div>
+  }
+</div>

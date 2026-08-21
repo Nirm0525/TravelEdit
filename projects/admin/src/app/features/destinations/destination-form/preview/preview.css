@@ -1,0 +1,96 @@
+/* Esta pestaña, a propósito, no usa los tokens del panel: imita la piel
+   editorial del sitio público (crema + borgoña + serif) para que la vista
+   previa se parezca a lo que el visitante vería, no al panel mismo. */
+
+.preview__disclaimer {
+  margin-bottom: var(--space-md);
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.preview {
+  max-width: 40rem;
+  background: #f6efe6;
+  color: #16110f;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line-200);
+}
+
+.preview__cover img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.preview__body {
+  padding: var(--space-xl);
+}
+
+.preview__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7a2338;
+  margin-bottom: var(--space-xs);
+}
+
+.preview__title {
+  font-family: 'Ws Paradose', 'Cormorant', serif;
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: var(--space-sm);
+}
+
+.preview__meta {
+  color: #8a7f76;
+  margin-bottom: var(--space-md);
+}
+
+.preview__short {
+  font-size: 1.1rem;
+  margin-bottom: var(--space-lg);
+}
+
+.preview__long {
+  line-height: 1.7;
+  margin-bottom: var(--space-lg);
+}
+
+.preview__long :first-child {
+  margin-top: 0;
+}
+
+.preview__section-title {
+  font-family: 'Ws Paradose', 'Cormorant', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: var(--space-lg) 0 var(--space-sm);
+}
+
+.preview__days {
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.preview__accommodation {
+  color: #8a7f76;
+  font-size: 0.875rem;
+}
+
+.preview__gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+}
+
+.preview__gallery img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}

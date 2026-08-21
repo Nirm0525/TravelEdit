@@ -1,0 +1,51 @@
+.rich-text-editor {
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+}
+
+.rich-text-editor--disabled {
+  opacity: 0.6;
+}
+
+.rich-text-editor__toolbar {
+  display: flex;
+  gap: var(--space-2xs);
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--line-200);
+  flex-wrap: wrap;
+}
+
+.rich-text-editor__toolbar button {
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.rich-text-editor__toolbar button:hover {
+  background: var(--canvas-100);
+  cursor: pointer;
+}
+
+.rich-text-editor__toolbar button.is-active {
+  background: var(--canvas-100);
+  color: var(--brand-600);
+  font-weight: 600;
+}
+
+.rich-text-editor__surface {
+  padding: var(--space-md);
+  min-height: 12rem;
+}
+
+/* Tiptap monta el DOM de ProseMirror a mano, fuera del template de Angular:
+   sin encapsulación no hay atributo de scope que targetear, por eso ::ng-deep. */
+.rich-text-editor__surface ::ng-deep .ProseMirror {
+  outline: none;
+  line-height: 1.6;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror p {
+  margin: 0 0 var(--space-sm);
+}

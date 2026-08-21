@@ -31,6 +31,8 @@
   --color-cream: #F6EFE6;      /* Fondo principal */
   --color-gold: #C79A5B;       /* Acentos e iconos */
   --color-stone: #8A7F76;      /* Texto secundario */
+  --color-wine: #6D2A34;       /* Wine Red del manual de marca — fondos oscuros/reversados */
+  --color-warm-beige: #CAAE97; /* Warm Beige del manual de marca — acento sobre fondos oscuros */
   --color-white: #FFFFFF;      /* Reversado sobre borgoña/tinta */
 
   /* Espaciado editorial */
@@ -53,6 +55,22 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-burgundy);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 body {

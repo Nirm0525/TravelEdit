@@ -10,23 +10,23 @@ export interface Article {
 
 export const ARTICLES: Article[] = [
   {
-    category: 'GUIDE',
+    category: 'THE EDIT',
     title: 'The Art of Slow Travel',
-    excerpt: 'Why less is the new luxury.',
+    excerpt: 'Why seeing less can mean experiencing more.',
     image: IMAGES.articleSlowTravel.url,
     alt: IMAGES.articleSlowTravel.alt
   },
   {
-    category: 'JOURNAL',
-    title: 'A Weekend in Paris, Perfected',
-    excerpt: "An insider's guide to timeless elegance.",
-    image: IMAGES.articleParisWeekend.url,
-    alt: IMAGES.articleParisWeekend.alt
+    category: 'PLACES',
+    title: 'Italy, Beyond the Obvious',
+    excerpt: "The places we'd return to—and how we'd experience them.",
+    image: IMAGES.articleItaly.url,
+    alt: IMAGES.articleItaly.alt
   },
   {
-    category: 'PLACES',
-    title: 'Hidden Gems in Bali',
-    excerpt: 'Beyond the map, into the magic.',
+    category: 'JOURNAL',
+    title: 'Where to Go Next',
+    excerpt: 'Five destinations worth having on your radar.',
     image: IMAGES.articleBaliHiddenGems.url,
     alt: IMAGES.articleBaliHiddenGems.alt
   }

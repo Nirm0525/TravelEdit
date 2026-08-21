@@ -20,7 +20,7 @@
     </nav>
 
     <div class="site-header__cta">
-      <app-animated-button href="#final-cta">DISEÑA TU VIAJE</app-animated-button>
+      <app-animated-button (buttonClick)="openTravelEditForm()">DISEÑA TU VIAJE</app-animated-button>
     </div>
 
     <button type="button" class="site-header__menu-toggle" (click)="toggleMenu()" aria-haspopup="true" [attr.aria-expanded]="menuOpen()">
@@ -43,7 +43,7 @@
       <li><a href="#experiencias" (click)="closeMenu()"><span>02</span> Experiencias</a></li>
       <li><a href="#the-edit" (click)="closeMenu()"><span>03</span> The Edit</a></li>
       <li><a href="#about" (click)="closeMenu()"><span>04</span> About Us</a></li>
-      <li><a href="#final-cta" (click)="closeMenu()"><span>05</span> Diseña tu viaje</a></li>
+      <li><button type="button" (click)="openTravelEditForm()"><span>05</span> Diseña tu viaje</button></li>
     </ol>
   </div>
 }

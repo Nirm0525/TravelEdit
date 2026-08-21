@@ -1,19 +1,66 @@
 .the-edit {
-  background: var(--color-ink);
-  padding-block: var(--space-2xl);
+  position: relative;
+  padding-block: clamp(7rem, 10vw, 13rem);
+  overflow: hidden;
+}
+
+.the-edit__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.the-edit__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.the-edit__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, rgba(109, 42, 52, 0.85), rgba(22, 17, 15, 0.92));
+}
+
+.the-edit__glow {
+  position: absolute;
+  pointer-events: none;
+}
+
+.the-edit__glow--beige {
+  width: 36rem;
+  height: 36rem;
+  top: -10rem;
+  right: -8rem;
+  background: radial-gradient(circle, rgba(202, 174, 151, 0.35), transparent 65%);
+}
+
+.the-edit__glow--wine {
+  width: 42rem;
+  height: 42rem;
+  bottom: -14rem;
+  left: -10rem;
+  background: radial-gradient(circle, rgba(122, 35, 56, 0.5), transparent 65%);
+}
+
+.the-edit > .container {
+  position: relative;
+  z-index: 1;
 }
 
 .the-edit ::ng-deep .eyebrow--on-dark {
-  color: var(--color-burgundy);
+  color: var(--color-warm-beige);
 }
 
 .the-edit ::ng-deep .animated-button--outline.animated-button--dark {
-  border-color: var(--color-burgundy);
+  border-color: var(--color-warm-beige);
 }
 
 .the-edit ::ng-deep .animated-button--outline.animated-button--dark:hover {
-  background: var(--color-burgundy);
-  border-color: var(--color-burgundy);
+  background: var(--color-warm-beige);
+  border-color: var(--color-warm-beige);
+  color: var(--color-ink);
 }
 
 .the-edit__layout {
@@ -48,12 +95,19 @@
   }
 
   .the-edit__intro {
-    flex: 0 0 20rem;
+    flex: 0 0 16rem;
     position: sticky;
     top: 8rem;
   }
 
   .the-edit__articles {
     flex: 1;
+    gap: var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .the-edit__glow {
+    display: none;
   }
 }

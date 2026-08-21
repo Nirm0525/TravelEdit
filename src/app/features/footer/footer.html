@@ -1,15 +1,17 @@
 <footer class="site-footer">
   <div class="container site-footer__top">
     <div class="site-footer__brand">
-      <img
-        src="images/logos/thetraveledit2.png"
-        alt="The Travel Edit"
-        class="site-footer__logo"
-        width="160"
-        height="60"
-        loading="lazy"
-        decoding="async"
-      />
+      <a href="/admin" target="_blank" rel="noopener" aria-label="Panel administrativo">
+        <img
+          src="images/logos/thetraveledit2.png"
+          alt="The Travel Edit"
+          class="site-footer__logo"
+          width="160"
+          height="60"
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
     </div>
 
     <nav class="site-footer__column" aria-label="Explore">
@@ -27,9 +29,7 @@
 
     <nav class="site-footer__column" aria-label="Follow">
       <h3 class="site-footer__heading">Follow</h3>
-      <a href="#">Instagram</a>
-      <a href="#">Pinterest</a>
-      <a href="#">TikTok</a>
+      <a href="https://www.instagram.com/thetraveledithn/" target="_blank" rel="noopener">Instagram</a>
     </nav>
 
     <form class="site-footer__newsletter" (submit)="onSubmit($event)">
@@ -57,8 +57,8 @@
   <div class="container site-footer__bottom">
     <p>© The Travel Edit {{ year }}</p>
     <div class="site-footer__legal">
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
     </div>
   </div>
 </footer>

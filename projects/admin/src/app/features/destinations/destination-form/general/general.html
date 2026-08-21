@@ -1,0 +1,79 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else {
+  <form class="destination-general" [formGroup]="form" (ngSubmit)="save()">
+    <div class="destination-general__grid">
+      <label class="field">
+        <span>Título</span>
+        <input type="text" formControlName="title" (input)="onTitleInput()" />
+      </label>
+
+      <label class="field">
+        <span>Slug</span>
+        <input type="text" formControlName="slug" />
+        @if (form.controls.slug.touched && form.controls.slug.invalid) {
+          <span class="field__hint">Solo minúsculas, números y guiones (ej: costa-amalfitana).</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>País / región</span>
+        <input type="text" formControlName="countryRegion" />
+      </label>
+
+      <label class="field">
+        <span>Tipo de viaje</span>
+        <select formControlName="tripType">
+          @for (option of tripTypeOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Duración (días)</span>
+        <input type="number" formControlName="durationDays" min="1" />
+      </label>
+
+      <label class="field">
+        <span>Temporada recomendada</span>
+        <select formControlName="season">
+          <option [ngValue]="null">— Sin especificar —</option>
+          @for (option of seasonOptions; track option.value) {
+            <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Precio desde (USD)</span>
+        <input type="number" formControlName="priceRangeMin" min="0" />
+      </label>
+
+      <label class="field">
+        <span>Precio hasta (USD)</span>
+        <input type="number" formControlName="priceRangeMax" min="0" />
+      </label>
+    </div>
+
+    <label class="field">
+      <span>Descripción corta (para tarjetas)</span>
+      <textarea formControlName="shortDescription" rows="2" maxlength="200"></textarea>
+      <span class="field__hint">{{ form.controls.shortDescription.value.length }}/200</span>
+    </label>
+
+    <label class="field">
+      <span>Descripción larga</span>
+      <app-rich-text-editor formControlName="longDescription" />
+    </label>
+
+    <div class="destination-general__footer">
+      <button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+      @if (savedAt()) {
+        <span class="destination-general__saved">Guardado.</span>
+      }
+    </div>
+  </form>
+}

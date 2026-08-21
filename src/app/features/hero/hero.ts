@@ -3,6 +3,7 @@ import { IMAGES } from '../../core/data/images';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
 import { gsap, ScrollTrigger, registerGsap } from '../../core/gsap/gsap-setup';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
+import { TravelEditFormService } from '../../core/services/travel-edit-form';
 
 @Component({
   selector: 'app-hero',
@@ -14,6 +15,7 @@ import { ReducedMotionService } from '../../core/services/reduced-motion';
 export class Hero implements AfterViewInit {
   readonly image = IMAGES.hero;
 
+  private readonly travelEditForm = inject(TravelEditFormService);
   private readonly reducedMotion = inject(ReducedMotionService);
   private readonly titleWords = viewChildren<ElementRef<HTMLElement>>('word');
   private readonly subtitle = viewChild<ElementRef<HTMLElement>>('subtitle');
@@ -57,5 +59,9 @@ export class Hero implements AfterViewInit {
         }
       });
     }
+  }
+
+  openTravelEditForm(): void {
+    this.travelEditForm.open();
   }
 }

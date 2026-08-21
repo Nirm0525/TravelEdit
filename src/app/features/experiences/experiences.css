@@ -28,8 +28,14 @@
     display: flex;
     justify-content: center;
     gap: clamp(1.5rem, 4vw, 3.5rem);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+    border-bottom: 1px solid rgba(32, 24, 20, 0.12);
     padding-bottom: var(--space-md);
+  }
+
+  @supports (color: color-mix(in srgb, var(--color-ink) 12%, transparent)) {
+    .experiences__tabs {
+      border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+    }
   }
 
   .experiences__tab {
@@ -60,7 +66,7 @@
     position: relative;
     margin-top: var(--space-lg);
     margin-inline: auto;
-    width: min(100%, 46rem);
+    width: min(100%, 64rem);
     aspect-ratio: 16 / 9;
     overflow: hidden;
   }

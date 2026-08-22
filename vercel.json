@@ -1,4 +1,7 @@
 {
+  "framework": "angular",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/TravelEdit/browser",
   "rewrites": [
     { "source": "/admin", "destination": "/admin/index.html" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" }

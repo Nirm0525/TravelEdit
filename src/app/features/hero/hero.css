@@ -45,6 +45,7 @@
 
 .hero__eyebrow {
   margin-bottom: var(--space-sm);
+  color: var(--color-gold);
 }
 
 .hero__title {

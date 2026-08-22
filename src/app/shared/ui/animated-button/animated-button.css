@@ -63,13 +63,13 @@
 }
 
 .animated-button--dark:not(.animated-button--outline) {
-  background: var(--color-cream);
+  background: var(--color-gold);
   color: var(--color-ink);
-  border-color: var(--color-cream);
+  border-color: var(--color-gold);
 }
 
 .animated-button--dark:not(.animated-button--outline):hover {
-  background: var(--color-gold);
-  border-color: var(--color-gold);
+  background: var(--color-cream);
+  border-color: var(--color-cream);
   color: var(--color-ink);
 }

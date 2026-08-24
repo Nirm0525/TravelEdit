@@ -1,0 +1,74 @@
+<header class="hero-editor__header">
+  <p class="eyebrow">Contenido del sitio</p>
+  <h1 class="page-title">Hero</h1>
+</header>
+
+@if (loading()) {
+  <p>Cargando…</p>
+} @else {
+  <form class="hero-editor" [formGroup]="form" (ngSubmit)="save()">
+    <div class="hero-editor__image">
+      <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
+
+      <label class="hero-editor__upload">
+        <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+        <input type="file" accept="image/*" [disabled]="uploading()" (change)="onFileSelected($event)" />
+      </label>
+
+      @if (uploadError()) {
+        <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+      }
+
+      <label class="field">
+        <span>Texto alternativo de la imagen</span>
+        <input type="text" formControlName="imageAlt" />
+      </label>
+    </div>
+
+    <label class="field">
+      <span>Eyebrow (línea pequeña sobre el título)</span>
+      <input type="text" formControlName="eyebrow" />
+    </label>
+
+    <div class="hero-editor__grid">
+      <label class="field">
+        <span>Título — línea 1</span>
+        <input type="text" formControlName="titleLine1" />
+      </label>
+      <label class="field">
+        <span>Título — línea 2</span>
+        <input type="text" formControlName="titleLine2" />
+      </label>
+      <label class="field">
+        <span>Título — línea 3</span>
+        <input type="text" formControlName="titleLine3" />
+      </label>
+    </div>
+    <p class="field__hint">El título se anima palabra por palabra en estas tres líneas — mantén cada una corta.</p>
+
+    <label class="field">
+      <span>Texto debajo del título</span>
+      <textarea formControlName="lead" rows="3"></textarea>
+    </label>
+
+    <div class="hero-editor__grid">
+      <label class="field">
+        <span>Texto del botón principal</span>
+        <input type="text" formControlName="ctaLabel" />
+      </label>
+      <label class="field">
+        <span>Texto del enlace "explorar"</span>
+        <input type="text" formControlName="exploreLabel" />
+      </label>
+    </div>
+
+    <div class="hero-editor__footer">
+      <button type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+      @if (savedAt()) {
+        <span class="hero-editor__saved">Guardado — ya está en el sitio público.</span>
+      }
+    </div>
+  </form>
+}

@@ -1,9 +1,22 @@
-import { AfterViewInit, Component, ElementRef, inject, viewChild, viewChildren } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, signal, viewChild, viewChildren } from '@angular/core';
 import { IMAGES } from '../../core/data/images';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
 import { gsap, ScrollTrigger, registerGsap } from '../../core/gsap/gsap-setup';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { TravelEditFormService } from '../../core/services/travel-edit-form';
+import { HeroContent, SiteContentService } from '../../core/services/site-content';
+
+const HERO_DEFAULT: HeroContent = {
+  eyebrow: 'Bespoke Travel Experiences',
+  titleLine1: 'Because',
+  titleLine2: 'luxury',
+  titleLine3: 'is personal.',
+  lead: 'Viajes diseñados a tu manera.\nCuidando cada detalle para que cada experiencia. Se sienta realmente tuya.',
+  ctaLabel: 'DISEÑA TU VIAJE',
+  exploreLabel: 'EXPLORE',
+  imageUrl: IMAGES.hero.url,
+  imageAlt: IMAGES.hero.alt
+};
 
 @Component({
   selector: 'app-hero',
@@ -13,7 +26,8 @@ import { TravelEditFormService } from '../../core/services/travel-edit-form';
   styleUrl: './hero.css'
 })
 export class Hero implements AfterViewInit {
-  readonly image = IMAGES.hero;
+  private readonly siteContent = inject(SiteContentService);
+  readonly content = signal<HeroContent>(HERO_DEFAULT);
 
   private readonly travelEditForm = inject(TravelEditFormService);
   private readonly reducedMotion = inject(ReducedMotionService);
@@ -23,6 +37,14 @@ export class Hero implements AfterViewInit {
   private readonly actions = viewChild<ElementRef<HTMLElement>>('actions');
   private readonly bg = viewChild<ElementRef<HTMLElement>>('bg');
   private readonly section = viewChild<ElementRef<HTMLElement>>('section');
+
+  constructor() {
+    void this.siteContent.getHero().then((data) => {
+      if (data) {
+        this.content.update((current) => ({ ...current, ...data }));
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     if (this.reducedMotion.reduced()) {

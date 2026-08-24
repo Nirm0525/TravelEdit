@@ -167,6 +167,35 @@ export interface Database {
         };
         Relationships: [];
       };
+      site_content: {
+        Row: {
+          section: string;
+          data: Record<string, unknown>;
+          updated_at: string;
+        };
+        Insert: {
+          section: string;
+          data?: Record<string, unknown>;
+        };
+        Update: {
+          data?: Record<string, unknown>;
+        };
+        Relationships: [];
+      };
+      audit_log: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          summary: string;
+          created_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

@@ -1,0 +1,56 @@
+.admin-table {
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.admin-table__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+.admin-table__scroll {
+  overflow-x: auto;
+}
+
+/* El <table> real vive en el componente que proyecta el contenido (destinos,
+   solicitudes, etc.) — ::ng-deep es la forma soportada de darle una única
+   apariencia visual sin que cada página repita sus propias reglas de tabla.
+   Mismo patrón ya usado en the-edit.css de esta app. */
+.admin-table__scroll ::ng-deep table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--size-small);
+}
+
+.admin-table__scroll ::ng-deep thead {
+  background: var(--canvas-100);
+}
+
+.admin-table__scroll ::ng-deep th {
+  text-align: left;
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: var(--space-sm) var(--space-md);
+  white-space: nowrap;
+}
+
+.admin-table__scroll ::ng-deep td {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--line-200);
+  vertical-align: middle;
+}
+
+.admin-table__scroll ::ng-deep tbody tr {
+  transition: background 0.1s var(--ease-standard);
+}
+
+.admin-table__scroll ::ng-deep tbody tr:hover {
+  background: var(--canvas-100);
+}

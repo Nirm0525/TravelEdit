@@ -55,6 +55,7 @@
 
 html {
   scroll-behavior: smooth;
+  overscroll-behavior-y: none;
 }
 
 ::-webkit-scrollbar {

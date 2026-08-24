@@ -1,23 +1,32 @@
 <div class="shell">
-  <header class="shell__header">
-    <p class="eyebrow">The Travel Edit — Panel</p>
+  <app-admin-sidebar [(mobileOpen)]="mobileSidebarOpen" />
 
-    <nav class="shell__nav" aria-label="Secciones del panel">
-      <a routerLink="/dashboard" routerLinkActive="is-active">Dashboard</a>
-      <a routerLink="/destinos" routerLinkActive="is-active">Destinos</a>
-      <a routerLink="/solicitudes" routerLinkActive="is-active">Solicitudes</a>
-    </nav>
+  <div class="shell__main">
+    <header class="shell__topbar">
+      <button
+        type="button"
+        class="shell__hamburger"
+        aria-label="Abrir menú"
+        (click)="mobileSidebarOpen.set(true)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" />
+        </svg>
+      </button>
 
-    @if (profile(); as staff) {
-      <div class="shell__user">
-        <span class="shell__user-name">{{ staff.fullName }}</span>
-        <span class="shell__user-role">{{ staff.role === 'admin' ? 'Admin' : 'Editor' }}</span>
-        <button type="button" class="shell__signout" (click)="signOut()">Cerrar sesión</button>
-      </div>
-    }
-  </header>
+      <p class="shell__breadcrumb">Panel {{ pageTitle() ? '/ ' + pageTitle() : '' }}</p>
 
-  <main class="shell__content">
-    <router-outlet />
-  </main>
+      @if (profile(); as staff) {
+        <div class="shell__user">
+          <span class="shell__user-name">{{ staff.fullName }}</span>
+          <span class="badge badge--neutral">{{ staff.role === 'admin' ? 'Admin' : 'Editor' }}</span>
+          <button type="button" class="btn btn--secondary" (click)="signOut()">Cerrar sesión</button>
+        </div>
+      }
+    </header>
+
+    <main class="shell__content">
+      <router-outlet />
+    </main>
+  </div>
 </div>

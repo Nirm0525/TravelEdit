@@ -1,0 +1,28 @@
+.admin-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2xs);
+  padding: var(--space-xl) var(--space-md);
+  color: var(--text-secondary);
+}
+
+.admin-empty-state__title {
+  font-family: var(--font-display);
+  font-size: var(--size-section-title);
+  color: var(--ink-900);
+}
+
+.admin-empty-state__message {
+  font-size: var(--size-small);
+  max-width: 26rem;
+}
+
+.admin-empty-state__action:empty {
+  display: none;
+}
+
+.admin-empty-state__action {
+  margin-top: var(--space-xs);
+}

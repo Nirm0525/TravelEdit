@@ -1,5 +1,35 @@
-.dashboard__header {
-  margin-bottom: var(--space-xl);
+.dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.dashboard__stat {
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.dashboard__stat-label {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--track-eyebrow);
+  margin: 0 0 var(--space-xs);
+}
+
+.dashboard__stat-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+}
+
+.dashboard__stat-hint {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--size-small);
+  color: var(--text-secondary);
 }
 
 .dashboard__skeleton {
@@ -8,23 +38,11 @@
   gap: var(--space-lg);
 }
 
-.dashboard__skeleton-card {
-  height: 14rem;
-  border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--surface-000) 25%, var(--canvas-100) 37%, var(--surface-000) 63%);
-  background-size: 400% 100%;
-  animation: dashboard-skeleton-shimmer 1.4s ease infinite;
-}
-
-@keyframes dashboard-skeleton-shimmer {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0 50%; }
-}
-
 .dashboard__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
 }
 
 .dashboard__card {
@@ -94,26 +112,6 @@
   text-decoration: underline;
 }
 
-.dashboard__stats {
-  display: flex;
-  gap: var(--space-xl);
-  margin: 0 0 var(--space-md);
-}
-
-.dashboard__stats dt {
-  font-size: var(--size-eyebrow);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: var(--track-eyebrow);
-  margin-bottom: var(--space-2xs);
-}
-
-.dashboard__stats dd {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-}
-
 .dashboard__stats-label {
   font-size: var(--size-eyebrow);
   color: var(--text-secondary);
@@ -133,4 +131,8 @@
 
 .dashboard__top-destinations span {
   color: var(--text-secondary);
+}
+
+.dashboard__activity .section-title {
+  margin-bottom: var(--space-md);
 }

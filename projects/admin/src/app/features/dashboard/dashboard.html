@@ -1,19 +1,37 @@
-<header class="dashboard__header">
-  <p class="eyebrow">The Travel Edit — Panel</p>
-  <h1 class="page-title">
-    @if (profile(); as staff) {
-      Hola, {{ staff.fullName }}.
-    }
-  </h1>
-</header>
+<app-admin-page-header breadcrumb="Panel / Dashboard" [title]="profile() ? 'Hola, ' + profile()!.fullName + '.' : 'Dashboard'" />
 
 @if (loading()) {
+  <div class="dashboard__stats">
+    @for (row of [1, 2, 3, 4]; track row) {
+      <app-admin-skeleton height="6rem" />
+    }
+  </div>
   <div class="dashboard__skeleton" aria-hidden="true">
     @for (row of [1, 2, 3]; track row) {
-      <div class="dashboard__skeleton-card"></div>
+      <app-admin-skeleton height="14rem" />
     }
   </div>
 } @else if (data(); as d) {
+  <div class="dashboard__stats">
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Solicitudes nuevas</p>
+      <p class="dashboard__stat-value">{{ d.counts.newLeads }}</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Solicitudes este mes</p>
+      <p class="dashboard__stat-value">{{ d.monthly.totalLeads }}</p>
+      <p class="dashboard__stat-hint">{{ d.monthly.responseRate }}% de tasa de respuesta</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Destinos publicados</p>
+      <p class="dashboard__stat-value">{{ d.counts.publishedDestinations }}</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Destinos en borrador</p>
+      <p class="dashboard__stat-value">{{ d.counts.draftDestinations }}</p>
+    </div>
+  </div>
+
   <div class="dashboard__grid">
     <section class="dashboard__card">
       <h2 class="section-title">Solicitudes sin responder</h2>
@@ -61,17 +79,6 @@
     <section class="dashboard__card">
       <h2 class="section-title">Este mes</h2>
 
-      <dl class="dashboard__stats">
-        <div>
-          <dt>Solicitudes recibidas</dt>
-          <dd>{{ d.monthly.totalLeads }}</dd>
-        </div>
-        <div>
-          <dt>Tasa de respuesta</dt>
-          <dd>{{ d.monthly.responseRate }}%</dd>
-        </div>
-      </dl>
-
       @if (d.monthly.topDestinations.length > 0) {
         <p class="dashboard__stats-label">Destinos más pedidos</p>
         <ol class="dashboard__top-destinations">
@@ -84,4 +91,29 @@
       }
     </section>
   </div>
+
+  <section class="dashboard__activity">
+    <h2 class="section-title">Actividad reciente</h2>
+
+    <app-admin-table [empty]="d.recentActivity.length === 0" emptyMessage="Sin actividad reciente. Las acciones administrativas aparecerán aquí.">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Actividad</th>
+            <th>Cuándo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of d.recentActivity; track entry.id) {
+            <tr>
+              <td>{{ entry.actorName }}</td>
+              <td>{{ entry.summary }}</td>
+              <td>{{ relativeTime(entry.createdAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </app-admin-table>
+  </section>
 }

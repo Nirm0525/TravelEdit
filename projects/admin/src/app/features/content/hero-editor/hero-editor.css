@@ -1,0 +1,124 @@
+.hero-editor__header {
+  margin-bottom: var(--space-xl);
+}
+
+.hero-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 40rem;
+}
+
+.hero-editor__image {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+}
+
+.hero-editor__image img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--canvas-100);
+}
+
+.hero-editor__upload {
+  align-self: flex-start;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hero-editor__upload:hover {
+  background: var(--canvas-100);
+}
+
+.hero-editor__upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.hero-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  font-size: var(--size-small);
+  font-weight: 500;
+}
+
+.field input,
+.field textarea {
+  font: inherit;
+  font-size: var(--size-body);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  color: var(--ink-900);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+
+.field__hint {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.field__hint--error {
+  color: var(--danger-600);
+}
+
+.hero-editor__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.hero-editor__footer button {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--brand-600);
+  color: var(--brand-600-contrast);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.hero-editor__footer button:disabled {
+  opacity: 0.6;
+}
+
+.hero-editor__footer button:not(:disabled):hover {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.hero-editor__saved {
+  color: var(--success-600);
+  font-size: var(--size-small);
+  font-weight: 600;
+}

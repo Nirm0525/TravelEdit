@@ -2,10 +2,14 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth';
 import { DashboardData, DashboardService } from '../../core/services/dashboard';
+import { relativeTime } from '../../core/utils/relative-time';
+import { AdminPageHeader } from '../../shared/ui/admin-page-header/admin-page-header';
+import { AdminTable } from '../../shared/ui/admin-table/admin-table';
+import { AdminSkeleton } from '../../shared/ui/admin-skeleton/admin-skeleton';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, AdminPageHeader, AdminTable, AdminSkeleton],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'
 })
@@ -35,5 +39,9 @@ export class Dashboard {
   isStale(isoDate: string): boolean {
     const ms = Date.now() - new Date(isoDate).getTime();
     return ms > 48 * 60 * 60 * 1000;
+  }
+
+  relativeTime(isoDate: string): string {
+    return relativeTime(isoDate);
   }
 }

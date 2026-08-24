@@ -1,27 +1,23 @@
 <section class="hero" id="top" #section>
   <div class="hero__bg" #bg>
-    <img [src]="image.url" alt="{{ image.alt }}" title="{{ image.alt }}" loading="lazy" />
+    <img [src]="content().imageUrl" alt="{{ content().imageAlt }}" title="{{ content().imageAlt }}" loading="lazy" />
     <div class="hero__overlay" aria-hidden="true"></div>
   </div>
 
   <div class="container hero__content">
-    <p class="eyebrow eyebrow--on-dark hero__eyebrow">Bespoke Travel Experiences</p>
+    <p class="eyebrow eyebrow--on-dark hero__eyebrow">{{ content().eyebrow }}</p>
 
     <h1 class="hero__title font-display">
-      <span class="hero__word-mask"><span class="hero__word" #word>Because</span></span>
-      <span class="hero__word-mask"><span class="hero__word" #word>luxury</span></span>
-      <span class="hero__word-mask"><span class="hero__word" #word>is personal.</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>{{ content().titleLine1 }}</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>{{ content().titleLine2 }}</span></span>
+      <span class="hero__word-mask"><span class="hero__word" #word>{{ content().titleLine3 }}</span></span>
     </h1>
 
-    <p class="hero__lead" #lead>
-      Viajes diseñados a tu manera.<br />
-      Cuidando cada detalle para que cada experiencia.
-      Se sienta realmente tuya.
-    </p>
+    <p class="hero__lead" #lead>{{ content().lead }}</p>
 
     <div class="hero__actions" #actions>
-      <app-animated-button (buttonClick)="openTravelEditForm()">DISEÑA TU VIAJE</app-animated-button>
-      <a class="hero__explore" href="#destinos" data-cursor="explore">EXPLORE <span aria-hidden="true">↓</span></a>
+      <app-animated-button (buttonClick)="openTravelEditForm()">{{ content().ctaLabel }}</app-animated-button>
+      <a class="hero__explore" href="#destinos" data-cursor="explore">{{ content().exploreLabel }} <span aria-hidden="true">↓</span></a>
     </div>
   </div>
 

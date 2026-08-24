@@ -14,15 +14,18 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
+        data: { title: 'Dashboard' },
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard)
       },
       {
         path: 'destinos',
+        data: { title: 'Destinos' },
         loadComponent: () =>
           import('./features/destinations/destinations-list/destinations-list').then((m) => m.DestinationsList)
       },
       {
         path: 'destinos/:id',
+        data: { title: 'Editar destino' },
         loadComponent: () =>
           import('./features/destinations/destination-form/destination-form').then((m) => m.DestinationForm),
         children: [
@@ -51,11 +54,18 @@ export const routes: Routes = [
       },
       {
         path: 'solicitudes',
+        data: { title: 'Solicitudes' },
         loadComponent: () => import('./features/leads/leads-list/leads-list').then((m) => m.LeadsList)
       },
       {
         path: 'solicitudes/:id',
+        data: { title: 'Detalle de solicitud' },
         loadComponent: () => import('./features/leads/lead-detail/lead-detail').then((m) => m.LeadDetail)
+      },
+      {
+        path: 'contenido/hero',
+        data: { title: 'Página principal' },
+        loadComponent: () => import('./features/content/hero-editor/hero-editor').then((m) => m.HeroEditor)
       }
     ]
   },

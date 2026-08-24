@@ -1,0 +1,175 @@
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 15rem;
+  flex-shrink: 0;
+  background: var(--surface-000);
+  border-right: 1px solid var(--line-200);
+  padding: var(--space-md) var(--space-sm);
+  transition: width 0.2s var(--ease-standard);
+}
+
+.admin-sidebar.is-collapsed {
+  width: 4.5rem;
+}
+
+.admin-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-xs) var(--space-md);
+}
+
+.admin-sidebar__logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__brand-label {
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.admin-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  flex: 1;
+}
+
+.admin-sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xs);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-sidebar__link:hover {
+  background: var(--canvas-100);
+  color: var(--ink-900);
+}
+
+.admin-sidebar__link.is-active {
+  background: color-mix(in srgb, var(--brand-600) 8%, transparent);
+  color: var(--brand-600);
+}
+
+.admin-sidebar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__link {
+  justify-content: center;
+}
+
+/* Tooltip solo cuando el sidebar está colapsado (data-tooltip se limpia en el template al expandir). */
+.admin-sidebar__link[data-tooltip]:hover::after,
+.admin-sidebar__link[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + var(--space-sm));
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ink-900);
+  color: var(--surface-000);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-eyebrow);
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.admin-sidebar__collapse-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-xs);
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--line-200);
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__collapse-toggle {
+  justify-content: center;
+}
+
+.admin-sidebar__collapse-toggle:hover {
+  color: var(--ink-900);
+  cursor: pointer;
+}
+
+.admin-sidebar__collapse-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  transition: transform 0.2s var(--ease-standard);
+}
+
+.admin-sidebar__collapse-icon--flipped {
+  transform: rotate(180deg);
+}
+
+.admin-sidebar__overlay {
+  display: none;
+}
+
+@media (max-width: 60rem) {
+  .admin-sidebar {
+    position: fixed;
+    inset-block: 0;
+    left: 0;
+    z-index: 1001;
+    width: 16rem;
+    transform: translateX(-100%);
+    transition: transform 0.2s var(--ease-standard);
+    box-shadow: 0 0 32px rgba(27, 24, 21, 0.2);
+  }
+
+  .admin-sidebar.is-collapsed {
+    width: 16rem;
+  }
+
+  .admin-sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  .admin-sidebar__overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgb(27 24 21 / 45%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .admin-sidebar__collapse-icon {
+    transition: none;
+  }
+}

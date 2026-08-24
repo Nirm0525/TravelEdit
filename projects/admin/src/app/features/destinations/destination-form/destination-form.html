@@ -36,7 +36,9 @@
       <h2 class="section-title">Eliminar destino</h2>
       <p>Escribe <strong>{{ d.title }}</strong> para confirmar. Esta acción no se puede deshacer.</p>
       <div class="destination-form__danger-row">
+        <label for="delete-confirm">Confirmación</label>
         <input
+          id="delete-confirm"
           type="text"
           [value]="deleteConfirmText()"
           (input)="onDeleteConfirmInput($event)"

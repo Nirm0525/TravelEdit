@@ -1,0 +1,9 @@
+<div class="admin-empty-state">
+  @if (title()) {
+    <p class="admin-empty-state__title">{{ title() }}</p>
+  }
+  <p class="admin-empty-state__message">{{ message() }}</p>
+  <div class="admin-empty-state__action">
+    <ng-content />
+  </div>
+</div>

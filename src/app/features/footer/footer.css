@@ -1,6 +1,6 @@
 .site-footer {
   background: var(--color-ink);
-  color: color-mix(in srgb, var(--color-cream) 75%, transparent);
+  color: rgba(255, 253, 248, 0.75);
   padding-top: var(--space-xl);
 }
 
@@ -9,7 +9,7 @@
   grid-template-columns: 1fr;
   gap: var(--space-lg);
   padding-bottom: var(--space-xl);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-cream) 15%, transparent);
+  border-bottom: 1px solid rgba(255, 253, 248, 0.15);
 }
 
 @media (min-width: 64rem) {
@@ -32,7 +32,7 @@
 .site-footer__column a {
   text-decoration: none;
   font-size: 0.9375rem;
-  color: color-mix(in srgb, var(--color-cream) 75%, transparent);
+  color: rgba(255, 253, 248, 0.75);
   transition: color 0.25s var(--ease-editorial);
 }
 
@@ -70,7 +70,7 @@
   min-width: 0;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-cream) 35%, transparent);
+  border-bottom: 1px solid rgba(255, 253, 248, 0.35);
   color: var(--color-cream);
   font-family: var(--font-ui);
   font-size: 0.9375rem;
@@ -78,7 +78,7 @@
 }
 
 .site-footer__newsletter-row input::placeholder {
-  color: color-mix(in srgb, var(--color-cream) 45%, transparent);
+  color: rgba(255, 253, 248, 0.45);
 }
 
 .site-footer__newsletter-message {
@@ -103,7 +103,7 @@
 
 .site-footer__legal a {
   text-decoration: none;
-  color: color-mix(in srgb, var(--color-cream) 60%, transparent);
+  color: rgba(255, 253, 248, 0.6);
 }
 
 .site-footer__legal a:hover {

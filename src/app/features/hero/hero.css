@@ -80,6 +80,7 @@
   color: rgba(246, 239, 230, 0.88);
   max-width: 32rem;
   margin-bottom: var(--space-md);
+  white-space: pre-line;
 }
 
 .hero__actions {

@@ -1,0 +1,17 @@
+<div class="admin-table">
+  @if (loading()) {
+    <div class="admin-table__skeleton">
+      @for (row of skeletonRows; track row) {
+        <app-admin-skeleton height="2.75rem" />
+      }
+    </div>
+  } @else if (empty()) {
+    <app-admin-empty-state [message]="emptyMessage()">
+      <ng-content select="[adminTableEmptyAction]" />
+    </app-admin-empty-state>
+  } @else {
+    <div class="admin-table__scroll">
+      <ng-content />
+    </div>
+  }
+</div>

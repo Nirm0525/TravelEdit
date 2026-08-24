@@ -135,6 +135,124 @@ table {
   outline-offset: 2px;
 }
 
+/* Sistema de botones — clases, no componente: se aplican directo sobre
+   <button>/<a> reales, sin envolver los formularios reactivos existentes. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: opacity 0.15s var(--ease-standard), background 0.15s var(--ease-standard);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn:not(:disabled):hover {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.btn--primary {
+  background: var(--brand-600);
+  color: var(--brand-600-contrast);
+}
+
+.btn--secondary {
+  background: var(--surface-000);
+  color: var(--ink-900);
+  border-color: var(--line-200);
+}
+
+.btn--danger {
+  background: var(--danger-600);
+  color: var(--brand-600-contrast);
+}
+
+.btn.is-loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+.btn.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  color: inherit;
+  animation: btn-spin 0.6s linear infinite;
+}
+
+.btn--primary.is-loading::after,
+.btn--danger.is-loading::after {
+  color: var(--brand-600-contrast);
+}
+
+.btn--secondary.is-loading::after {
+  color: var(--ink-900);
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Badges de estado, reutilizables en tablas y tarjetas. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge--neutral {
+  background: var(--canvas-100);
+  color: var(--text-secondary);
+}
+
+.badge--success {
+  background: color-mix(in srgb, var(--success-600) 12%, transparent);
+  color: var(--success-600);
+}
+
+.badge--warning {
+  background: color-mix(in srgb, var(--attention-600) 14%, transparent);
+  color: var(--attention-600);
+}
+
+.badge--danger {
+  background: color-mix(in srgb, var(--danger-600) 12%, transparent);
+  color: var(--danger-600);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+
+  .btn.is-loading::after {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

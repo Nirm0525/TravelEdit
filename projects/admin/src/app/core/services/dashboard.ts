@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
+import { AuditLogService, AuditLogItem } from './audit-log';
 
 export interface DashboardNewLead {
   id: string;
@@ -20,10 +21,18 @@ export interface DashboardMonthlySummary {
   topDestinations: Array<{ label: string; count: number }>;
 }
 
+export interface DashboardCounts {
+  newLeads: number;
+  publishedDestinations: number;
+  draftDestinations: number;
+}
+
 export interface DashboardData {
   newLeads: DashboardNewLead[];
   stalledDrafts: DashboardStalledDraft[];
   monthly: DashboardMonthlySummary;
+  counts: DashboardCounts;
+  recentActivity: AuditLogItem[];
 }
 
 const LIST_LIMIT = 10;
@@ -34,15 +43,45 @@ const TOP_DESTINATIONS_LIMIT = 5;
 })
 export class DashboardService {
   private readonly supabase = inject(SupabaseService);
+  private readonly auditLog = inject(AuditLogService);
 
   async load(): Promise<DashboardData> {
-    const [newLeads, stalledDrafts, monthly] = await Promise.all([
+    const [newLeads, stalledDrafts, monthly, counts, recentActivity] = await Promise.all([
       this.fetchNewLeads(),
       this.fetchStalledDrafts(),
-      this.fetchMonthlySummary()
+      this.fetchMonthlySummary(),
+      this.fetchCounts(),
+      this.auditLog.listRecent()
     ]);
 
-    return { newLeads, stalledDrafts, monthly };
+    return { newLeads, stalledDrafts, monthly, counts, recentActivity };
+  }
+
+  private async fetchCounts(): Promise<DashboardCounts> {
+    const [newLeadsCount, publishedCount, draftCount] = await Promise.all([
+      this.supabase.client.from('leads').select('id', { count: 'exact', head: true }).eq('status', 'nueva'),
+      this.supabase.client
+        .from('destinations')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'published'),
+      this.supabase.client.from('destinations').select('id', { count: 'exact', head: true }).eq('status', 'draft')
+    ]);
+
+    if (newLeadsCount.error) {
+      throw newLeadsCount.error;
+    }
+    if (publishedCount.error) {
+      throw publishedCount.error;
+    }
+    if (draftCount.error) {
+      throw draftCount.error;
+    }
+
+    return {
+      newLeads: newLeadsCount.count ?? 0,
+      publishedDestinations: publishedCount.count ?? 0,
+      draftDestinations: draftCount.count ?? 0
+    };
   }
 
   private async fetchNewLeads(): Promise<DashboardNewLead[]> {

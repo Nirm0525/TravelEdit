@@ -1,0 +1,25 @@
+@if (open()) {
+  <div class="admin-modal__overlay" (click)="onOverlayClick($event)">
+    <div
+      class="admin-modal__panel"
+      #panel
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="title()"
+      tabindex="-1"
+    >
+      <div class="admin-modal__header">
+        <h2 class="admin-modal__title">{{ title() }}</h2>
+        <button type="button" class="admin-modal__close" aria-label="Cerrar" (click)="close()">✕</button>
+      </div>
+
+      <div class="admin-modal__body">
+        <ng-content />
+      </div>
+
+      <div class="admin-modal__footer">
+        <ng-content select="[adminModalFooter]" />
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,12 @@
+<header class="admin-page-header">
+  <div class="admin-page-header__text">
+    @if (breadcrumb()) {
+      <p class="admin-page-header__breadcrumb">{{ breadcrumb() }}</p>
+    }
+    <h1 class="page-title">{{ title() }}</h1>
+  </div>
+
+  <div class="admin-page-header__actions">
+    <ng-content />
+  </div>
+</header>

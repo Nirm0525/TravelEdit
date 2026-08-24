@@ -1,0 +1,53 @@
+<app-admin-modal [open]="open()" [title]="title" (closed)="close()">
+  <form class="user-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <label class="field">
+      <span>Nombre completo</span>
+      <input type="text" formControlName="fullName" />
+      @if (form.controls.fullName.touched && form.controls.fullName.invalid) {
+        <span class="field__hint field__hint--error">El nombre es obligatorio.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span>Correo electrónico</span>
+      <input type="email" formControlName="email" />
+      @if (form.controls.email.touched && form.controls.email.invalid) {
+        <span class="field__hint field__hint--error">Ingresa un correo válido.</span>
+      }
+    </label>
+
+    <div class="user-form__grid">
+      <label class="field">
+        <span>Rol</span>
+        <select formControlName="role">
+          @for (role of roleOptions; track role) {
+            <option [value]="role">{{ roleLabels[role] }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Estado</span>
+        <select formControlName="status">
+          <option value="active">Activo</option>
+          <option value="inactive">Inactivo</option>
+        </select>
+      </label>
+    </div>
+
+    @if (mode() === 'create') {
+      <p class="field__hint">Se le enviará un correo de invitación para que cree su contraseña.</p>
+    }
+
+    @if (error(); as message) {
+      <p class="field__hint field__hint--error">{{ message }}</p>
+    }
+  </form>
+
+  <div adminModalFooter>
+    <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="close()">Cancelar</button>
+    <button type="button" class="btn btn--primary" [class.is-loading]="saving()" [disabled]="saving()" (click)="submit()">
+      Guardar
+    </button>
+  </div>
+</app-admin-modal>

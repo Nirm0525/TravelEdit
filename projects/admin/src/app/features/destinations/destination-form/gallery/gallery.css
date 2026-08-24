@@ -62,16 +62,7 @@
 }
 
 .gallery__upload-confirm {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--brand-600);
-  color: var(--brand-600-contrast);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
   margin-bottom: var(--space-lg);
-}
-
-.gallery__upload-confirm:disabled {
-  opacity: 0.5;
 }
 
 .gallery__empty {

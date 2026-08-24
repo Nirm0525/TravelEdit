@@ -1,0 +1,58 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (user(); as u) {
+  <app-admin-page-header breadcrumb="Panel / Usuarios / Detalle" [title]="u.fullName" />
+
+  <div class="user-detail__card">
+    <dl class="user-detail__fields">
+      <div>
+        <dt>Correo</dt>
+        <dd>{{ u.email }}</dd>
+      </div>
+      <div>
+        <dt>Rol</dt>
+        <dd>{{ roleLabels[u.role] }}</dd>
+      </div>
+      <div>
+        <dt>Estado</dt>
+        <dd><span class="badge" [class]="statusBadgeClass(u)">{{ statusLabel(u) }}</span></dd>
+      </div>
+      <div>
+        <dt>Fecha de registro</dt>
+        <dd>{{ u.createdAt | date: 'd MMM y' }}</dd>
+      </div>
+      <div>
+        <dt>Última actividad</dt>
+        <dd>{{ lastActive(u) }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <section class="user-detail__activity">
+    <h2 class="section-title">Actividad reciente</h2>
+
+    <app-admin-table
+      [empty]="activity().length === 0"
+      emptyMessage="Este usuario todavía no tiene actividad registrada."
+    >
+      <table>
+        <thead>
+          <tr>
+            <th>Actividad</th>
+            <th>Cuándo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of activity(); track entry.id) {
+            <tr>
+              <td>{{ entry.summary }}</td>
+              <td>{{ relativeTime(entry.createdAt) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </app-admin-table>
+  </section>
+} @else {
+  <p>No se encontró este usuario.</p>
+}

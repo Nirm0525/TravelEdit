@@ -1,0 +1,67 @@
+.users-list__search {
+  font: inherit;
+  font-size: var(--size-small);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  color: var(--ink-900);
+  min-width: 16rem;
+}
+
+.users-list__search:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+
+.users-list__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: color-mix(in srgb, var(--danger-600) 6%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+  color: var(--danger-600);
+}
+
+.users-list__role-select {
+  font: inherit;
+  font-size: var(--size-small);
+  padding: var(--space-2xs) var(--space-xs);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  color: var(--ink-900);
+}
+
+.users-list__actions {
+  display: flex;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+
+.users-list__action {
+  font-size: var(--size-small);
+  font-weight: 600;
+  color: var(--brand-600);
+}
+
+.users-list__action:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.users-list__action--danger {
+  color: var(--danger-600);
+}
+
+.users-list__danger-hint {
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+}
+
+.users-list__danger-hint--error {
+  color: var(--danger-600);
+}

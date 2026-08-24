@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
+import { permissionGuard } from './core/guards/permission-guard';
 
 export const routes: Routes = [
   {
@@ -20,12 +21,14 @@ export const routes: Routes = [
       {
         path: 'destinos',
         data: { title: 'Destinos' },
+        canActivate: [permissionGuard('destinos')],
         loadComponent: () =>
           import('./features/destinations/destinations-list/destinations-list').then((m) => m.DestinationsList)
       },
       {
         path: 'destinos/:id',
         data: { title: 'Editar destino' },
+        canActivate: [permissionGuard('destinos')],
         loadComponent: () =>
           import('./features/destinations/destination-form/destination-form').then((m) => m.DestinationForm),
         children: [
@@ -55,17 +58,32 @@ export const routes: Routes = [
       {
         path: 'solicitudes',
         data: { title: 'Solicitudes' },
+        canActivate: [permissionGuard('solicitudes')],
         loadComponent: () => import('./features/leads/leads-list/leads-list').then((m) => m.LeadsList)
       },
       {
         path: 'solicitudes/:id',
         data: { title: 'Detalle de solicitud' },
+        canActivate: [permissionGuard('solicitudes')],
         loadComponent: () => import('./features/leads/lead-detail/lead-detail').then((m) => m.LeadDetail)
       },
       {
         path: 'contenido/hero',
         data: { title: 'Página principal' },
+        canActivate: [permissionGuard('contenido')],
         loadComponent: () => import('./features/content/hero-editor/hero-editor').then((m) => m.HeroEditor)
+      },
+      {
+        path: 'usuarios',
+        data: { title: 'Usuarios' },
+        canActivate: [permissionGuard('usuarios')],
+        loadComponent: () => import('./features/users/users-list/users-list').then((m) => m.UsersList)
+      },
+      {
+        path: 'usuarios/:id',
+        data: { title: 'Detalle de usuario' },
+        canActivate: [permissionGuard('usuarios')],
+        loadComponent: () => import('./features/users/user-detail/user-detail').then((m) => m.UserDetail)
       }
     ]
   },

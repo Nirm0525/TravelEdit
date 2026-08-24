@@ -19,8 +19,14 @@
       @if (profile(); as staff) {
         <div class="shell__user">
           <span class="shell__user-name">{{ staff.fullName }}</span>
-          <span class="badge badge--neutral">{{ staff.role === 'admin' ? 'Admin' : 'Editor' }}</span>
-          <button type="button" class="btn btn--secondary" (click)="signOut()">Cerrar sesión</button>
+          <span class="badge badge--neutral">{{ roleLabel(staff.role) }}</span>
+          <button type="button" class="shell__signout" (click)="signOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M16 16l4-4-4-4M20 12H9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Cerrar sesión
+          </button>
         </div>
       }
     </header>

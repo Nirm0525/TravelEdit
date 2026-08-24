@@ -169,16 +169,20 @@ export interface Database {
       };
       site_content: {
         Row: {
-          section: string;
-          data: Record<string, unknown>;
+          id: string;
+          section_key: string;
+          content: Record<string, unknown>;
+          updated_by: string | null;
           updated_at: string;
         };
         Insert: {
-          section: string;
-          data?: Record<string, unknown>;
+          section_key: string;
+          content?: Record<string, unknown>;
+          updated_by?: string | null;
         };
         Update: {
-          data?: Record<string, unknown>;
+          content?: Record<string, unknown>;
+          updated_by?: string | null;
         };
         Relationships: [];
       };

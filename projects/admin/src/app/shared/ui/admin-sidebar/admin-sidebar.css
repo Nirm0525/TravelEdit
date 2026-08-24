@@ -1,6 +1,12 @@
+:host {
+  display: flex;
+  flex-direction: column;
+}
+
 .admin-sidebar {
   display: flex;
   flex-direction: column;
+  flex: 1;
   width: 15rem;
   flex-shrink: 0;
   background: var(--surface-000);
@@ -16,16 +22,27 @@
 .admin-sidebar__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   padding: var(--space-xs) var(--space-xs) var(--space-md);
 }
 
+.admin-sidebar.is-collapsed .admin-sidebar__brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+
 .admin-sidebar__logo {
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  transition: width 0.2s var(--ease-standard), height 0.2s var(--ease-standard);
+}
+
+.admin-sidebar.is-collapsed .admin-sidebar__logo {
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .admin-sidebar__brand-label {
@@ -108,10 +125,13 @@
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-xs);
   margin-top: var(--space-sm);
+  padding-top: var(--space-md);
   border-top: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--size-small);
   font-weight: 600;
+  transition: background 0.15s var(--ease-standard), color 0.15s var(--ease-standard);
 }
 
 .admin-sidebar.is-collapsed .admin-sidebar__collapse-toggle {
@@ -119,6 +139,7 @@
 }
 
 .admin-sidebar__collapse-toggle:hover {
+  background: var(--canvas-100);
   color: var(--ink-900);
   cursor: pointer;
 }

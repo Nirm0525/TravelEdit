@@ -12,25 +12,6 @@
   gap: var(--space-xs);
 }
 
-.destination-form__actions button {
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid var(--line-200);
-  border-radius: var(--radius-sm);
-  background: var(--surface-000);
-  font-weight: 600;
-  font-size: var(--size-small);
-}
-
-.destination-form__actions button:hover {
-  cursor: pointer;
-}
-
-.destination-form__actions button.is-primary {
-  background: var(--brand-600);
-  color: var(--brand-600-contrast);
-  border-color: var(--brand-600);
-}
-
 .destination-form__tabs {
   display: flex;
   gap: var(--space-lg);
@@ -82,18 +63,3 @@
   font: inherit;
 }
 
-.destination-form__danger-row button {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--danger-600);
-  color: var(--brand-600-contrast);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.destination-form__danger-row button:disabled {
-  opacity: 0.4;
-}
-
-.destination-form__danger-row button:not(:disabled):hover {
-  cursor: pointer;
-}

@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  max-width: 40rem;
+  max-width: 60rem;
 }
 
 .hero-editor__image {
@@ -98,23 +98,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.hero-editor__footer button {
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--brand-600);
-  color: var(--brand-600-contrast);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.hero-editor__footer button:disabled {
-  opacity: 0.6;
-}
-
-.hero-editor__footer button:not(:disabled):hover {
-  cursor: pointer;
-  opacity: 0.9;
 }
 
 .hero-editor__saved {

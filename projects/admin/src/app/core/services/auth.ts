@@ -53,7 +53,17 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await this.supabase.client.auth.signOut();
+    const { error } = await this.supabase.client.auth.signOut();
+    if (error) {
+      console.error('Error al notificar el cierre de sesión al servidor:', error.message);
+    }
+
+    // Se limpia el estado local pase lo que pase: si el usuario pidió salir,
+    // no debe quedar atrapado en la sesión por un fallo de red al avisarle
+    // al servidor — onAuthStateChange no siempre llega a tiempo en ese caso.
+    this._session.set(null);
+    this._profile.set(null);
+    this._status.set('signed-out');
   }
 
   private async applySession(session: Session | null): Promise<void> {

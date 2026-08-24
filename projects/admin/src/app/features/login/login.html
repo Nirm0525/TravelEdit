@@ -1,10 +1,10 @@
 <main class="login">
   <div class="login__bg" aria-hidden="true">
-    <img src="/images/login-visual.jpg" alt="" loading="eager" />
+    <img src="images/login-visual.jpg" alt="" loading="eager" />
   </div>
 
   <form class="login__card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <img src="/images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="login__logo" />
+    <img src="images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="login__logo" />
     <h1 class="page-title">Panel administrativo</h1>
 
     <label class="login__field">
@@ -27,7 +27,7 @@
       <p class="login__hint login__hint--form" role="alert">{{ message }}</p>
     }
 
-    <button type="submit" class="login__submit" [disabled]="submitting()">
+    <button type="submit" class="login__submit btn btn--primary" [disabled]="submitting()">
       {{ submitting() ? 'Entrando…' : 'Entrar' }}
     </button>
 

@@ -1,0 +1,31 @@
+.user-detail__card {
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.user-detail__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-lg);
+  margin: 0;
+}
+
+.user-detail__fields dt {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--track-eyebrow);
+  margin-bottom: var(--space-2xs);
+}
+
+.user-detail__fields dd {
+  margin: 0;
+  font-size: var(--size-body);
+}
+
+.user-detail__activity .section-title {
+  margin-bottom: var(--space-md);
+}

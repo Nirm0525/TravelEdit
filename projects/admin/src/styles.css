@@ -141,14 +141,22 @@ table {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2xs);
-  padding: var(--space-sm) var(--space-lg);
-  border-radius: var(--radius-sm);
+  gap: 0.6rem;
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: 999px;
   font: inherit;
   font-size: var(--size-small);
   font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
   border: 1px solid transparent;
   transition: opacity 0.15s var(--ease-standard), background 0.15s var(--ease-standard);
+}
+
+.btn::after {
+  content: '✦';
+  font-size: 0.75em;
+  transition: transform 0.4s var(--ease-standard);
 }
 
 .btn:disabled {
@@ -159,6 +167,10 @@ table {
 .btn:not(:disabled):hover {
   cursor: pointer;
   opacity: 0.9;
+}
+
+.btn:not(:disabled):hover::after {
+  transform: rotate(90deg);
 }
 
 .btn--primary {
@@ -183,7 +195,7 @@ table {
   pointer-events: none;
 }
 
-.btn.is-loading::after {
+.btn.is-loading::before {
   content: '';
   position: absolute;
   width: 1rem;
@@ -195,13 +207,17 @@ table {
   animation: btn-spin 0.6s linear infinite;
 }
 
-.btn--primary.is-loading::after,
-.btn--danger.is-loading::after {
+.btn--primary.is-loading::before,
+.btn--danger.is-loading::before {
   color: var(--brand-600-contrast);
 }
 
-.btn--secondary.is-loading::after {
+.btn--secondary.is-loading::before {
   color: var(--ink-900);
+}
+
+.btn.is-loading::after {
+  content: none;
 }
 
 @keyframes btn-spin {

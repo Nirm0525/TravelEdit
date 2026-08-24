@@ -12,7 +12,7 @@ export class SiteContentService {
     const { data, error } = await this.supabase.client
       .from('site_content')
       .select('*')
-      .eq('section', 'hero')
+      .eq('section_key', 'hero')
       .single();
 
     if (error) {
@@ -24,8 +24,8 @@ export class SiteContentService {
   async updateHero(content: HeroContent): Promise<void> {
     const { error } = await this.supabase.client
       .from('site_content')
-      .update({ data: content as unknown as Record<string, unknown> })
-      .eq('section', 'hero');
+      .update({ content: content as unknown as Record<string, unknown> })
+      .eq('section_key', 'hero');
 
     if (error) {
       throw error;

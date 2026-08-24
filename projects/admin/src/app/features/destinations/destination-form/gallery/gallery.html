@@ -26,7 +26,7 @@
         }
       </ul>
 
-      <button type="button" class="gallery__upload-confirm" [disabled]="!canUploadPending() || uploading()" (click)="uploadPending()">
+      <button type="button" class="gallery__upload-confirm btn btn--primary" [disabled]="!canUploadPending() || uploading()" (click)="uploadPending()">
         {{ uploading() ? 'Subiendo…' : 'Subir ' + pending().length + ' imagen(es)' }}
       </button>
     }

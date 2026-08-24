@@ -17,7 +17,7 @@
       @if (assignedToName(); as name) {
         <span>Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
       } @else {
-        <button type="button" (click)="assignToMe()">Asignarme esta solicitud</button>
+        <button type="button" class="btn btn--secondary" (click)="assignToMe()">Asignarme esta solicitud</button>
       }
     </div>
   </header>
@@ -75,7 +75,7 @@
           (input)="onNoteInput($event)"
           placeholder="Agregar una nota interna…"
         ></textarea>
-        <button type="submit" [disabled]="!newNote().trim() || savingNote()">
+        <button type="submit" class="btn btn--primary" [disabled]="!newNote().trim() || savingNote()">
           {{ savingNote() ? 'Guardando…' : 'Agregar nota' }}
         </button>
       </form>
@@ -84,7 +84,7 @@
 
   @if (isAdmin()) {
     <section class="lead-detail__danger">
-      <button type="button" (click)="requestDelete()">
+      <button type="button" class="btn btn--danger" (click)="requestDelete()">
         {{ deleteConfirming() ? '¿Seguro? Confirmar eliminación' : 'Eliminar solicitud' }}
       </button>
     </section>

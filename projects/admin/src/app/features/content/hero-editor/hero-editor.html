@@ -63,7 +63,7 @@
     </div>
 
     <div class="hero-editor__footer">
-      <button type="submit" [disabled]="saving()">
+      <button type="submit" class="btn btn--primary" [disabled]="saving()">
         {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
       </button>
       @if (savedAt()) {

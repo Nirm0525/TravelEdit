@@ -22,13 +22,13 @@ export class SiteContentService {
   async getHero(): Promise<Partial<HeroContent> | null> {
     const { data, error } = await this.supabase.client
       .from('site_content')
-      .select('data')
-      .eq('section', 'hero')
+      .select('content')
+      .eq('section_key', 'hero')
       .maybeSingle();
 
     if (error || !data) {
       return null;
     }
-    return data.data as Partial<HeroContent>;
+    return data.content as Partial<HeroContent>;
   }
 }

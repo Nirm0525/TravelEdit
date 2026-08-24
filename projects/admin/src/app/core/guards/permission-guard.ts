@@ -1,19 +1,19 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth';
-import { StaffRole } from '../models/staff-role';
+import { PermissionKey, canAccess } from '../data/permissions';
 
-export function roleGuard(role: StaffRole): CanActivateFn {
+export function permissionGuard(key: PermissionKey): CanActivateFn {
   return async () => {
     const auth = inject(AuthService);
     const router = inject(Router);
 
     await auth.ready();
 
-    if (auth.profile()?.role === role) {
+    if (canAccess(auth.profile()?.role, key)) {
       return true;
     }
 
-    return router.createUrlTree(['/login']);
+    return router.createUrlTree(['/dashboard']);
   };
 }

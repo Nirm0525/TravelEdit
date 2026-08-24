@@ -57,6 +57,30 @@
   font-weight: 600;
 }
 
+.shell__signout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  font-weight: 600;
+  transition: background 0.15s var(--ease-standard), color 0.15s var(--ease-standard);
+}
+
+.shell__signout svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+.shell__signout:hover {
+  background: color-mix(in srgb, var(--danger-600) 8%, transparent);
+  color: var(--danger-600);
+  cursor: pointer;
+}
+
 .shell__content {
   flex: 1;
   padding: var(--space-xl) var(--space-lg);

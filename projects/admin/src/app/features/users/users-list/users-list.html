@@ -1,0 +1,92 @@
+<app-admin-page-header breadcrumb="Panel / Usuarios" title="Usuarios">
+  <input
+    type="search"
+    class="users-list__search"
+    placeholder="Buscar por nombre o correo…"
+    [value]="search()"
+    (input)="onSearchInput($event)"
+  />
+  <button type="button" class="btn btn--primary" (click)="openCreate()">+ Agregar usuario</button>
+</app-admin-page-header>
+
+@if (loadError(); as message) {
+  <div class="users-list__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="retry()">Reintentar</button>
+  </div>
+} @else {
+<app-admin-table
+  [loading]="loading()"
+  [empty]="!loading() && filtered().length === 0"
+  emptyMessage="No hay usuarios que coincidan con la búsqueda."
+>
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Rol</th>
+        <th>Estado</th>
+        <th>Registro</th>
+        <th>Última actividad</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (user of filtered(); track user.id) {
+        <tr>
+          <td><a [routerLink]="['/usuarios', user.id]">{{ user.fullName }}</a></td>
+          <td>{{ user.email }}</td>
+          <td>
+            <select
+              class="users-list__role-select"
+              [attr.aria-label]="'Rol de ' + user.fullName"
+              title="Cambiar rol del usuario"
+              [value]="user.role"
+              [disabled]="savingId() === user.id"
+              (change)="onRoleChange(user, $event)"
+            >
+              @for (role of roleOptions; track role) {
+                <option [value]="role">{{ roleLabels[role] }}</option>
+              }
+            </select>
+          </td>
+          <td><span class="badge" [class]="statusBadgeClass(user)">{{ statusLabel(user) }}</span></td>
+          <td>{{ user.createdAt | date: 'd MMM y' }}</td>
+          <td>{{ lastActive(user) }}</td>
+          <td class="users-list__actions">
+            <button type="button" class="users-list__action" (click)="openEdit(user)">Editar</button>
+            <button type="button" class="users-list__action users-list__action--danger" (click)="requestDelete(user)">
+              Eliminar
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</app-admin-table>
+}
+
+<app-user-form-modal
+  [open]="formOpen()"
+  [mode]="formMode()"
+  [user]="formUser()"
+  (closed)="closeForm()"
+  (saved)="onFormSaved()"
+/>
+
+<app-admin-modal [open]="deleteTarget() !== null" title="Eliminar usuario" (closed)="cancelDelete()">
+  @if (deleteTarget(); as target) {
+    <p>¿Estás seguro de que deseas eliminar a <strong>{{ target.fullName }}</strong>?</p>
+    <p class="users-list__danger-hint">Esta acción no se puede deshacer.</p>
+    @if (deleteError(); as message) {
+      <p class="users-list__danger-hint users-list__danger-hint--error">{{ message }}</p>
+    }
+  }
+  <div adminModalFooter>
+    <button type="button" class="btn btn--secondary" [disabled]="deleting()" (click)="cancelDelete()">Cancelar</button>
+    <button type="button" class="btn btn--danger" [class.is-loading]="deleting()" [disabled]="deleting()" (click)="confirmDelete()">
+      Eliminar
+    </button>
+  </div>
+</app-admin-modal>

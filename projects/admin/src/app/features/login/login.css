@@ -105,22 +105,8 @@
 
 .login__submit {
   margin-top: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--brand-600);
-  color: var(--brand-600-contrast);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
+  width: 100%;
   transition: opacity 0.15s var(--ease-standard), transform 0.1s var(--ease-standard);
-}
-
-.login__submit:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.login__submit:not(:disabled):hover {
-  opacity: 0.9;
-  cursor: pointer;
 }
 
 .login__submit:not(:disabled):active {

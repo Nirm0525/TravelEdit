@@ -4,14 +4,14 @@
 
 <aside class="admin-sidebar" [class.is-collapsed]="collapsed()" [class.is-mobile-open]="mobileOpen()">
   <div class="admin-sidebar__brand">
-    <img src="/logo.png" alt="The Travel Edit" class="admin-sidebar__logo" />
+    <img src="logo.png" alt="The Travel Edit" class="admin-sidebar__logo" />
     @if (!collapsed()) {
       <span class="admin-sidebar__brand-label">Panel</span>
     }
   </div>
 
   <nav class="admin-sidebar__nav" aria-label="Secciones del panel">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <a
         [routerLink]="item.path"
         routerLinkActive="is-active"
@@ -48,6 +48,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M3 12h5l1.5 3h5L16 12h5" stroke-linecap="round" stroke-linejoin="round" />
                 <rect x="3" y="5" width="18" height="14" rx="2" stroke-linejoin="round" />
+              </svg>
+            }
+            @case ('users') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="9" cy="8" r="3" />
+                <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
+                <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
               </svg>
             }
           }

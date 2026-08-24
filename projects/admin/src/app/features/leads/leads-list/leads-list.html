@@ -1,7 +1,7 @@
 <div class="leads-list">
   <header class="leads-list__header">
     <h1 class="page-title">Solicitudes</h1>
-    <button type="button" class="leads-list__export" [disabled]="exporting() || total() === 0" (click)="exportCsv()">
+    <button type="button" class="leads-list__export btn btn--secondary" [disabled]="exporting() || total() === 0" (click)="exportCsv()">
       {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
     </button>
   </header>
@@ -48,7 +48,7 @@
       <input type="date" [ngModel]="createdTo()" (ngModelChange)="createdTo.set($event)" name="createdTo" />
     </label>
 
-    <button type="submit" class="leads-list__apply">Filtrar</button>
+    <button type="submit" class="leads-list__apply btn btn--primary">Filtrar</button>
   </form>
 
   @if (loading()) {

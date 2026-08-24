@@ -9,13 +9,13 @@
 
     <div class="destination-form__actions">
       @if (d.status !== 'published') {
-        <button type="button" class="is-primary" (click)="setStatus('published')">Publicar destino</button>
+        <button type="button" class="btn btn--primary" (click)="setStatus('published')">Publicar destino</button>
       }
       @if (d.status === 'published') {
-        <button type="button" (click)="setStatus('archived')">Archivar</button>
+        <button type="button" class="btn btn--secondary" (click)="setStatus('archived')">Archivar</button>
       }
       @if (d.status === 'archived') {
-        <button type="button" (click)="setStatus('draft')">Volver a borrador</button>
+        <button type="button" class="btn btn--secondary" (click)="setStatus('draft')">Volver a borrador</button>
       }
     </div>
   </header>
@@ -44,7 +44,7 @@
           (input)="onDeleteConfirmInput($event)"
           [attr.aria-label]="'Escribe ' + d.title + ' para confirmar'"
         />
-        <button type="button" [disabled]="!canDelete() || deleting()" (click)="remove()">
+        <button type="button" class="btn btn--danger" [disabled]="!canDelete() || deleting()" (click)="remove()">
           {{ deleting() ? 'Eliminando…' : 'Eliminar definitivamente' }}
         </button>
       </div>

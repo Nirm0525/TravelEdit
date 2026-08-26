@@ -39,6 +39,46 @@ export class ArticleDetail {
     return body ? this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body)) : null;
   });
 
+  readonly authorInitials = computed<string>(() => {
+    const author = this.article()?.author ?? '';
+    return author
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() ?? '')
+      .join('');
+  });
+
+  readonly publishedAtLabel = computed<string | null>(() => {
+    const value = this.article()?.publishedAt;
+    if (!value) {
+      return null;
+    }
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return new Intl.DateTimeFormat('es', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+  });
+
+  // No es un campo editorial más para llenar: se calcula solo a partir del
+  // texto, así nunca queda desactualizado si el artículo se edita después.
+  readonly readingTimeLabel = computed<string | null>(() => {
+    const body = this.article()?.body;
+    if (!body) {
+      return null;
+    }
+    const wordCount = body
+      .replace(/<[^>]*>/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean).length;
+    if (!wordCount) {
+      return null;
+    }
+    const minutes = Math.max(1, Math.round(wordCount / 200));
+    return `${minutes} min de lectura`;
+  });
+
   constructor() {
     void this.load();
   }

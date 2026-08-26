@@ -57,8 +57,11 @@ export interface EditArticle {
   title: string;
   excerpt: string;
   author: string;
+  publishedAt: string;
   image: string;
   alt: string;
+  cardImage: string;
+  cardAlt: string;
   body: string;
 }
 

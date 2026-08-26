@@ -12,7 +12,12 @@
 
     <div class="final-cta__links">
       @for (link of content().links; track link.label) {
-        <a [href]="link.href" data-cursor="explore">{{ link.label }}</a>
+        <a
+          [href]="link.href"
+          [attr.target]="link.href.startsWith('http') ? '_blank' : null"
+          [attr.rel]="link.href.startsWith('http') ? 'noopener' : null"
+          data-cursor="explore"
+        >{{ link.label }}</a>
       }
     </div>
   </div>

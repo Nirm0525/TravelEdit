@@ -106,7 +106,7 @@
 }
 
 .article-detail__content {
-  max-width: 42rem;
+  max-width: 56rem;
   padding-block: var(--space-lg) var(--space-2xl);
 }
 
@@ -117,12 +117,58 @@
   margin-block: var(--space-sm) var(--space-sm);
 }
 
-.article-detail__byline {
+.article-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: var(--space-xs);
+  color: rgba(246, 239, 230, 0.92);
+  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
+}
+
+.article-detail__meta-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: var(--font-ui);
   font-size: 0.9375rem;
   font-weight: 500;
-  color: rgba(246, 239, 230, 0.9);
-  text-shadow: 0 1px 10px rgb(0 0 0 / 45%);
+}
+
+.article-detail__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-burgundy);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-white);
+  text-shadow: none;
+}
+
+.article-detail__meta-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: rgba(246, 239, 230, 0.85);
+}
+
+.article-detail__meta-dot {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
 }
 
 .article-detail__excerpt {
@@ -173,15 +219,6 @@
   margin: var(--space-lg) 0;
   border-radius: 2px;
   overflow: hidden;
-}
-
-/* Las fotos se salen un poco de la columna de lectura (42rem) en pantallas
-   grandes — el texto se mantiene angosto para que se lea bien, pero las
-   imágenes ganan presencia en vez de quedar chicas dentro del mismo ancho. */
-@media (min-width: 64rem) {
-  .article-detail__prose ::ng-deep .article-figure {
-    margin-inline: -7rem;
-  }
 }
 
 .article-detail__prose ::ng-deep .article-figure img {
@@ -250,16 +287,6 @@
   width: 100%;
   border-radius: 2px;
   margin: var(--space-lg) 0;
-}
-
-/* Solo ensancha imágenes sueltas (el editor las envuelve en un <p>) — las de
-   .article-figure ya se ensanchan a través de su propio contenedor arriba,
-   y no hay que ensancharlas dos veces. */
-@media (min-width: 64rem) {
-  .article-detail__prose ::ng-deep p > img:only-child {
-    margin-inline: -7rem;
-    width: calc(100% + 14rem);
-  }
 }
 
 .article-detail__prose ::ng-deep hr {

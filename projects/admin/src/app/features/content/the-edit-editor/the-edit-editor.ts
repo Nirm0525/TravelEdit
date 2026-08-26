@@ -10,6 +10,22 @@ import { PreviewModal } from '../../../shared/ui/preview-modal/preview-modal';
 import { slugify } from '../../../core/utils/slugify';
 import { environment } from '../../../../environments/environment';
 
+const EMPTY_ARTICLE: EditArticle = {
+  slug: '',
+  category: '',
+  title: '',
+  excerpt: '',
+  author: '',
+  publishedAt: '',
+  image: '',
+  alt: '',
+  cardImage: '',
+  cardAlt: '',
+  body: ''
+};
+
+type ArticleImageField = 'image' | 'cardImage';
+
 @Component({
   selector: 'app-the-edit-editor',
   imports: [ReactiveFormsModule, FormsModule, DragDropModule, ContentEditorLayout, RichTextEditor, PreviewModal],
@@ -27,7 +43,7 @@ export class TheEditEditor {
   readonly error = signal<string | null>(null);
 
   readonly articles = signal<EditArticle[]>([]);
-  readonly uploadingIndex = signal<number | null>(null);
+  readonly uploadingField = signal<{ index: number; field: ArticleImageField } | null>(null);
   readonly uploadError = signal<string | null>(null);
 
   readonly bodyImageUpload = (file: File): Promise<string> => this.images.uploadArticleImage(file);
@@ -56,7 +72,10 @@ export class TheEditEditor {
     this.loading.set(true);
     const content = await this.siteContent.getTheEdit();
     this.form.patchValue(content);
-    this.articles.set(content.articles);
+    // Artículos guardados antes de que existieran "author"/"publishedAt" no
+    // traen esas claves — sin esto, [value]="article.author" pone el string
+    // "undefined" en el input en vez de dejarlo vacío.
+    this.articles.set(content.articles.map((article) => ({ ...EMPTY_ARTICLE, ...article })));
     this.loading.set(false);
   }
 
@@ -77,10 +96,7 @@ export class TheEditEditor {
   }
 
   addArticle(): void {
-    this.articles.update((list) => [
-      ...list,
-      { slug: '', category: '', title: '', excerpt: '', author: '', image: '', alt: '', body: '' }
-    ]);
+    this.articles.update((list) => [...list, { ...EMPTY_ARTICLE }]);
   }
 
   removeArticle(index: number): void {
@@ -93,7 +109,7 @@ export class TheEditEditor {
     this.articles.set(reordered);
   }
 
-  async onImageSelected(index: number, event: Event): Promise<void> {
+  async onImageSelected(index: number, field: ArticleImageField, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
@@ -101,16 +117,21 @@ export class TheEditEditor {
       return;
     }
 
-    this.uploadingIndex.set(index);
+    this.uploadingField.set({ index, field });
     this.uploadError.set(null);
     try {
       const url = await this.images.uploadArticleImage(file);
-      this.updateArticle(index, { image: url });
+      this.updateArticle(index, { [field]: url });
     } catch {
       this.uploadError.set('No se pudo subir la imagen. Intenta de nuevo.');
     } finally {
-      this.uploadingIndex.set(null);
+      this.uploadingField.set(null);
     }
+  }
+
+  isUploading(index: number, field: ArticleImageField): boolean {
+    const current = this.uploadingField();
+    return current?.index === index && current?.field === field;
   }
 
   async save(): Promise<void> {

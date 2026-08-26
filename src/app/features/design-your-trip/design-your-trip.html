@@ -36,7 +36,22 @@
           </p>
         </div>
 
+        <div
+          class="dyt-progress"
+          role="progressbar"
+          aria-label="Progreso del formulario"
+          [attr.aria-valuenow]="currentStep()"
+          aria-valuemin="1"
+          [attr.aria-valuemax]="totalSteps"
+        >
+          @for (step of [1, 2, 3]; track step) {
+            <span class="dyt-progress__step" [class.is-active]="step === currentStep()" [class.is-done]="step < currentStep()"></span>
+          }
+          <span class="dyt-progress__label">Paso {{ currentStep() }} de {{ totalSteps }}</span>
+        </div>
+
         <form class="dyt-form" [formGroup]="form" (ngSubmit)="submit()">
+          @if (currentStep() === 1) {
           <section class="dyt-section">
             <p class="dyt-section__number">01</p>
             <h2 class="font-display">Sobre ti</h2>
@@ -98,7 +113,9 @@
               </label>
             }
           </section>
+          }
 
+          @if (currentStep() === 2) {
           <section class="dyt-section">
             <p class="dyt-section__number">02</p>
             <h2 class="font-display">Tu viaje</h2>
@@ -208,7 +225,9 @@
               ></textarea>
             </label>
           </section>
+          }
 
+          @if (currentStep() === 3) {
           <section class="dyt-section">
             <p class="dyt-section__number">03</p>
             <h2 class="font-display">Cuéntanos más</h2>
@@ -229,16 +248,25 @@
             </fieldset>
 
             <div class="tef-turnstile" #turnstileContainer></div>
-
-            @if (errorMessage(); as message) {
-              <p class="tef-error" role="alert">{{ message }}</p>
-            }
           </section>
+          }
+
+          @if (errorMessage(); as message) {
+            <p class="tef-error" role="alert">{{ message }}</p>
+          }
 
           <div class="dyt-submit-row">
-            <button type="submit" class="dyt-submit" [disabled]="submitting()">
-              {{ submitting() ? 'Enviando…' : 'Enviar solicitud →' }}
-            </button>
+            @if (currentStep() > 1) {
+              <button type="button" class="dyt-back" (click)="previousStep()">← Atrás</button>
+            }
+
+            @if (currentStep() < totalSteps) {
+              <button type="button" class="dyt-submit" (click)="nextStep()">Siguiente →</button>
+            } @else {
+              <button type="submit" class="dyt-submit" [disabled]="submitting()">
+                {{ submitting() ? 'Enviando…' : 'Enviar solicitud →' }}
+              </button>
+            }
           </div>
         </form>
       </div>

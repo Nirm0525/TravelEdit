@@ -30,7 +30,7 @@ const FINAL_CTA_DEFAULT: FinalCtaContent = {
   imageUrl: IMAGES.finalCta.url,
   imageAlt: IMAGES.finalCta.alt,
   links: [
-    { label: 'Instagram', href: '#' },
+    { label: 'Instagram', href: 'https://www.instagram.com/thetraveledithn/' },
     { label: 'WhatsApp', href: 'https://wa.me/50433070330' },
     { label: 'Email', href: 'mailto:marcela@travelinternational.org' }
   ]

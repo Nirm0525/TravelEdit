@@ -1,6 +1,6 @@
 <article class="article-card" appRevealOnScroll>
   <a class="article-card__frame" data-cursor="view" [routerLink]="['/the-edit', article().slug]">
-    <img [src]="article().image" alt="{{ article().alt }}" loading="lazy" decoding="async" />
+    <img [src]="cardImage()" alt="{{ cardAlt() }}" loading="lazy" decoding="async" />
     <div class="article-card__overlay" aria-hidden="true"></div>
     <div class="article-card__content">
       <p class="eyebrow eyebrow--on-dark">{{ article().category }}</p>

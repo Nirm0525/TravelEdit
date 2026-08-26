@@ -83,17 +83,39 @@
             </div>
 
             <div class="the-edit-editor__item-body">
-              <div class="content-image-field">
-                @if (article.image) {
-                  <img [src]="article.image" [alt]="article.alt" />
-                }
-                <label class="content-image-field__upload">
-                  <span>{{ uploadingIndex() === $index ? 'Subiendo…' : 'Cambiar imagen' }}</span>
-                  <input type="file" accept="image/*" [disabled]="uploadingIndex() !== null" (change)="onImageSelected($index, $event)" />
-                </label>
+              <div class="the-edit-editor__images">
+                <div class="content-image-field">
+                  <p class="field__hint">Imagen del hero (portada del artículo)</p>
+                  @if (article.image) {
+                    <img [src]="article.image" [alt]="article.alt" />
+                  }
+                  <label class="content-image-field__upload">
+                    <span>{{ isUploading($index, 'image') ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+                    <input type="file" accept="image/*" [disabled]="uploadingField() !== null" (change)="onImageSelected($index, 'image', $event)" />
+                  </label>
+                </div>
+
+                <div class="content-image-field">
+                  <p class="field__hint">Imagen de la tarjeta en la página principal</p>
+                  @if (article.cardImage || article.image) {
+                    <img [src]="article.cardImage || article.image" [alt]="article.cardAlt || article.alt" />
+                  }
+                  <label class="content-image-field__upload">
+                    <span>{{ isUploading($index, 'cardImage') ? 'Subiendo…' : (article.cardImage ? 'Cambiar imagen' : 'Usar otra imagen') }}</span>
+                    <input type="file" accept="image/*" [disabled]="uploadingField() !== null" (change)="onImageSelected($index, 'cardImage', $event)" />
+                  </label>
+                  @if (article.cardImage) {
+                    <button type="button" class="btn btn--secondary" (click)="updateArticle($index, { cardImage: '', cardAlt: '' })">Usar la del hero</button>
+                  } @else {
+                    <span class="field__hint">Si no se define, se usa la imagen del hero.</span>
+                  }
+                </div>
               </div>
 
               <div class="the-edit-editor__item-fields">
+                <p class="content-section__title">Hero</p>
+                <p class="field__hint">Lo que se ve sobre la foto de portada del artículo.</p>
+
                 <label class="field">
                   <span>Categoría</span>
                   <input type="text" [value]="article.category" (input)="updateArticle($index, { category: $any($event.target).value })" />
@@ -102,6 +124,25 @@
                   <span>Título</span>
                   <input type="text" [value]="article.title" (input)="onTitleInput($index, $any($event.target).value)" />
                 </label>
+                <div class="content-grid">
+                  <label class="field">
+                    <span>Autor</span>
+                    <input type="text" [value]="article.author" (input)="updateArticle($index, { author: $any($event.target).value })" />
+                    <span class="field__hint">Se muestra como "Por {{ article.author || '…' }}" en el hero.</span>
+                  </label>
+                  <label class="field">
+                    <span>Fecha de publicación</span>
+                    <input type="date" [value]="article.publishedAt" (input)="updateArticle($index, { publishedAt: $any($event.target).value })" />
+                    <span class="field__hint">El tiempo de lectura se calcula solo, a partir del texto.</span>
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Texto alternativo de la imagen del hero</span>
+                  <input type="text" [value]="article.alt" (input)="updateArticle($index, { alt: $any($event.target).value })" />
+                </label>
+
+                <p class="content-section__title the-edit-editor__subsection">Detalles</p>
+
                 <label class="field">
                   <span>Slug (URL del artículo)</span>
                   <input type="text" [value]="article.slug" (input)="updateArticle($index, { slug: $any($event.target).value })" />
@@ -113,15 +154,12 @@
                   <span>Extracto</span>
                   <textarea rows="2" [value]="article.excerpt" (input)="updateArticle($index, { excerpt: $any($event.target).value })"></textarea>
                 </label>
-                <label class="field">
-                  <span>Autor</span>
-                  <input type="text" [value]="article.author" (input)="updateArticle($index, { author: $any($event.target).value })" />
-                  <span class="field__hint">Se muestra como "Por {{ article.author || '…' }}" en el hero del artículo.</span>
-                </label>
-                <label class="field">
-                  <span>Texto alternativo de la imagen</span>
-                  <input type="text" [value]="article.alt" (input)="updateArticle($index, { alt: $any($event.target).value })" />
-                </label>
+                @if (article.cardImage) {
+                  <label class="field">
+                    <span>Texto alternativo de la imagen de la tarjeta</span>
+                    <input type="text" [value]="article.cardAlt" (input)="updateArticle($index, { cardAlt: $any($event.target).value })" />
+                  </label>
+                }
               </div>
             </div>
 

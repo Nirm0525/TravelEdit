@@ -10,6 +10,50 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const RATE_LIMIT_WINDOW_MINUTES = 10;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
+// Mismo patrón que admin-users: el navegador manda un preflight OPTIONS
+// antes del POST, y ese preflight debe responderse con el origen exacto
+// que llama — nada de "*".
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:4200',
+  'http://localhost:4301',
+  'http://localhost:4305',
+  'https://thetravel-edit.com'
+]);
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const requestOrigin = req.headers.get('Origin') ?? '';
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin'
+  };
+  if (ALLOWED_ORIGINS.has(requestOrigin)) {
+    headers['Access-Control-Allow-Origin'] = requestOrigin;
+  }
+  return headers;
+}
+
+// El header Origin/CORS solo lo respeta un navegador — un POST directo
+// (curl, script) lo ignora por completo y de todos modos llegaría hasta el
+// insert. `hostname` en la respuesta de siteverify es el dominio donde
+// Cloudflare realmente vio resolverse el widget, así que es la señal server-
+// side confiable: mismos dominios que ya confiamos para CORS.
+const ALLOWED_HOSTNAMES = new Set(Array.from(ALLOWED_ORIGINS, (o) => new URL(o).hostname));
+
+// Los tres secrets de prueba documentados por Cloudflare (siempre aprueban /
+// siempre bloquean / fuerza challenge) devuelven siempre hostname:
+// "example.com" en siteverify, sin importar la página real — no dan
+// protección real, así que mientras se use uno de estos no tiene sentido
+// exigir que el hostname cuadre. En cuanto TURNSTILE_SECRET_KEY sea un
+// secret real de Cloudflare, esta lista deja de aplicar y el check de abajo
+// se vuelve estricto.
+const CLOUDFLARE_TEST_SECRETS = new Set([
+  '1x0000000000000000000000000000000AA',
+  '2x0000000000000000000000000000000AA',
+  '3x0000000000000000000000000000000AA'
+]);
+
 const ORIGIN_VALUES = ['formulario_web', 'whatsapp', 'instagram', 'referido', 'email', 'otro'] as const;
 type Origin = (typeof ORIGIN_VALUES)[number];
 
@@ -114,82 +158,136 @@ async function sendNotificationEmail(
   }
 }
 
+/** Nunca confiar en que el frontend diga "Turnstile aprobado" — esta es la
+ *  única verificación que cuenta, y ocurre server-side contra Cloudflare.
+ *  Cualquier fallo (red, Cloudflare caído, secret ausente, hostname que no
+ *  cuadra) debe resolver a "no válido" sin tumbar la función ni filtrar
+ *  detalles técnicos al cliente — por eso todo el ruido queda en
+ *  console.error para los logs de la función, y el caller solo recibe true/false. */
 async function verifyTurnstile(token: string, remoteIp: string): Promise<boolean> {
   const secret = Deno.env.get('TURNSTILE_SECRET_KEY');
   if (!secret) {
+    console.error('verifyTurnstile: falta TURNSTILE_SECRET_KEY en los secrets de la función.');
     return false;
   }
 
-  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ secret, response: token, remoteip: remoteIp })
-  });
+  try {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token, remoteip: remoteIp })
+    });
 
-  const result = (await response.json()) as { success: boolean };
-  return result.success;
+    if (!response.ok) {
+      console.error('verifyTurnstile: Cloudflare respondió', response.status, await response.text());
+      return false;
+    }
+
+    const result = (await response.json()) as {
+      success: boolean;
+      hostname?: string;
+      'error-codes'?: string[];
+    };
+
+    if (!result.success) {
+      console.error('verifyTurnstile: token rechazado por Cloudflare', result['error-codes']);
+      return false;
+    }
+
+    // Cloudflare solo manda `hostname` cuando puede determinarlo — si viene,
+    // debe ser uno de los dominios en los que confiamos. Excepción: los
+    // secrets de prueba de Cloudflare siempre devuelven "example.com" sin
+    // relación con la página real, así que no aplican este check.
+    if (result.hostname && !CLOUDFLARE_TEST_SECRETS.has(secret) && !ALLOWED_HOSTNAMES.has(result.hostname)) {
+      console.error('verifyTurnstile: hostname inesperado en la respuesta', result.hostname);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('verifyTurnstile: error inesperado verificando contra Cloudflare', err);
+    return false;
+  }
 }
 
 Deno.serve(async (req) => {
+  const cors = corsHeadersFor(req);
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors });
+  }
+
+  const json = (body: unknown, status: number) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Método no permitido.' }), { status: 405 });
+    return json({ error: 'Método no permitido.' }, 405);
   }
 
-  const body = (await req.json()) as LeadRequestBody;
-  const name = body.name?.trim() ?? '';
-  const email = body.email?.trim() ?? '';
-  const phone = body.phone?.trim() ?? '';
+  // Cualquier fallo no anticipado de aquí en adelante (JSON mal formado,
+  // Supabase caído, etc.) cae aquí — el cliente nunca debe ver un stack
+  // trace ni un mensaje técnico, solo un mensaje genérico. El detalle real
+  // queda en console.error, visible en los logs de la función.
+  try {
+    const body = (await req.json()) as LeadRequestBody;
+    const name = body.name?.trim() ?? '';
+    const email = body.email?.trim() ?? '';
+    const phone = body.phone?.trim() ?? '';
 
-  if (!name || !isValidEmail(email) || !phone) {
-    return new Response(JSON.stringify({ error: 'Nombre, correo válido y teléfono son obligatorios.' }), { status: 400 });
+    if (!name || !isValidEmail(email) || !phone) {
+      return json({ error: 'Nombre, correo válido y teléfono son obligatorios.' }, 400);
+    }
+
+    if (!body.turnstileToken) {
+      return json({ error: 'Falta la verificación anti-spam.' }, 400);
+    }
+
+    const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ipHash = await hashIp(remoteIp);
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60_000).toISOString();
+    const { count } = await serviceClient
+      .from('lead_submission_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_hash', ipHash)
+      .gte('created_at', windowStart);
+
+    await serviceClient.from('lead_submission_attempts').insert({ ip_hash: ipHash });
+
+    if ((count ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
+      return json({ error: 'Demasiados intentos. Intenta de nuevo más tarde.' }, 429);
+    }
+
+    // Única verificación que cuenta: server-side, contra Cloudflare. El
+    // lead no se inserta si esto no devuelve true, sin excepciones.
+    const captchaOk = await verifyTurnstile(body.turnstileToken, remoteIp);
+    if (!captchaOk) {
+      return json({ error: 'No se pudo verificar que eres una persona.' }, 400);
+    }
+
+    const origin: Origin = 'formulario_web';
+    const { error } = await serviceClient.from('leads').insert({
+      name,
+      email,
+      phone,
+      destination_interest_text: body.destinationInterestText?.trim() || null,
+      details: body.details ?? {},
+      origin
+    });
+
+    if (error) {
+      console.error('submit-lead: insert en leads falló', error);
+      return json({ error: 'No se pudo enviar la solicitud.' }, 500);
+    }
+
+    await sendNotificationEmail(name, email, phone, body.destinationInterestText?.trim() || null, body.details ?? {});
+
+    return json({ ok: true }, 200);
+  } catch (err) {
+    console.error('submit-lead: error inesperado', err);
+    return json({ error: 'No pudimos procesar tu solicitud. Inténtalo nuevamente.' }, 500);
   }
-
-  if (!body.turnstileToken) {
-    return new Response(JSON.stringify({ error: 'Falta la verificación anti-spam.' }), { status: 400 });
-  }
-
-  const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  const ipHash = await hashIp(remoteIp);
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60_000).toISOString();
-  const { count } = await serviceClient
-    .from('lead_submission_attempts')
-    .select('id', { count: 'exact', head: true })
-    .eq('ip_hash', ipHash)
-    .gte('created_at', windowStart);
-
-  await serviceClient.from('lead_submission_attempts').insert({ ip_hash: ipHash });
-
-  if ((count ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
-    return new Response(JSON.stringify({ error: 'Demasiados intentos. Intenta de nuevo más tarde.' }), { status: 429 });
-  }
-
-  const captchaOk = await verifyTurnstile(body.turnstileToken, remoteIp);
-  if (!captchaOk) {
-    return new Response(JSON.stringify({ error: 'No se pudo verificar que eres una persona.' }), { status: 400 });
-  }
-
-  const origin: Origin = 'formulario_web';
-  const { error } = await serviceClient.from('leads').insert({
-    name,
-    email,
-    phone,
-    destination_interest_text: body.destinationInterestText?.trim() || null,
-    details: body.details ?? {},
-    origin
-  });
-
-  if (error) {
-    return new Response(JSON.stringify({ error: 'No se pudo enviar la solicitud.' }), { status: 500 });
-  }
-
-  await sendNotificationEmail(name, email, phone, body.destinationInterestText?.trim() || null, body.details ?? {});
-
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
 });

@@ -213,8 +213,13 @@ export interface EditArticle {
   title: string;
   excerpt: string;
   author: string;
+  publishedAt: string;
+  /** Imagen del hero, en la página del artículo. */
   image: string;
   alt: string;
+  /** Imagen de la tarjeta en la sección "The Edit" del Home — si está vacía, se usa `image`. */
+  cardImage: string;
+  cardAlt: string;
   body: string;
 }
 
@@ -394,8 +399,11 @@ const THE_EDIT_LIVE_DEFAULT: TheEditContent = {
       title: 'The Art of Slow Travel',
       excerpt: 'Why seeing less can mean experiencing more.',
       author: 'The Travel Edit',
+      publishedAt: '2026-06-02',
       image: 'https://images.unsplash.com/photo-1760365942157-36df5ac3efd4?q=80&w=1200&h=800&fit=crop&auto=format',
       alt: 'Paisaje de montañas verdes visto a través de la ventana de un tren en movimiento',
+      cardImage: '',
+      cardAlt: '',
       body: SLOW_TRAVEL_BODY
     },
     {
@@ -404,8 +412,11 @@ const THE_EDIT_LIVE_DEFAULT: TheEditContent = {
       title: 'Italy, Beyond the Obvious',
       excerpt: "The places we'd return to—and how we'd experience them.",
       author: 'The Travel Edit',
+      publishedAt: '2026-06-16',
       image: 'https://images.unsplash.com/photo-1702742910382-76c82eca9b55?q=80&w=1200&h=800&fit=crop&auto=format',
       alt: 'Vista aérea de un pueblo en la campiña de la Toscana, Italia',
+      cardImage: '',
+      cardAlt: '',
       body: ITALY_BEYOND_BODY
     },
     {
@@ -414,8 +425,11 @@ const THE_EDIT_LIVE_DEFAULT: TheEditContent = {
       title: 'Where to Go Next',
       excerpt: 'Five destinations worth having on your radar.',
       author: 'The Travel Edit',
+      publishedAt: '2026-07-01',
       image: 'https://images.unsplash.com/photo-1575573333701-d644e92a5160?q=80&w=1200&h=800&fit=crop&auto=format',
       alt: 'Cascada escondida en la selva de Bali rodeada de vegetación tropical',
+      cardImage: '',
+      cardAlt: '',
       body: WHERE_TO_GO_NEXT_BODY
     }
   ]

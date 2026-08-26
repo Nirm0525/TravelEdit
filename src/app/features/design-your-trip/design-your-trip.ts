@@ -1,10 +1,10 @@
-import { AfterViewInit, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { IMAGES } from '../../core/data/images';
 import { LeadSubmissionService } from '../../core/services/lead-submission';
-import { environment } from '../../../environments/environment.prod';
+import { environment } from '../../../environments/environment';
 import {
   BUDGET_RANGE_OPTIONS,
   FLIGHT_CLASS_OPTIONS,
@@ -35,7 +35,7 @@ declare global {
   templateUrl: './design-your-trip.html',
   styleUrl: './design-your-trip.css'
 })
-export class DesignYourTrip implements AfterViewInit {
+export class DesignYourTrip {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly leadSubmission = inject(LeadSubmissionService);
   private readonly title = inject(Title);
@@ -47,6 +47,9 @@ export class DesignYourTrip implements AfterViewInit {
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly turnstileToken = signal<string | null>(null);
+
+  readonly totalSteps = 3;
+  readonly currentStep = signal(1);
 
   readonly travelingWithOptions = TRAVELING_WITH_OPTIONS;
   readonly occasionOptions = OCCASION_OPTIONS;
@@ -95,19 +98,48 @@ export class DesignYourTrip implements AfterViewInit {
       name: 'description',
       content: 'Cuéntanos qué tienes en mente y diseñaremos una experiencia de viaje pensada especialmente para ti.'
     });
-  }
 
-  ngAfterViewInit(): void {
-    const container = this.turnstileContainer()?.nativeElement;
-    if (container) {
-      void this.renderTurnstile(container);
-    }
+    effect(() => {
+      const container = this.turnstileContainer()?.nativeElement;
+      if (container) {
+        void this.renderTurnstile(container);
+      }
+    });
   }
 
   toggleStylePreference(option: StylePreference): void {
     const current = this.form.controls.stylePreferences.value;
     const next = current.includes(option) ? current.filter((v) => v !== option) : [...current, option];
     this.form.controls.stylePreferences.setValue(next);
+  }
+
+  nextStep(): void {
+    if (this.currentStep() === 1 && !this.isStepOneValid()) {
+      this.form.controls.name.markAsTouched();
+      this.form.controls.email.markAsTouched();
+      this.form.controls.phone.markAsTouched();
+      this.errorMessage.set('Revisa los campos obligatorios antes de continuar.');
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.currentStep.update((step) => Math.min(step + 1, this.totalSteps));
+    this.scrollToTop();
+  }
+
+  previousStep(): void {
+    this.errorMessage.set(null);
+    this.currentStep.update((step) => Math.max(step - 1, 1));
+    this.scrollToTop();
+  }
+
+  private isStepOneValid(): boolean {
+    const { name, email, phone } = this.form.controls;
+    return name.valid && email.valid && phone.valid;
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async submit(): Promise<void> {

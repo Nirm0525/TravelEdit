@@ -34,6 +34,13 @@ const publicTemplate = (production) => `export const environment = {
 
 const adminTemplate = (production) => `export const environment = {
   production: ${production},
+  // Vacío en producción: admin se sirve en /admin/ del mismo dominio que el
+  // sitio público, así que un enlace que empieza en "/" (p. ej. "/#destinos")
+  // ya apunta correctamente al sitio público sin necesidad de un host explícito.
+  // En local, admin (4301) y el sitio público (4200) son puertos distintos —
+  // sin este host explícito, "Vista previa" abriría el enlace dentro del
+  // propio admin en vez del sitio público.
+  publicSiteUrl: '${production ? '' : 'http://localhost:4200'}',
   supabaseUrl: '${SUPABASE_URL}',
   supabaseKey: '${SUPABASE_KEY}'
 };

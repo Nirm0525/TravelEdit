@@ -22,7 +22,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-white) 35%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -41,7 +41,7 @@
 
 .dyt-header__back:hover {
   background: color-mix(in srgb, var(--color-white) 14%, transparent);
-  border-color: color-mix(in srgb, var(--color-white) 60%, transparent);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .dyt-header__back:hover svg {
@@ -91,9 +91,40 @@
   max-width: 42rem;
 }
 
+.dyt-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 42rem;
+  margin-bottom: var(--space-md);
+}
+
+.dyt-progress__step {
+  height: 0.25rem;
+  flex: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-stone) 25%, transparent);
+  transition: background 0.2s var(--ease-editorial);
+}
+
+.dyt-progress__step.is-active,
+.dyt-progress__step.is-done {
+  background: var(--color-burgundy);
+}
+
+.dyt-progress__label {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+  margin-left: 0.5rem;
+}
+
 .dyt-section {
   padding-top: var(--space-lg);
-  border-top: 1px solid color-mix(in srgb, var(--color-stone) 25%, transparent);
+  border-top: 1px solid var(--color-stone);
   margin-bottom: var(--space-md);
 }
 
@@ -117,7 +148,9 @@
 
 .dyt-submit-row {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 1rem;
   margin-top: var(--space-md);
 }
 
@@ -138,6 +171,24 @@
 .dyt-submit:not(:disabled):hover {
   cursor: pointer;
   opacity: 0.9;
+}
+
+.dyt-back {
+  padding: 1.1rem 1.75rem;
+  margin-right: auto;
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-stone);
+  border-radius: 0.25rem;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.dyt-back:hover {
+  cursor: pointer;
+  border-color: var(--color-burgundy);
+  color: var(--color-burgundy);
 }
 
 .dyt-success {

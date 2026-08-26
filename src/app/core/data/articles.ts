@@ -6,8 +6,11 @@ export interface Article {
   title: string;
   excerpt: string;
   author: string;
+  publishedAt: string;
   image: string;
   alt: string;
+  cardImage: string;
+  cardAlt: string;
   body: string;
 }
 
@@ -168,8 +171,11 @@ export const ARTICLES: Article[] = [
     title: 'The Art of Slow Travel',
     excerpt: 'Why seeing less can mean experiencing more.',
     author: 'The Travel Edit',
+    publishedAt: '2026-06-02',
     image: IMAGES.articleSlowTravel.url,
     alt: IMAGES.articleSlowTravel.alt,
+    cardImage: '',
+    cardAlt: '',
     body: SLOW_TRAVEL_BODY
   },
   {
@@ -178,8 +184,11 @@ export const ARTICLES: Article[] = [
     title: 'Italy, Beyond the Obvious',
     excerpt: "The places we'd return to—and how we'd experience them.",
     author: 'The Travel Edit',
+    publishedAt: '2026-06-16',
     image: IMAGES.articleItaly.url,
     alt: IMAGES.articleItaly.alt,
+    cardImage: '',
+    cardAlt: '',
     body: ITALY_BEYOND_BODY
   },
   {
@@ -188,8 +197,11 @@ export const ARTICLES: Article[] = [
     title: 'Where to Go Next',
     excerpt: 'Five destinations worth having on your radar.',
     author: 'The Travel Edit',
+    publishedAt: '2026-07-01',
     image: IMAGES.articleBaliHiddenGems.url,
     alt: IMAGES.articleBaliHiddenGems.alt,
+    cardImage: '',
+    cardAlt: '',
     body: WHERE_TO_GO_NEXT_BODY
   }
 ];

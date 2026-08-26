@@ -1,0 +1,144 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'The Edit' }]"
+    title="The Edit"
+    description="Artículos y notas editoriales destacadas."
+    previewHref="/#the-edit"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Encabezado</p>
+
+      <label class="field">
+        <span>Eyebrow</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="headingLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="headingLine2" />
+        </label>
+      </div>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Texto de apoyo — línea 1</span>
+          <input type="text" formControlName="supportLine1" />
+        </label>
+        <label class="field">
+          <span>Texto de apoyo — línea 2</span>
+          <input type="text" formControlName="supportLine2" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Botón</p>
+      <div class="content-grid">
+        <label class="field">
+          <span>Texto del botón</span>
+          <input type="text" formControlName="ctaLabel" />
+        </label>
+        <label class="field">
+          <span>Enlace</span>
+          <input type="text" formControlName="ctaHref" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Artículos</p>
+        <button type="button" class="btn btn--secondary" (click)="addArticle()">Agregar artículo</button>
+      </div>
+
+      <p class="field__hint">La vista previa de cada artículo muestra la última versión guardada, no los cambios sin guardar.</p>
+
+      @if (uploadError()) {
+        <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+      }
+
+      <div cdkDropList class="the-edit-editor__list" (cdkDropListDropped)="drop($event)">
+        @for (article of articles(); track $index) {
+          <div class="content-list-item" cdkDrag>
+            <div class="content-list-item__header">
+              <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+              </svg>
+              <span class="field__hint">Artículo {{ $index + 1 }}</span>
+              @if (article.slug) {
+                <button type="button" class="btn btn--secondary" (click)="previewSlug.set(article.slug)">Vista previa</button>
+              }
+              <button type="button" class="btn btn--secondary" (click)="removeArticle($index)">Quitar</button>
+            </div>
+
+            <div class="the-edit-editor__item-body">
+              <div class="content-image-field">
+                @if (article.image) {
+                  <img [src]="article.image" [alt]="article.alt" />
+                }
+                <label class="content-image-field__upload">
+                  <span>{{ uploadingIndex() === $index ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+                  <input type="file" accept="image/*" [disabled]="uploadingIndex() !== null" (change)="onImageSelected($index, $event)" />
+                </label>
+              </div>
+
+              <div class="the-edit-editor__item-fields">
+                <label class="field">
+                  <span>Categoría</span>
+                  <input type="text" [value]="article.category" (input)="updateArticle($index, { category: $any($event.target).value })" />
+                </label>
+                <label class="field">
+                  <span>Título</span>
+                  <input type="text" [value]="article.title" (input)="onTitleInput($index, $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  <span>Slug (URL del artículo)</span>
+                  <input type="text" [value]="article.slug" (input)="updateArticle($index, { slug: $any($event.target).value })" />
+                  @if (article.slug) {
+                    <span class="field__hint">/the-edit/{{ article.slug }}</span>
+                  }
+                </label>
+                <label class="field">
+                  <span>Extracto</span>
+                  <textarea rows="2" [value]="article.excerpt" (input)="updateArticle($index, { excerpt: $any($event.target).value })"></textarea>
+                </label>
+                <label class="field">
+                  <span>Autor</span>
+                  <input type="text" [value]="article.author" (input)="updateArticle($index, { author: $any($event.target).value })" />
+                  <span class="field__hint">Se muestra como "Por {{ article.author || '…' }}" en el hero del artículo.</span>
+                </label>
+                <label class="field">
+                  <span>Texto alternativo de la imagen</span>
+                  <input type="text" [value]="article.alt" (input)="updateArticle($index, { alt: $any($event.target).value })" />
+                </label>
+              </div>
+            </div>
+
+            <label class="field the-edit-editor__body-field">
+              <span>Cuerpo del artículo</span>
+              <app-rich-text-editor
+                [ngModel]="article.body"
+                [ngModelOptions]="{ standalone: true }"
+                [imageUpload]="bodyImageUpload"
+                (ngModelChange)="updateArticle($index, { body: $event })"
+              />
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>
+
+<app-preview-modal [url]="previewUrl()" (closed)="previewSlug.set(null)" />

@@ -1,0 +1,97 @@
+.preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-lg);
+  background: color-mix(in srgb, var(--ink-900) 55%, transparent);
+}
+
+.preview-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 75rem;
+  height: 100%;
+  background: var(--canvas-100);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 32px 64px -20px rgba(0, 0, 0, 0.45);
+}
+
+.preview-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-000);
+  border-bottom: 1px solid var(--line-200);
+  flex-shrink: 0;
+}
+
+.preview-modal__tabs {
+  display: flex;
+  gap: var(--space-2xs);
+  padding: var(--space-3xs);
+  background: var(--canvas-100);
+  border-radius: 999px;
+}
+
+.preview-modal__tabs button {
+  padding: var(--space-2xs) var(--space-md);
+  border-radius: 999px;
+  font-size: var(--size-small);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.preview-modal__tabs button:hover {
+  cursor: pointer;
+}
+
+.preview-modal__tabs button.is-active {
+  background: var(--ink-900);
+  color: var(--surface-000);
+}
+
+.preview-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.preview-modal__close svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.preview-modal__close:hover {
+  background: var(--canvas-100);
+  cursor: pointer;
+}
+
+.preview-modal__viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  background: var(--line-200);
+  padding: var(--space-lg);
+}
+
+.preview-modal__frame {
+  height: 100%;
+  min-height: 40rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  box-shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.35);
+  transition: width 0.2s var(--ease-standard);
+}

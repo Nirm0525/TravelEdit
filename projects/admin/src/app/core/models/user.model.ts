@@ -21,8 +21,8 @@ export interface CreateUserPayload {
 
 export interface UpdateUserPayload {
   userId: string;
-  fullName: string;
-  email: string;
-  role: StaffRole;
-  status: 'active' | 'inactive';
+  fullName?: string;
+  email?: string;
+  role?: StaffRole;
+  status?: 'active' | 'inactive';
 }

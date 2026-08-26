@@ -1,0 +1,23 @@
+.footer-editor__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.footer-editor__link,
+.footer-editor__social {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.footer-editor__link input,
+.footer-editor__social input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: var(--size-small);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+}

@@ -1,7 +1,9 @@
 .article-card__frame {
+  display: block;
   position: relative;
   aspect-ratio: 3 / 5;
   overflow: hidden;
+  text-decoration: none;
 }
 
 .article-card__frame img {

@@ -4,17 +4,11 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { DestinationsService } from '../../../../core/services/destinations';
 import { DestinationImagesService } from '../../../../core/services/destination-images';
 import { Destination, DestinationImage } from '../../../../core/models/destination.model';
-
-interface PendingUpload {
-  id: string;
-  file: File;
-  altText: string;
-  previewUrl: string;
-}
+import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 
 @Component({
   selector: 'app-destination-gallery',
-  imports: [DragDropModule],
+  imports: [DragDropModule, ImageUploader],
   templateUrl: './gallery.html',
   styleUrl: './gallery.css'
 })
@@ -27,9 +21,10 @@ export class Gallery {
   readonly images = signal<DestinationImage[]>([]);
   readonly destination = signal<Destination | null>(null);
   readonly loading = signal(true);
-  readonly pending = signal<PendingUpload[]>([]);
   readonly uploading = signal(false);
+  readonly uploadError = signal<string | null>(null);
   readonly confirmingDeleteId = signal<string | null>(null);
+  readonly editingAltId = signal<string | null>(null);
 
   constructor() {
     void this.load();
@@ -54,57 +49,18 @@ export class Gallery {
     return this.imagesService.publicUrl(image.storagePath);
   }
 
-  onFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = input.files;
-    if (!files) {
-      return;
-    }
-
-    const additions: PendingUpload[] = Array.from(files).map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      altText: '',
-      previewUrl: URL.createObjectURL(file)
-    }));
-
-    this.pending.update((current) => [...current, ...additions]);
-    input.value = '';
-  }
-
-  onPendingAltInput(pendingId: string, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.pending.update((items) => items.map((item) => (item.id === pendingId ? { ...item, altText: value } : item)));
-  }
-
-  discardPending(pendingId: string): void {
-    const item = this.pending().find((p) => p.id === pendingId);
-    if (item) {
-      URL.revokeObjectURL(item.previewUrl);
-    }
-    this.pending.update((items) => items.filter((p) => p.id !== pendingId));
-  }
-
-  canUploadPending(): boolean {
-    const items = this.pending();
-    return items.length > 0 && items.every((item) => item.altText.trim().length > 0);
-  }
-
-  async uploadPending(): Promise<void> {
-    if (!this.canUploadPending() || this.uploading()) {
-      return;
-    }
-
+  async onFilesReady(files: ReadyImage[]): Promise<void> {
     this.uploading.set(true);
+    this.uploadError.set(null);
     try {
       let position = this.images().length;
-      for (const item of this.pending()) {
-        const image = await this.imagesService.upload(this.destinationId, item.file, item.altText.trim(), position);
+      for (const item of files) {
+        const image = await this.imagesService.upload(this.destinationId, item.file, item.altText, position);
         this.images.update((images) => [...images, image]);
-        URL.revokeObjectURL(item.previewUrl);
         position += 1;
       }
-      this.pending.set([]);
+    } catch {
+      this.uploadError.set('No se pudo subir una de las imágenes. Intenta de nuevo.');
     } finally {
       this.uploading.set(false);
     }
@@ -120,6 +76,20 @@ export class Gallery {
     moveItemInArray(reordered, event.previousIndex, event.currentIndex);
     this.images.set(reordered);
     await this.imagesService.reorder(reordered.map((image) => image.id));
+  }
+
+  startEditAlt(image: DestinationImage): void {
+    this.editingAltId.set(image.id);
+  }
+
+  async saveAltText(image: DestinationImage, event: Event): Promise<void> {
+    const value = (event.target as HTMLInputElement).value.trim();
+    this.editingAltId.set(null);
+    if (!value || value === image.altText) {
+      return;
+    }
+    await this.imagesService.updateAltText(image.id, value);
+    this.images.update((images) => images.map((img) => (img.id === image.id ? { ...img, altText: value } : img)));
   }
 
   requestDelete(image: DestinationImage): void {

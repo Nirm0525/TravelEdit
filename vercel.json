@@ -4,6 +4,8 @@
   "outputDirectory": "dist/TravelEdit/browser",
   "rewrites": [
     { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/admin/:path*", "destination": "/admin/index.html" }
+    { "source": "/admin/:path*", "destination": "/admin/index.html" },
+    { "source": "/disenar-tu-viaje", "destination": "/index.html" },
+    { "source": "/the-edit/:slug", "destination": "/index.html" }
   ]
 }

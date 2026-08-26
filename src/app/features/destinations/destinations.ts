@@ -1,10 +1,28 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Injector, OnDestroy, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { NgFor } from '@angular/common';
 import { DESTINATIONS, Destination } from '../../core/data/destinations';
 import { DestinationCard } from './destination-card/destination-card';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 import { Draggable, gsap, registerGsap } from '../../core/gsap/gsap-setup';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
+import { SiteContentService } from '../../core/services/site-content';
+import { PublicDestinationsService } from '../../core/services/public-destinations';
+
+interface DestinationsHeading {
+  eyebrow: string;
+  headingLine1: string;
+  headingLine2: string;
+  headingLine3: string;
+  support: string;
+}
+
+const HEADING_DEFAULT: DestinationsHeading = {
+  eyebrow: 'Destinations',
+  headingLine1: 'Where will',
+  headingLine2: 'your story',
+  headingLine3: 'begin?',
+  support: 'Places worth discovering.\nStories worth living.'
+};
 
 @Component({
   selector: 'app-destinations',
@@ -14,7 +32,12 @@ import { ReducedMotionService } from '../../core/services/reduced-motion';
   styleUrl: './destinations.css'
 })
 export class Destinations implements AfterViewInit, OnDestroy {
-  readonly destinations = DESTINATIONS;
+  private readonly siteContent = inject(SiteContentService);
+  private readonly publicDestinations = inject(PublicDestinationsService);
+  private readonly injector = inject(Injector);
+
+  readonly heading = signal<DestinationsHeading>(HEADING_DEFAULT);
+  readonly destinations = signal<Destination[]>(DESTINATIONS);
 
   trackBySlug(_index: number, destination: Destination): string {
     return destination.slug;
@@ -25,6 +48,28 @@ export class Destinations implements AfterViewInit, OnDestroy {
   private readonly track = viewChild<ElementRef<HTMLElement>>('track');
   private draggable?: Draggable;
 
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    const data = await this.siteContent.getDestinosDestacados();
+    if (data) {
+      this.heading.update((current) => ({ ...current, ...data }));
+    }
+
+    const ids = data?.destinationIds ?? [];
+    if (ids.length === 0) {
+      return;
+    }
+
+    const featured = await this.publicDestinations.getByIds(ids);
+    if (featured.length > 0) {
+      this.destinations.set(featured);
+      this.reinitDraggable();
+    }
+  }
+
   private bounds = () => ({ minX: 0, maxX: 0 });
   private hoverDirection = 0;
   private hoverSpeed = 0;
@@ -33,6 +78,15 @@ export class Destinations implements AfterViewInit, OnDestroy {
   private readonly tickHover = () => this.updateHoverScroll();
 
   ngAfterViewInit(): void {
+    this.initDraggable();
+  }
+
+  ngOnDestroy(): void {
+    gsap.ticker.remove(this.tickHover);
+    this.draggable?.kill();
+  }
+
+  private initDraggable(): void {
     const viewportEl = this.viewport()?.nativeElement;
     const trackEl = this.track()?.nativeElement;
     if (!viewportEl || !trackEl) {
@@ -56,9 +110,12 @@ export class Destinations implements AfterViewInit, OnDestroy {
     gsap.ticker.add(this.tickHover);
   }
 
-  ngOnDestroy(): void {
+  /** Los destinos reales llegan async, después de ngAfterViewInit — hay que
+   *  re-medir el carrusel una vez que el DOM refleje la lista nueva. */
+  private reinitDraggable(): void {
     gsap.ticker.remove(this.tickHover);
     this.draggable?.kill();
+    afterNextRender(() => this.initDraggable(), { injector: this.injector });
   }
 
   onViewportPointerMove(event: MouseEvent): void {

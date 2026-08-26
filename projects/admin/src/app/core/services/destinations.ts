@@ -7,7 +7,7 @@ import {
   toDestination,
   toItineraryDay
 } from '../models/destination.model';
-import { DestinationStatus } from '../models/destination-enums';
+import { DestinationStatus, TripType } from '../models/destination-enums';
 import { slugify } from '../utils/slugify';
 
 export interface DestinationListPage {
@@ -19,7 +19,20 @@ export interface DestinationListParams {
   page: number;
   pageSize: number;
   status?: DestinationStatus;
+  tripType?: TripType;
   search?: string;
+}
+
+export interface CreateDestinationPayload {
+  title: string;
+  slug: string;
+  countryRegion: string;
+  tripType: TripType;
+  durationDays: number;
+  season?: Destination['season'];
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
+  shortDescription?: string;
 }
 
 @Injectable({
@@ -42,6 +55,9 @@ export class DestinationsService {
     if (params.status) {
       query = query.eq('status', params.status);
     }
+    if (params.tripType) {
+      query = query.eq('trip_type', params.tripType);
+    }
     if (params.search) {
       query = query.ilike('title', `%${params.search}%`);
     }
@@ -55,6 +71,20 @@ export class DestinationsService {
       items: (data ?? []).map(toDestination),
       total: count ?? 0
     };
+  }
+
+  /** Trae destinos por ID sin filtrar por status — usado por el editor de "Destinos destacados"
+   *  para poder seguir mostrando un destino ya elegido aunque haya pasado a archivado. */
+  async listByIds(ids: string[]): Promise<Destination[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await this.supabase.client.from('destinations').select('*').in('id', ids);
+    if (error) {
+      throw error;
+    }
+    return (data ?? []).map(toDestination);
   }
 
   async getById(id: string): Promise<Destination | null> {
@@ -78,6 +108,37 @@ export class DestinationsService {
       .insert({
         title,
         slug: baseSlug,
+        // long_description es NOT NULL sin default en la base real (a
+        // diferencia de lo que describe la migración 0002) — sin esto el
+        // insert falla con 23502 en cualquier destino nuevo.
+        long_description: '',
+        created_by: this.auth.profile()?.id
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return toDestination(data);
+  }
+
+  /** Siempre crea en 'draft' — status no es elegible al crear, se publica después
+   *  desde el editor una vez que el contenido esté listo. */
+  async create(payload: CreateDestinationPayload): Promise<Destination> {
+    const { data, error } = await this.supabase.client
+      .from('destinations')
+      .insert({
+        title: payload.title,
+        slug: payload.slug,
+        country_region: payload.countryRegion,
+        trip_type: payload.tripType,
+        duration_days: payload.durationDays,
+        season: payload.season ?? null,
+        price_range_min: payload.priceRangeMin ?? null,
+        price_range_max: payload.priceRangeMax ?? null,
+        short_description: payload.shortDescription ?? '',
+        long_description: '',
         created_by: this.auth.profile()?.id
       })
       .select('*')

@@ -1,0 +1,63 @@
+@if (notFound()) {
+  <p class="field__hint field__hint--error">No se encontró esta sección — puede que ya haya sido eliminada.</p>
+  <a class="btn btn--secondary" routerLink="/contenido">Volver a Página principal</a>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <app-content-editor-layout
+      [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Sección personalizada' }]"
+      title="Sección personalizada"
+      description="Bloque genérico que se muestra al final del Home."
+      [previewHref]="'/#custom-' + sectionId"
+      [loading]="loading()"
+      [saving]="saving()"
+      [saved]="!!savedAt()"
+      [errorMessage]="error()"
+    >
+      <div class="content-section">
+        <p class="content-section__title">Imagen (opcional)</p>
+        <div class="content-image-field">
+          @if (previewUrl() ?? form.controls.imageUrl.value) {
+            <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
+          }
+
+          <label class="content-image-field__upload">
+            <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+            <input type="file" accept="image/*" [disabled]="uploading()" (change)="onFileSelected($event)" />
+          </label>
+
+          @if (uploadError()) {
+            <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+          }
+
+          <label class="field">
+            <span>Texto alternativo de la imagen</span>
+            <input type="text" formControlName="imageAlt" />
+          </label>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <p class="content-section__title">Contenido</p>
+
+        <label class="field">
+          <span>Eyebrow</span>
+          <input type="text" formControlName="eyebrow" />
+        </label>
+
+        <label class="field">
+          <span>Título</span>
+          <input type="text" formControlName="title" />
+        </label>
+
+        <label class="field">
+          <span>Texto</span>
+          <textarea formControlName="body" rows="4"></textarea>
+        </label>
+      </div>
+
+      <div class="content-section">
+        <button type="button" class="btn btn--danger" [disabled]="saving()" (click)="remove()">Eliminar sección</button>
+      </div>
+    </app-content-editor-layout>
+  </form>
+}

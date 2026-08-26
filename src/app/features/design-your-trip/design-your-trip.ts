@@ -1,8 +1,10 @@
-import { Component, ElementRef, HostListener, effect, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { environment } from '../../../environments/environment.prod';
-import { TravelEditFormService } from '../../core/services/travel-edit-form';
+import { Meta, Title } from '@angular/platform-browser';
+import { RouterLink } from '@angular/router';
+import { IMAGES } from '../../core/data/images';
 import { LeadSubmissionService } from '../../core/services/lead-submission';
+import { environment } from '../../../environments/environment.prod';
 import {
   BUDGET_RANGE_OPTIONS,
   FLIGHT_CLASS_OPTIONS,
@@ -27,22 +29,20 @@ declare global {
   }
 }
 
-const TOTAL_STEPS = 5;
-
 @Component({
-  selector: 'app-travel-edit-form',
-  imports: [ReactiveFormsModule],
-  templateUrl: './travel-edit-form.html',
-  styleUrl: './travel-edit-form.css'
+  selector: 'app-design-your-trip',
+  imports: [ReactiveFormsModule, RouterLink],
+  templateUrl: './design-your-trip.html',
+  styleUrl: './design-your-trip.css'
 })
-export class TravelEditForm {
+export class DesignYourTrip implements AfterViewInit {
   private readonly fb = inject(NonNullableFormBuilder);
-  private readonly formState = inject(TravelEditFormService);
   private readonly leadSubmission = inject(LeadSubmissionService);
+  private readonly title = inject(Title);
+  private readonly meta = inject(Meta);
 
-  readonly isOpen = this.formState.isOpen;
-  readonly currentStep = signal(1);
-  readonly totalSteps = TOTAL_STEPS;
+  readonly heroImage = IMAGES.designYourTrip;
+
   readonly submitting = signal(false);
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -58,7 +58,6 @@ export class TravelEditForm {
   readonly hearAboutUsOptions = HEAR_ABOUT_US_OPTIONS;
 
   private readonly turnstileContainer = viewChild<ElementRef<HTMLElement>>('turnstileContainer');
-  private turnstileRenderRequested = false;
 
   readonly form = this.fb.group({
     name: this.fb.control('', Validators.required),
@@ -91,41 +90,18 @@ export class TravelEditForm {
   });
 
   constructor() {
-    effect(() => {
-      if (this.currentStep() === 5 && !this.turnstileRenderRequested) {
-        const container = this.turnstileContainer()?.nativeElement;
-        if (container) {
-          this.turnstileRenderRequested = true;
-          void this.renderTurnstile(container);
-        }
-      }
+    this.title.setTitle('Diseña tu viaje | Travel Edit');
+    this.meta.updateTag({
+      name: 'description',
+      content: 'Cuéntanos qué tienes en mente y diseñaremos una experiencia de viaje pensada especialmente para ti.'
     });
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    if (this.isOpen()) {
-      this.closeAndReset();
+  ngAfterViewInit(): void {
+    const container = this.turnstileContainer()?.nativeElement;
+    if (container) {
+      void this.renderTurnstile(container);
     }
-  }
-
-  canContinueFromStep1(): boolean {
-    const { name, email, phone } = this.form.controls;
-    return name.valid && email.valid && phone.valid;
-  }
-
-  next(): void {
-    if (this.currentStep() === 1 && !this.canContinueFromStep1()) {
-      this.form.controls.name.markAsTouched();
-      this.form.controls.email.markAsTouched();
-      this.form.controls.phone.markAsTouched();
-      return;
-    }
-    this.currentStep.update((step) => Math.min(this.totalSteps, step + 1));
-  }
-
-  back(): void {
-    this.currentStep.update((step) => Math.max(1, step - 1));
   }
 
   toggleStylePreference(option: StylePreference): void {
@@ -134,41 +110,13 @@ export class TravelEditForm {
     this.form.controls.stylePreferences.setValue(next);
   }
 
-  closeAndReset(): void {
-    this.formState.close();
-    this.form.reset({
-      name: '',
-      email: '',
-      phone: '',
-      location: '',
-      travelingWith: null,
-      adults: null,
-      children: null,
-      childrenAges: '',
-      destinationInterestText: '',
-      destinationNotes: '',
-      departureDate: '',
-      returnDate: '',
-      nights: null,
-      datesFlexible: false,
-      occasion: null,
-      stylePreferences: [],
-      pace: null,
-      hotelStyle: null,
-      budgetRange: null,
-      flightClass: null,
-      likesAndDislikes: '',
-      unforgettableNote: '',
-      hearAboutUs: null
-    });
-    this.currentStep.set(1);
-    this.submitted.set(false);
-    this.errorMessage.set(null);
-    this.turnstileToken.set(null);
-    this.turnstileRenderRequested = false;
-  }
-
   async submit(): Promise<void> {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.errorMessage.set('Revisa los campos obligatorios antes de enviar.');
+      return;
+    }
+
     if (this.submitting() || !this.turnstileToken()) {
       this.errorMessage.set('Completa la verificación anti-spam antes de enviar.');
       return;

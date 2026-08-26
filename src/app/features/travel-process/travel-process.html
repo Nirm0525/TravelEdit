@@ -11,12 +11,12 @@
 
   <div class="container">
     <h2 id="travel-process-title" class="travel-process__title font-display" appRevealOnScroll>
-      Not a trip.
-      <em class="font-display--emphasis">Your edit.</em>
+      {{ heading().titleLine1 }}
+      <em class="font-display--emphasis">{{ heading().titleLine2 }}</em>
     </h2>
 
     <ol class="travel-process__steps">
-      @for (step of steps; track step.number; let i = $index) {
+      @for (step of steps(); track step.number; let i = $index) {
         <li class="travel-process__step" [appRevealOnScroll]="i * 0.15">
           <span class="travel-process__number">{{ step.number }}</span>
           <span class="travel-process__icon" aria-hidden="true">

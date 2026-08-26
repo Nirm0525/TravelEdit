@@ -1,0 +1,97 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Experiencias' }]"
+    title="Experiencias"
+    description="Tipos de experiencia mostrados en Home."
+    previewHref="/#experiencias"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Encabezado</p>
+
+      <label class="field">
+        <span>Eyebrow</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="headingLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="headingLine2" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Texto de apoyo</span>
+        <textarea formControlName="support" rows="2"></textarea>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Experiencias</p>
+        <button type="button" class="btn btn--secondary" (click)="addItem()">Agregar experiencia</button>
+      </div>
+
+      @if (uploadError()) {
+        <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+      }
+
+      <div cdkDropList class="experiencias-editor__list" (cdkDropListDropped)="drop($event)">
+        @for (item of items(); track $index) {
+          <div class="content-list-item" cdkDrag>
+            <div class="content-list-item__header">
+              <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+              </svg>
+              <span class="field__hint">Experiencia {{ $index + 1 }}</span>
+              <button type="button" class="btn btn--secondary" (click)="removeItem($index)">Quitar</button>
+            </div>
+
+            <div class="experiencias-editor__item-body">
+              <div class="content-image-field">
+                @if (item.image) {
+                  <img [src]="item.image" [alt]="item.alt" />
+                }
+                <label class="content-image-field__upload">
+                  <span>{{ uploadingIndex() === $index ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+                  <input type="file" accept="image/*" [disabled]="uploadingIndex() !== null" (change)="onImageSelected($index, $event)" />
+                </label>
+              </div>
+
+              <div class="experiencias-editor__item-fields">
+                <div class="content-grid">
+                  <label class="field">
+                    <span>Nombre</span>
+                    <input type="text" [value]="item.name" (input)="updateItem($index, { name: $any($event.target).value })" />
+                  </label>
+                  <label class="field">
+                    <span>Icono</span>
+                    <select [value]="item.icon" (change)="updateItem($index, { icon: $any($event.target).value })">
+                      @for (icon of iconOptions; track icon) {
+                        <option [value]="icon">{{ icon }}</option>
+                      }
+                    </select>
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Texto alternativo de la imagen</span>
+                  <input type="text" [value]="item.alt" (input)="updateItem($index, { alt: $any($event.target).value })" />
+                </label>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

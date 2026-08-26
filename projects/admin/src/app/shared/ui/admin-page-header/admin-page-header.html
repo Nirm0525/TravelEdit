@@ -1,7 +1,18 @@
 <header class="admin-page-header">
   <div class="admin-page-header__text">
-    @if (breadcrumb()) {
-      <p class="admin-page-header__breadcrumb">{{ breadcrumb() }}</p>
+    @if (breadcrumb(); as crumbs) {
+      <p class="admin-page-header__breadcrumb">
+        @for (crumb of crumbs; track crumb.label; let last = $last) {
+          @if (crumb.link && !last) {
+            <a [routerLink]="crumb.link">{{ crumb.label }}</a>
+          } @else {
+            <span>{{ crumb.label }}</span>
+          }
+          @if (!last) {
+            <span aria-hidden="true"> / </span>
+          }
+        }
+      </p>
     }
     <h1 class="page-title">{{ title() }}</h1>
   </div>

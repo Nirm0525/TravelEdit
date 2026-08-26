@@ -1,19 +1,19 @@
 <section class="final-cta" id="final-cta" aria-labelledby="final-cta-title">
   <div class="final-cta__bg">
-    <img [src]="image.url" [alt]="image.alt" loading="lazy" decoding="async" />
+    <img [src]="content().imageUrl" [alt]="content().imageAlt" loading="lazy" decoding="async" />
   </div>
 
   <div class="container final-cta__content" appRevealOnScroll>
-    <p class="eyebrow eyebrow--on-dark">Your Next Story Starts Here</p>
-    <h2 id="final-cta-title" class="final-cta__title font-display">Where<br />to next?</h2>
-    <p class="final-cta__text">Let's create something unforgettable.</p>
+    <p class="eyebrow eyebrow--on-dark">{{ content().eyebrow }}</p>
+    <h2 id="final-cta-title" class="final-cta__title font-display">{{ content().titleLine1 }}<br />{{ content().titleLine2 }}</h2>
+    <p class="final-cta__text">{{ content().text }}</p>
 
-    <app-animated-button theme="dark" (buttonClick)="openTravelEditForm()">START YOUR JOURNEY</app-animated-button>
+    <app-animated-button theme="dark" (buttonClick)="openTravelEditForm()">{{ content().ctaLabel }}</app-animated-button>
 
     <div class="final-cta__links">
-      <a href="#" data-cursor="explore">Instagram</a>
-      <a href="https://wa.me/50433070330" target="_blank" rel="noopener" data-cursor="explore">WhatsApp</a>
-      <a href="mailto:marcela@travelinternational.org" data-cursor="explore">Email</a>
+      @for (link of content().links; track link.label) {
+        <a [href]="link.href" data-cursor="explore">{{ link.label }}</a>
+      }
     </div>
   </div>
 </section>

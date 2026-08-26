@@ -1,0 +1,10 @@
+<app-admin-modal [open]="open()" [title]="title()" (closed)="cancel()">
+  <p>{{ message() }}</p>
+
+  <div adminModalFooter>
+    <button type="button" class="btn btn--secondary" (click)="cancel()">{{ cancelLabel() }}</button>
+    <button type="button" [class]="danger() ? 'btn btn--danger' : 'btn btn--primary'" (click)="confirm()">
+      {{ confirmLabel() }}
+    </button>
+  </div>
+</app-admin-modal>

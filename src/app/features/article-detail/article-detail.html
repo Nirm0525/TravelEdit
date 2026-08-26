@@ -1,0 +1,49 @@
+<div class="article-detail">
+  <header class="article-detail__header">
+    <a routerLink="/" class="article-detail__logo">
+      <img src="images/logos/thetraveledit2.png" alt="The Travel Edit" width="150" height="56" />
+    </a>
+    <a href="/#the-edit" class="article-detail__back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>The Edit</span>
+    </a>
+  </header>
+
+  @if (article(); as a) {
+    <article class="article-detail__article">
+      <div class="article-detail__hero">
+        <img [src]="a.image" [alt]="a.alt" loading="eager" />
+        <div class="article-detail__hero-overlay" aria-hidden="true"></div>
+        <div class="container article-detail__hero-content">
+          <p class="eyebrow eyebrow--on-dark">{{ a.category }}</p>
+          <h1 class="article-detail__title font-display">{{ a.title }}</h1>
+          @if (a.author) {
+            <p class="article-detail__byline">Por {{ a.author }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="container article-detail__content">
+        <p class="article-detail__excerpt">{{ a.excerpt }}</p>
+
+        <div class="article-detail__prose" [innerHTML]="safeBody()"></div>
+
+        <a href="/#the-edit" class="article-detail__cta">
+          <span>Volver a The Edit</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </article>
+  } @else {
+    <div class="article-detail__not-found">
+      <p class="eyebrow">The Edit</p>
+      <h1 class="font-display">No encontramos este artículo.</h1>
+      <a href="/#the-edit" class="article-detail__cta">
+        <span>Volver a The Edit</span>
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  }
+</div>

@@ -1,75 +1,90 @@
-<div class="destinations-list">
-  <header class="destinations-list__header">
-    <h1 class="page-title">Destinos</h1>
+<app-admin-page-header [breadcrumb]="breadcrumb" title="Destinos">
+  <a class="btn btn--primary" routerLink="/destinos/nuevo">+ Nuevo destino</a>
+</app-admin-page-header>
 
-    <form class="destinations-list__create" (ngSubmit)="createDraft()">
-      <label class="visually-hidden" for="new-destination-title">Título del nuevo destino</label>
-      <input
-        id="new-destination-title"
-        type="text"
-        placeholder="Título del nuevo destino…"
-        [ngModel]="newTitle()"
-        (ngModelChange)="newTitle.set($event)"
-        name="newTitle"
-      />
-      <button type="submit" [disabled]="!newTitle().trim() || creating()">
-        {{ creating() ? 'Creando…' : 'Crear borrador' }}
-      </button>
-    </form>
-  </header>
+<div class="destinations-list__toolbar">
+  <input
+    type="search"
+    class="destinations-list__search"
+    placeholder="Buscar por título…"
+    [value]="search()"
+    (input)="onSearchInput($event)"
+  />
 
-  <div class="destinations-list__filters" role="group" aria-label="Filtrar por estado">
-    <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">Todos</button>
-    <button type="button" [class.is-active]="statusFilter() === 'draft'" (click)="setStatusFilter('draft')">Borrador</button>
-    <button type="button" [class.is-active]="statusFilter() === 'published'" (click)="setStatusFilter('published')">Publicado</button>
-    <button type="button" [class.is-active]="statusFilter() === 'archived'" (click)="setStatusFilter('archived')">Archivado</button>
-  </div>
+  <select class="destinations-list__trip-type" aria-label="Filtrar por tipo de viaje" (change)="setTripTypeFilter($event)">
+    <option value="" [selected]="tripTypeFilter() === ''">Todos los tipos</option>
+    @for (option of tripTypeOptions; track option.value) {
+      <option [value]="option.value" [selected]="tripTypeFilter() === option.value">{{ option.label }}</option>
+    }
+  </select>
 
-  @if (loading()) {
-    <div class="destinations-list__skeleton" aria-hidden="true">
-      @for (row of [1, 2, 3, 4, 5]; track row) {
-        <div class="destinations-list__skeleton-row"></div>
-      }
-    </div>
-  } @else if (items().length === 0) {
-    <div class="destinations-list__empty">
-      <p>Todavía no hay destinos{{ statusFilter() ? ' con este estado' : '' }}.</p>
-      <p>Escribe un título arriba y crea el primer borrador — el resto del contenido (itinerario, galería, descripción) se completa después.</p>
-    </div>
-  } @else {
-    <table class="destinations-list__table">
-      <thead>
-        <tr>
-          <th scope="col">Título</th>
-          <th scope="col">País / región</th>
-          <th scope="col">Estado</th>
-          <th scope="col">Duración</th>
-          <th scope="col">Actualizado</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id) {
-          <tr>
-            <td data-label="Título">
-              <a [routerLink]="['/destinos', item.id, 'general']">{{ item.title }}</a>
-            </td>
-            <td data-label="País / región">{{ item.countryRegion || '—' }}</td>
-            <td data-label="Estado">
-              <span class="destinations-list__status" [attr.data-status]="item.status">
-                {{ statusLabel[item.status] }}
-              </span>
-            </td>
-            <td data-label="Duración">{{ item.durationDays }} días</td>
-            <td data-label="Actualizado">{{ item.updatedAt | date: 'd MMM y' }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-
-    <div class="destinations-list__pagination">
-      <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
-      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} destinos</span>
-      <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
-    </div>
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn btn--secondary" (click)="clearFilters()">Limpiar filtros</button>
   }
 </div>
+
+<div class="destinations-list__filters" role="group" aria-label="Filtrar por estado">
+  <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">Todos</button>
+  <button type="button" [class.is-active]="statusFilter() === 'draft'" (click)="setStatusFilter('draft')">Borrador</button>
+  <button type="button" [class.is-active]="statusFilter() === 'published'" (click)="setStatusFilter('published')">Publicado</button>
+  <button type="button" [class.is-active]="statusFilter() === 'archived'" (click)="setStatusFilter('archived')">Archivado</button>
+</div>
+
+<app-admin-table
+  [loading]="loading()"
+  [empty]="!loading() && items().length === 0"
+  [emptyMessage]="hasActiveFilters() ? 'No hay destinos que coincidan con estos filtros.' : 'Todavía no hay destinos.'"
+>
+  <table>
+    <thead>
+      <tr>
+        <th scope="col"><span class="visually-hidden">Portada</span></th>
+        <th scope="col">Título</th>
+        <th scope="col">País / región</th>
+        <th scope="col">Tipo</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Actualizado</th>
+        <th scope="col">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td class="destinations-list__cover-cell">
+            @if (coverUrlById()[item.id]; as cover) {
+              <img [src]="cover" [alt]="item.title" class="destinations-list__cover" />
+            } @else {
+              <div class="destinations-list__cover destinations-list__cover--empty" aria-hidden="true"></div>
+            }
+          </td>
+          <td data-label="Título">
+            <a [routerLink]="['/destinos', item.id, 'general']">{{ item.title }}</a>
+            <span class="destinations-list__slug">{{ item.slug }}</span>
+          </td>
+          <td data-label="País / región">{{ item.countryRegion || '—' }}</td>
+          <td data-label="Tipo">{{ item.tripType }}</td>
+          <td data-label="Estado">
+            <app-status-badge [label]="statusLabel[item.status]" [variant]="statusVariant[item.status]" />
+          </td>
+          <td data-label="Actualizado">{{ item.updatedAt | date: 'd MMM y' }}</td>
+          <td data-label="Acciones">
+            <div class="destinations-list__actions">
+              <a [routerLink]="['/destinos', item.id, 'general']">Editar</a>
+              <a [routerLink]="['/destinos', item.id, 'galeria']">Imágenes</a>
+              <a [routerLink]="['/destinos', item.id, 'itinerario']">Itinerario</a>
+              <button type="button" (click)="toggleStatus(item)">{{ statusActionLabel(item) }}</button>
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</app-admin-table>
+
+@if (!loading() && items().length > 0) {
+  <div class="destinations-list__pagination">
+    <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
+    <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} destinos</span>
+    <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
+  </div>
+}

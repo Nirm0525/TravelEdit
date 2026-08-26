@@ -1,0 +1,38 @@
+<app-admin-page-header [breadcrumb]="breadcrumb()" [title]="title()">
+  @if (resolvedPreviewHref()) {
+    <button type="button" class="btn btn--secondary" (click)="previewOpen.set(true)">Vista previa</button>
+  }
+</app-admin-page-header>
+
+<app-preview-modal [url]="activePreviewUrl()" (closed)="previewOpen.set(false)" />
+
+@if (description()) {
+  <p class="content-editor-layout__description">{{ description() }}</p>
+}
+
+@if (loading()) {
+  <div class="content-editor-layout__skeleton">
+    <app-admin-skeleton height="12rem" />
+    <app-admin-skeleton height="2.75rem" />
+    <app-admin-skeleton height="2.75rem" />
+    <app-admin-skeleton height="2.75rem" />
+  </div>
+} @else {
+  <div class="content-editor-layout__body">
+    <ng-content />
+  </div>
+
+  @if (errorMessage()) {
+    <p class="content-editor-layout__error">{{ errorMessage() }}</p>
+  }
+
+  <div class="content-editor-layout__footer">
+    <a class="btn btn--secondary" [routerLink]="backLink()">Cancelar</a>
+    <button type="submit" class="btn btn--primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+    @if (saved() && !saving()) {
+      <span class="content-editor-layout__saved">Cambios guardados correctamente.</span>
+    }
+  </div>
+}

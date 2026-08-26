@@ -1,13 +1,13 @@
 <section class="experiences" id="experiencias" aria-labelledby="experiences-title">
   <div class="container">
-    <app-section-title eyebrow="Experiences" align="center">
-      How do you<br />want to feel?
-      <p support>Every journey starts with how you want to experience it.</p>
+    <app-section-title [eyebrow]="heading().eyebrow" align="center">
+      {{ heading().headingLine1 }}<br />{{ heading().headingLine2 }}
+      <p support>{{ heading().support }}</p>
     </app-section-title>
 
     <div class="experiences__desktop">
       <div class="experiences__tabs" role="tablist" aria-label="Tipos de experiencia">
-        @for (experience of experiences; track experience.slug; let i = $index) {
+        @for (experience of experiences(); track experience.slug; let i = $index) {
           <button
             type="button"
             role="tab"
@@ -26,7 +26,7 @@
       </div>
 
       <div class="experiences__stage" data-cursor="view">
-        @for (experience of experiences; track experience.slug; let i = $index) {
+        @for (experience of experiences(); track experience.slug; let i = $index) {
           <img
             [src]="experience.image"
             [alt]="experience.alt"
@@ -40,7 +40,7 @@
     </div>
 
     <div class="experiences__mobile">
-      @for (experience of experiences; track experience.slug) {
+      @for (experience of experiences(); track experience.slug) {
         <app-experience-card [experience]="experience" />
       }
     </div>

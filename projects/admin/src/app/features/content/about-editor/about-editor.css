@@ -1,0 +1,20 @@
+.about-editor__words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.about-editor__word {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.about-editor__word input {
+  flex: 1;
+  font: inherit;
+  font-size: var(--size-body);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+}

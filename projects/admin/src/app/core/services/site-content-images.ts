@@ -37,8 +37,32 @@ export class SiteContentImagesService {
   private readonly supabase = inject(SupabaseService);
 
   async uploadHeroImage(file: File): Promise<string> {
+    return this.upload('hero', file);
+  }
+
+  async uploadAboutImage(file: File): Promise<string> {
+    return this.upload('about', file);
+  }
+
+  async uploadCtaFinalImage(file: File): Promise<string> {
+    return this.upload('cta-final', file);
+  }
+
+  async uploadExperienceImage(file: File): Promise<string> {
+    return this.upload('experiencias', file);
+  }
+
+  async uploadArticleImage(file: File): Promise<string> {
+    return this.upload('the-edit', file);
+  }
+
+  async uploadCustomSectionImage(file: File): Promise<string> {
+    return this.upload('personalizadas', file);
+  }
+
+  private async upload(folder: string, file: File): Promise<string> {
     const compressed = await compressImage(file);
-    const storagePath = `hero/${crypto.randomUUID()}.webp`;
+    const storagePath = `${folder}/${crypto.randomUUID()}.webp`;
 
     const { error } = await this.supabase.client.storage
       .from(BUCKET)

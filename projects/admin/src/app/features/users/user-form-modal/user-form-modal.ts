@@ -2,7 +2,7 @@ import { Component, effect, inject, input, output, signal } from '@angular/core'
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
 import { AdminUsersService } from '../../../core/services/admin-users';
-import { AdminUser } from '../../../core/models/user.model';
+import { AdminUser, UpdateUserPayload } from '../../../core/models/user.model';
 import { STAFF_ROLE_LABEL, StaffRole } from '../../../core/models/staff-role';
 
 export type UserFormMode = 'create' | 'edit';
@@ -80,7 +80,21 @@ export class UserFormModal {
 
     try {
       if (this.mode() === 'edit' && this.user()) {
-        await this.usersService.updateUser({ userId: this.user()!.id, ...value });
+        const current = this.user()!;
+        const changes: UpdateUserPayload = { userId: current.id };
+        if (value.fullName !== current.fullName) {
+          changes.fullName = value.fullName;
+        }
+        if (value.email !== current.email) {
+          changes.email = value.email;
+        }
+        if (value.role !== current.role) {
+          changes.role = value.role;
+        }
+        if (value.status !== (current.status === 'inactive' ? 'inactive' : 'active')) {
+          changes.status = value.status;
+        }
+        await this.usersService.updateUser(changes);
       } else {
         await this.usersService.createUser(value);
       }

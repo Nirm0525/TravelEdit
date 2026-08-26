@@ -1,0 +1,99 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'CTA final' }]"
+    title="CTA final"
+    description="Llamado a la acción antes del footer."
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Imagen de fondo</p>
+      <div class="content-image-field">
+        <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
+
+        <label class="content-image-field__upload">
+          <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+          <input type="file" accept="image/*" [disabled]="uploading()" (change)="onFileSelected($event)" />
+        </label>
+
+        @if (uploadError()) {
+          <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+        }
+
+        <label class="field">
+          <span>Texto alternativo de la imagen</span>
+          <input type="text" formControlName="imageAlt" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Contenido</p>
+
+      <label class="field">
+        <span>Eyebrow</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="titleLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="titleLine2" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Texto</span>
+        <textarea formControlName="text" rows="2"></textarea>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Botón</p>
+      <label class="field">
+        <span>Texto del botón</span>
+        <input type="text" formControlName="ctaLabel" />
+      </label>
+      <p class="field__hint">El botón abre el formulario de cotización; solo el texto es editable.</p>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Enlaces de contacto</p>
+        <button type="button" class="btn btn--secondary" (click)="addLink()">Agregar enlace</button>
+      </div>
+
+      <div cdkDropList class="cta-final-editor__links" (cdkDropListDropped)="drop($event)">
+        @for (link of links(); track $index) {
+          <div class="content-list-item" cdkDrag>
+            <div class="content-list-item__header">
+              <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+              </svg>
+              <span class="field__hint">Enlace {{ $index + 1 }}</span>
+              <button type="button" class="btn btn--secondary" (click)="removeLink($index)">Quitar</button>
+            </div>
+            <div class="content-grid">
+              <label class="field">
+                <span>Texto</span>
+                <input type="text" [value]="link.label" (input)="updateLink($index, { label: $any($event.target).value })" />
+              </label>
+              <label class="field">
+                <span>Enlace (URL, mailto: o #anchor)</span>
+                <input type="text" [value]="link.href" (input)="updateLink($index, { href: $any($event.target).value })" />
+              </label>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

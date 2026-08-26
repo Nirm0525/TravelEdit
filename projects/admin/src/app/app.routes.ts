@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
 import { permissionGuard } from './core/guards/permission-guard';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes-guard';
 
 export const routes: Routes = [
   {
@@ -26,6 +27,13 @@ export const routes: Routes = [
           import('./features/destinations/destinations-list/destinations-list').then((m) => m.DestinationsList)
       },
       {
+        path: 'destinos/nuevo',
+        data: { title: 'Nuevo destino' },
+        canActivate: [permissionGuard('destinos')],
+        loadComponent: () =>
+          import('./features/destinations/destination-create/destination-create').then((m) => m.DestinationCreate)
+      },
+      {
         path: 'destinos/:id',
         data: { title: 'Editar destino' },
         canActivate: [permissionGuard('destinos')],
@@ -35,6 +43,7 @@ export const routes: Routes = [
           { path: '', redirectTo: 'general', pathMatch: 'full' },
           {
             path: 'general',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/destinations/destination-form/general/general').then((m) => m.General)
           },
@@ -68,10 +77,73 @@ export const routes: Routes = [
         loadComponent: () => import('./features/leads/lead-detail/lead-detail').then((m) => m.LeadDetail)
       },
       {
-        path: 'contenido/hero',
+        path: 'contenido',
         data: { title: 'Página principal' },
         canActivate: [permissionGuard('contenido')],
+        loadComponent: () =>
+          import('./features/content/content-overview/content-overview').then((m) => m.ContentOverview)
+      },
+      {
+        path: 'contenido/hero',
+        data: { title: 'Hero' },
+        canActivate: [permissionGuard('contenido')],
         loadComponent: () => import('./features/content/hero-editor/hero-editor').then((m) => m.HeroEditor)
+      },
+      {
+        path: 'contenido/destinos-destacados',
+        data: { title: 'Destinos destacados' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () =>
+          import('./features/content/destinos-destacados-editor/destinos-destacados-editor').then(
+            (m) => m.DestinosDestacadosEditor
+          )
+      },
+      {
+        path: 'contenido/travel-process',
+        data: { title: 'Travel Process' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () =>
+          import('./features/content/travel-process-editor/travel-process-editor').then(
+            (m) => m.TravelProcessEditor
+          )
+      },
+      {
+        path: 'contenido/experiencias',
+        data: { title: 'Experiencias' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () =>
+          import('./features/content/experiencias-editor/experiencias-editor').then((m) => m.ExperienciasEditor)
+      },
+      {
+        path: 'contenido/the-edit',
+        data: { title: 'The Edit' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () => import('./features/content/the-edit-editor/the-edit-editor').then((m) => m.TheEditEditor)
+      },
+      {
+        path: 'contenido/about',
+        data: { title: 'About' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () => import('./features/content/about-editor/about-editor').then((m) => m.AboutEditor)
+      },
+      {
+        path: 'contenido/cta-final',
+        data: { title: 'CTA final' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () => import('./features/content/cta-final-editor/cta-final-editor').then((m) => m.CtaFinalEditor)
+      },
+      {
+        path: 'contenido/footer',
+        data: { title: 'Footer' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () => import('./features/content/footer-editor/footer-editor').then((m) => m.FooterEditor)
+      },
+      {
+        path: 'contenido/personalizada/:id',
+        data: { title: 'Sección personalizada' },
+        canActivate: [permissionGuard('contenido')],
+        loadComponent: () =>
+          import('./features/content/custom-section-editor/custom-section-editor').then((m) => m.CustomSectionEditor)
       },
       {
         path: 'usuarios',

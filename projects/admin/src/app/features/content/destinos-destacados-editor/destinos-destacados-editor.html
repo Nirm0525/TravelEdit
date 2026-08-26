@@ -1,0 +1,115 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Destinos destacados' }]"
+    title="Destinos destacados"
+    description="Selecciona y ordena los destinos que aparecen en el Home."
+    previewHref="/#destinos"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Encabezado</p>
+
+      <label class="field">
+        <span>Eyebrow</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="headingLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="headingLine2" />
+        </label>
+        <label class="field">
+          <span>Título — línea 3</span>
+          <input type="text" formControlName="headingLine3" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Texto de apoyo</span>
+        <textarea formControlName="support" rows="2"></textarea>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Destinos seleccionados</p>
+        <button type="button" class="btn btn--secondary" (click)="openPicker()">Agregar destino</button>
+      </div>
+
+      @if (selected().length === 0) {
+        <p class="field__hint">Todavía no hay destinos seleccionados — se muestra el listado por defecto del sitio.</p>
+      } @else {
+        <div cdkDropList class="destinos-destacados__list" (cdkDropListDropped)="drop($event)">
+          @for (destination of selected(); track destination.id) {
+            <div class="content-list-item" cdkDrag>
+              <div class="content-list-item__header">
+                <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                  <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                  <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+                </svg>
+                <div class="destinos-destacados__info">
+                  <strong>{{ destination.title }}</strong>
+                  <span class="field__hint">{{ destination.countryRegion }}</span>
+                </div>
+                @if (isUnavailable(destination)) {
+                  <span class="badge badge--warning">Ya no disponible ({{ statusLabel[destination.status] }})</span>
+                }
+                <button type="button" class="btn btn--secondary" (click)="removeSelected(destination.id)">Quitar</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </app-content-editor-layout>
+</form>
+
+<app-admin-modal [open]="pickerOpen()" title="Agregar destino" (closed)="closePicker()">
+  <div class="destinos-destacados__picker-filters">
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [class.is-loading]="false"
+      [attr.aria-pressed]="pickerStatus() === 'published'"
+      (click)="setPickerStatus('published')"
+    >
+      Publicados
+    </button>
+    <button
+      type="button"
+      class="btn btn--secondary"
+      [attr.aria-pressed]="pickerStatus() === 'draft'"
+      (click)="setPickerStatus('draft')"
+    >
+      Borradores
+    </button>
+    <input type="search" class="destinos-destacados__picker-search" placeholder="Buscar por título…" (input)="onPickerSearch($event)" />
+  </div>
+
+  @if (pickerLoading()) {
+    <p class="field__hint">Cargando…</p>
+  } @else if (pickerResults().length === 0) {
+    <p class="field__hint">No hay destinos disponibles con este filtro.</p>
+  } @else {
+    <div class="destinos-destacados__picker-list">
+      @for (destination of pickerResults(); track destination.id) {
+        <div class="destinos-destacados__picker-row">
+          <div>
+            <strong>{{ destination.title }}</strong>
+            <span class="field__hint">{{ destination.countryRegion }}</span>
+          </div>
+          <button type="button" class="btn btn--secondary" (click)="addDestination(destination)">Agregar</button>
+        </div>
+      }
+    </div>
+  }
+</app-admin-modal>

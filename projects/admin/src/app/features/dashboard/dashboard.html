@@ -1,4 +1,4 @@
-<app-admin-page-header breadcrumb="Panel / Dashboard" [title]="profile() ? 'Hola, ' + profile()!.fullName + '.' : 'Dashboard'" />
+<app-admin-page-header [breadcrumb]="[{ label: 'Dashboard' }]" [title]="profile() ? 'Hola, ' + profile()!.fullName + '.' : 'Dashboard'" />
 
 @if (loading()) {
   <div class="dashboard__stats">

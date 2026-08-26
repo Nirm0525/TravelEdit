@@ -16,6 +16,16 @@
   margin: 0 0 var(--space-2xs);
 }
 
+.admin-page-header__breadcrumb a {
+  color: var(--text-secondary);
+}
+
+.admin-page-header__breadcrumb a:hover {
+  color: var(--brand-600);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .admin-page-header__actions {
   display: flex;
   align-items: center;

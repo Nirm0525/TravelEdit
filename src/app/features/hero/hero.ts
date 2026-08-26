@@ -1,9 +1,9 @@
-import { AfterViewInit, Component, ElementRef, inject, signal, viewChild, viewChildren } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild, viewChildren } from '@angular/core';
+import { Router } from '@angular/router';
 import { IMAGES } from '../../core/data/images';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
 import { gsap, ScrollTrigger, registerGsap } from '../../core/gsap/gsap-setup';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
-import { TravelEditFormService } from '../../core/services/travel-edit-form';
 import { HeroContent, SiteContentService } from '../../core/services/site-content';
 
 const HERO_DEFAULT: HeroContent = {
@@ -25,11 +25,11 @@ const HERO_DEFAULT: HeroContent = {
   templateUrl: './hero.html',
   styleUrl: './hero.css'
 })
-export class Hero implements AfterViewInit {
+export class Hero implements AfterViewInit, OnDestroy {
   private readonly siteContent = inject(SiteContentService);
   readonly content = signal<HeroContent>(HERO_DEFAULT);
 
-  private readonly travelEditForm = inject(TravelEditFormService);
+  private readonly router = inject(Router);
   private readonly reducedMotion = inject(ReducedMotionService);
   private readonly titleWords = viewChildren<ElementRef<HTMLElement>>('word');
   private readonly subtitle = viewChild<ElementRef<HTMLElement>>('subtitle');
@@ -37,6 +37,8 @@ export class Hero implements AfterViewInit {
   private readonly actions = viewChild<ElementRef<HTMLElement>>('actions');
   private readonly bg = viewChild<ElementRef<HTMLElement>>('bg');
   private readonly section = viewChild<ElementRef<HTMLElement>>('section');
+  private introTimeline?: gsap.core.Timeline;
+  private scrollTween?: gsap.core.Tween;
 
   constructor() {
     void this.siteContent.getHero().then((data) => {
@@ -54,6 +56,7 @@ export class Hero implements AfterViewInit {
     registerGsap();
 
     const tl = gsap.timeline({ delay: 0.2 });
+    this.introTimeline = tl;
     tl.from(this.bg()?.nativeElement ?? [], { opacity: 0, duration: 1.4, ease: 'power2.out' })
       .from(this.titleWords().map((w) => w.nativeElement), {
         yPercent: 110,
@@ -69,7 +72,7 @@ export class Hero implements AfterViewInit {
     const sectionEl = this.section()?.nativeElement;
     const bgEl = this.bg()?.nativeElement;
     if (sectionEl && bgEl) {
-      gsap.to(bgEl, {
+      this.scrollTween = gsap.to(bgEl, {
         scale: 1.12,
         yPercent: 8,
         ease: 'none',
@@ -83,7 +86,13 @@ export class Hero implements AfterViewInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.introTimeline?.kill();
+    this.scrollTween?.scrollTrigger?.kill();
+    this.scrollTween?.kill();
+  }
+
   openTravelEditForm(): void {
-    this.travelEditForm.open();
+    void this.router.navigate(['/disenar-tu-viaje']);
   }
 }

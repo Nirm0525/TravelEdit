@@ -68,6 +68,9 @@
     </label>
 
     <div class="destination-general__footer">
+      <button type="button" class="btn btn--secondary" [disabled]="saving() || !form.dirty" (click)="cancel()">
+        Cancelar
+      </button>
       <button type="submit" class="btn btn--primary" [disabled]="saving()">
         {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
       </button>

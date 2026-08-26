@@ -7,6 +7,7 @@ import { TripType, Season } from '../../../../core/models/destination-enums';
 import { TRIP_TYPE_OPTIONS, SEASON_OPTIONS } from '../../../../core/data/destination-options';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
 import { slugify } from '../../../../core/utils/slugify';
+import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes-guard';
 
 @Component({
   selector: 'app-destination-general',
@@ -14,7 +15,7 @@ import { slugify } from '../../../../core/utils/slugify';
   templateUrl: './general.html',
   styleUrl: './general.css'
 })
-export class General {
+export class General implements HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);
   private readonly destinationsService = inject(DestinationsService);
   private readonly richContent = inject(RichContentService);
@@ -27,6 +28,7 @@ export class General {
   readonly savedAt = signal<Date | null>(null);
   private slugTouched = false;
   private readonly destinationId = this.route.parent!.snapshot.paramMap.get('id')!;
+  private loadedValues: ReturnType<General['form']['getRawValue']> | null = null;
 
   readonly form = this.fb.group({
     title: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -72,8 +74,21 @@ export class General {
         longDescription: destination.longDescription
       });
       this.slugTouched = true;
+      this.loadedValues = this.form.getRawValue();
+      this.form.markAsPristine();
     }
     this.loading.set(false);
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty;
+  }
+
+  cancel(): void {
+    if (this.loadedValues) {
+      this.form.reset(this.loadedValues);
+      this.form.markAsPristine();
+    }
   }
 
   onTitleInput(): void {
@@ -95,6 +110,8 @@ export class General {
       await this.destinationsService.update(this.destinationId, rest);
       await this.richContent.save('destinations', this.destinationId, longDescription);
       this.savedAt.set(new Date());
+      this.loadedValues = this.form.getRawValue();
+      this.form.markAsPristine();
     } finally {
       this.saving.set(false);
     }

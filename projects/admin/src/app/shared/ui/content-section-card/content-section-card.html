@@ -1,0 +1,30 @@
+<article class="content-section-card">
+  <div class="content-section-card__header">
+    <div class="content-section-card__title">
+      <span class="content-section-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M3 9h18" stroke-linecap="round" />
+          <path d="M8 14h8M8 17h5" stroke-linecap="round" />
+        </svg>
+      </span>
+      <h3 class="content-section-card__name">{{ name() }}</h3>
+    </div>
+    <span class="badge badge--success">Activo</span>
+  </div>
+
+  <p class="content-section-card__description">{{ description() }}</p>
+
+  @if (loading()) {
+    <p class="content-section-card__updated">Cargando…</p>
+  } @else if (updatedAt()) {
+    <p class="content-section-card__updated">Última actualización: {{ updatedAt() | date: "d MMM y, HH:mm" }}</p>
+  }
+
+  <div class="content-section-card__actions">
+    <a class="btn btn--primary" [routerLink]="editLink()">Editar</a>
+    @if (resolvedPreviewHref(); as href) {
+      <a class="btn btn--secondary content-section-card__preview-btn" [href]="href" target="_blank" rel="noopener noreferrer">Vista previa</a>
+    }
+  </div>
+</article>

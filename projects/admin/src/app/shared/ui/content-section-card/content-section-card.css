@@ -1,0 +1,90 @@
+.content-section-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem;
+  padding: var(--space-lg);
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-top: 3px solid var(--brand-600);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s var(--ease-standard), box-shadow 0.15s var(--ease-standard), transform 0.15s var(--ease-standard);
+}
+
+.content-section-card:hover {
+  border-color: color-mix(in srgb, var(--brand-600) 35%, var(--line-200));
+  border-top-color: var(--brand-600);
+  box-shadow: 0 12px 24px -14px rgba(122, 35, 56, 0.35);
+  transform: translateY(-2px);
+}
+
+.content-section-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.content-section-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.content-section-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-600) 12%, transparent);
+  color: var(--brand-600);
+}
+
+.content-section-card__icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.content-section-card__name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--size-section-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content-section-card__description {
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  flex: 1;
+}
+
+.content-section-card__updated {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+  margin-top: var(--space-sm);
+}
+
+.content-section-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--line-200);
+}
+
+.content-section-card__preview-btn {
+  background: color-mix(in srgb, var(--brand-600) 6%, var(--surface-000));
+  border-color: var(--brand-600);
+  color: var(--brand-600);
+}
+
+.content-section-card__preview-btn:hover {
+  background: color-mix(in srgb, var(--brand-600) 14%, var(--surface-000));
+}

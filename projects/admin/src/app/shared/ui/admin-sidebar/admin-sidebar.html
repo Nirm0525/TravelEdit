@@ -6,7 +6,7 @@
   <div class="admin-sidebar__brand">
     <img src="logo.png" alt="The Travel Edit" class="admin-sidebar__logo" />
     @if (!collapsed()) {
-      <span class="admin-sidebar__brand-label">Panel</span>
+      <span class="admin-sidebar__brand-label">Admin Dashboard</span>
     }
   </div>
 
@@ -66,6 +66,50 @@
       </a>
     }
   </nav>
+
+  @if (profile(); as staff) {
+    <div class="admin-sidebar__user" #userMenu>
+      <button
+        type="button"
+        class="admin-sidebar__user-trigger"
+        (click)="toggleUserMenu()"
+        aria-haspopup="true"
+        [attr.aria-expanded]="userMenuOpen()"
+        [attr.data-tooltip]="collapsed() ? staff.fullName : null"
+      >
+        <span class="admin-sidebar__user-avatar" aria-hidden="true">{{ initial(staff.fullName) }}</span>
+        @if (!collapsed()) {
+          <span class="admin-sidebar__user-info">
+            <span class="admin-sidebar__user-name">{{ staff.fullName }}</span>
+            <span class="badge badge--neutral">{{ roleLabel(staff.role) }}</span>
+          </span>
+          <svg
+            class="admin-sidebar__user-chevron"
+            [class.admin-sidebar__user-chevron--open]="userMenuOpen()"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        }
+      </button>
+
+      @if (userMenuOpen()) {
+        <div class="admin-sidebar__user-menu" role="menu">
+          <button type="button" class="admin-sidebar__signout" role="menuitem" (click)="signOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M16 16l4-4-4-4M20 12H9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Cerrar sesión
+          </button>
+        </div>
+      }
+    </div>
+  }
 
   <button
     type="button"

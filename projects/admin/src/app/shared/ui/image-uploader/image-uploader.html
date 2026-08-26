@@ -1,0 +1,30 @@
+<div class="image-uploader">
+  <label class="image-uploader__pick">
+    <span>Elegir {{ multiple() ? 'imágenes' : 'imagen' }}…</span>
+    <input type="file" accept="image/*" [multiple]="multiple()" [disabled]="disabled()" (change)="onFilesSelected($event)" />
+  </label>
+
+  @if (pending().length > 0) {
+    <div class="image-uploader__pending">
+      @for (item of pending(); track item.id) {
+        <div class="image-uploader__item">
+          <img [src]="item.previewUrl" alt="" />
+          <label class="field image-uploader__alt">
+            <span>Texto alternativo{{ requireAltText() ? ' *' : '' }}</span>
+            <input
+              type="text"
+              [value]="item.altText"
+              [attr.aria-label]="'Texto alternativo de la imagen'"
+              (input)="onAltTextInput(item.id, $event)"
+            />
+          </label>
+          <button type="button" class="btn btn--secondary" (click)="discard(item.id)">Quitar</button>
+        </div>
+      }
+    </div>
+
+    <button type="button" class="btn btn--primary" [disabled]="!canConfirm() || disabled()" (click)="confirm()">
+      {{ confirmLabel() }}
+    </button>
+  }
+</div>

@@ -1,74 +1,77 @@
-<header class="hero-editor__header">
-  <p class="eyebrow">Contenido del sitio</p>
-  <h1 class="page-title">Hero</h1>
-</header>
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Hero' }]"
+    title="Hero"
+    description="Contenido principal de la portada."
+    previewHref="/"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Imagen</p>
+      <div class="content-image-field">
+        <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
 
-@if (loading()) {
-  <p>Cargando…</p>
-} @else {
-  <form class="hero-editor" [formGroup]="form" (ngSubmit)="save()">
-    <div class="hero-editor__image">
-      <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
+        <label class="content-image-field__upload">
+          <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+          <input type="file" accept="image/*" [disabled]="uploading()" (change)="onFileSelected($event)" />
+        </label>
 
-      <label class="hero-editor__upload">
-        <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
-        <input type="file" accept="image/*" [disabled]="uploading()" (change)="onFileSelected($event)" />
-      </label>
+        @if (uploadError()) {
+          <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+        }
 
-      @if (uploadError()) {
-        <p class="field__hint field__hint--error">{{ uploadError() }}</p>
-      }
+        <label class="field">
+          <span>Texto alternativo de la imagen</span>
+          <input type="text" formControlName="imageAlt" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Contenido</p>
 
       <label class="field">
-        <span>Texto alternativo de la imagen</span>
-        <input type="text" formControlName="imageAlt" />
+        <span>Eyebrow (línea pequeña sobre el título)</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="titleLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="titleLine2" />
+        </label>
+        <label class="field">
+          <span>Título — línea 3</span>
+          <input type="text" formControlName="titleLine3" />
+        </label>
+      </div>
+      <p class="field__hint">El título se anima palabra por palabra en estas tres líneas — mantén cada una corta.</p>
+
+      <label class="field">
+        <span>Texto debajo del título</span>
+        <textarea formControlName="lead" rows="3"></textarea>
       </label>
     </div>
 
-    <label class="field">
-      <span>Eyebrow (línea pequeña sobre el título)</span>
-      <input type="text" formControlName="eyebrow" />
-    </label>
-
-    <div class="hero-editor__grid">
-      <label class="field">
-        <span>Título — línea 1</span>
-        <input type="text" formControlName="titleLine1" />
-      </label>
-      <label class="field">
-        <span>Título — línea 2</span>
-        <input type="text" formControlName="titleLine2" />
-      </label>
-      <label class="field">
-        <span>Título — línea 3</span>
-        <input type="text" formControlName="titleLine3" />
-      </label>
+    <div class="content-section">
+      <p class="content-section__title">Botón</p>
+      <div class="content-grid">
+        <label class="field">
+          <span>Texto del botón principal</span>
+          <input type="text" formControlName="ctaLabel" />
+        </label>
+        <label class="field">
+          <span>Texto del enlace "explorar"</span>
+          <input type="text" formControlName="exploreLabel" />
+        </label>
+      </div>
     </div>
-    <p class="field__hint">El título se anima palabra por palabra en estas tres líneas — mantén cada una corta.</p>
-
-    <label class="field">
-      <span>Texto debajo del título</span>
-      <textarea formControlName="lead" rows="3"></textarea>
-    </label>
-
-    <div class="hero-editor__grid">
-      <label class="field">
-        <span>Texto del botón principal</span>
-        <input type="text" formControlName="ctaLabel" />
-      </label>
-      <label class="field">
-        <span>Texto del enlace "explorar"</span>
-        <input type="text" formControlName="exploreLabel" />
-      </label>
-    </div>
-
-    <div class="hero-editor__footer">
-      <button type="submit" class="btn btn--primary" [disabled]="saving()">
-        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
-      </button>
-      @if (savedAt()) {
-        <span class="hero-editor__saved">Guardado — ya está en el sitio público.</span>
-      }
-    </div>
-  </form>
-}
+  </app-content-editor-layout>
+</form>

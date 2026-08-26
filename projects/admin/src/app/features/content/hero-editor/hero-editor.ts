@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SiteContentService } from '../../../core/services/site-content';
 import { SiteContentImagesService } from '../../../core/services/site-content-images';
+import { ContentEditorLayout } from '../../../shared/ui/content-editor-layout/content-editor-layout';
 
 @Component({
   selector: 'app-hero-editor',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ContentEditorLayout],
   templateUrl: './hero-editor.html',
   styleUrl: './hero-editor.css'
 })
@@ -17,6 +18,7 @@ export class HeroEditor {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly savedAt = signal<Date | null>(null);
+  readonly error = signal<string | null>(null);
   readonly uploading = signal(false);
   readonly uploadError = signal<string | null>(null);
   readonly previewUrl = signal<string | null>(null);
@@ -76,9 +78,12 @@ export class HeroEditor {
     }
 
     this.saving.set(true);
+    this.error.set(null);
     try {
       await this.siteContent.updateHero(this.form.getRawValue());
       this.savedAt.set(new Date());
+    } catch {
+      this.error.set('No se pudieron guardar los cambios. Intenta nuevamente.');
     } finally {
       this.saving.set(false);
     }

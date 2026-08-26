@@ -53,6 +53,10 @@ export interface Database {
           price_range_min?: number | null;
           price_range_max?: number | null;
           short_description?: string;
+          // NOT NULL sin default en la base real (confirmado en Fase 4) —
+          // el tipo generado asumía que había default, como describe la
+          // migración 0002, pero esa columna nunca lo tuvo en producción.
+          long_description?: string;
           status?: DestinationStatus;
           created_by?: string | null;
         };

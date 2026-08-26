@@ -1,0 +1,73 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Travel Process' }]"
+    title="Travel Process"
+    description="Los pasos del proceso de planificación de viaje."
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Título de la sección</p>
+      <div class="content-grid">
+        <label class="field">
+          <span>Línea 1</span>
+          <input type="text" formControlName="titleLine1" />
+        </label>
+        <label class="field">
+          <span>Línea 2 (con énfasis)</span>
+          <input type="text" formControlName="titleLine2" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Pasos</p>
+        <button type="button" class="btn btn--secondary" (click)="addStep()">Agregar paso</button>
+      </div>
+
+      <div cdkDropList class="travel-process-editor__list" (cdkDropListDropped)="drop($event)">
+        @for (step of steps(); track $index) {
+          <div class="content-list-item" cdkDrag>
+            <div class="content-list-item__header">
+              <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+                <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+                <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+              </svg>
+              <span class="field__hint">Paso {{ $index + 1 }}</span>
+              <button type="button" class="btn btn--secondary" (click)="removeStep($index)">Quitar</button>
+            </div>
+
+            <div class="content-grid">
+              <label class="field">
+                <span>Número</span>
+                <input type="text" [value]="step.number" (input)="updateStep($index, { number: $any($event.target).value })" />
+              </label>
+              <label class="field">
+                <span>Icono</span>
+                <select [value]="step.icon" (change)="updateStep($index, { icon: $any($event.target).value })">
+                  @for (icon of iconOptions; track icon) {
+                    <option [value]="icon">{{ icon }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Título</span>
+              <input type="text" [value]="step.title" (input)="updateStep($index, { title: $any($event.target).value })" />
+            </label>
+
+            <label class="field">
+              <span>Descripción</span>
+              <textarea rows="2" [value]="step.text" (input)="updateStep($index, { text: $any($event.target).value })"></textarea>
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

@@ -1,0 +1,21 @@
+@for (section of sections(); track section.id) {
+  @if (section.title || section.body || section.imageUrl) {
+    <section class="custom-section" [id]="'custom-' + section.id" [class.custom-section--no-image]="!section.imageUrl">
+      @if (section.imageUrl) {
+        <div class="custom-section__media">
+          <img [src]="section.imageUrl" [alt]="section.imageAlt" loading="lazy" decoding="async" />
+        </div>
+      }
+
+      <div class="custom-section__content">
+        <div class="container custom-section__inner">
+          @if (section.eyebrow) {
+            <p class="eyebrow" appRevealOnScroll>{{ section.eyebrow }}</p>
+          }
+          <h2 class="custom-section__title font-display" appRevealOnScroll>{{ section.title }}</h2>
+          <p class="custom-section__body" appRevealOnScroll>{{ section.body }}</p>
+        </div>
+      </div>
+    </section>
+  }
+}

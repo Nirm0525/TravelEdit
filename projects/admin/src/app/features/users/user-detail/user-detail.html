@@ -1,7 +1,10 @@
 @if (loading()) {
   <p>Cargando…</p>
 } @else if (user(); as u) {
-  <app-admin-page-header breadcrumb="Panel / Usuarios / Detalle" [title]="u.fullName" />
+  <app-admin-page-header
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Usuarios', link: '/usuarios' }, { label: 'Detalle' }]"
+    [title]="u.fullName"
+  />
 
   <div class="user-detail__card">
     <dl class="user-detail__fields">

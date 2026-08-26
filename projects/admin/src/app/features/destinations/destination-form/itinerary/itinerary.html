@@ -39,7 +39,7 @@
           />
         </div>
 
-        <button type="button" class="itinerary__day-remove" (click)="removeDay(day)" aria-label="Eliminar día">✕</button>
+        <button type="button" class="itinerary__day-remove" (click)="requestRemoveDay(day)" aria-label="Eliminar día">✕</button>
       </li>
     }
   </ol>
@@ -50,3 +50,12 @@
     <p class="itinerary__saving">Guardando orden…</p>
   }
 }
+
+<app-confirm-dialog
+  [open]="dayPendingDelete() !== null"
+  title="Eliminar día"
+  [message]="'¿Seguro que quieres eliminar \'' + (dayPendingDelete()?.title || 'este día') + '\'? Esta acción no se puede deshacer.'"
+  confirmLabel="Eliminar"
+  (confirmed)="confirmRemoveDay()"
+  (cancelled)="cancelRemoveDay()"
+/>

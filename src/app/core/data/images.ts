@@ -96,6 +96,10 @@ export const IMAGES = {
     url: '/images/The%20Travel%20Edit-16.jpg',
     alt: 'Retrato de la fundadora de The Travel Edit, sonriendo en un ambiente cálido y acogedor'
   },
+  designYourTrip: {
+    url: '/images/The%20Travel%20Edit-2.jpg',
+    alt: 'Persona sosteniendo una tablet con el logo de The Travel Edit y una postal "Coming Soon" sobre un jardín de cactus'
+  },
   finalCta: {
     url: 'https://images.unsplash.com/photo-1601445862636-aa4cae12f5c3?q=80&w=2400&h=1200&fit=crop&auto=format',
     alt: 'Vista de la Costa Amalfitana al amanecer en tonos suaves, apta como fondo oscurecido',

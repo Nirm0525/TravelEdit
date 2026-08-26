@@ -1,8 +1,29 @@
-import { Component } from '@angular/core';
-import { ARTICLES } from '../../core/data/articles';
+import { Component, inject, signal } from '@angular/core';
+import { ARTICLES, Article } from '../../core/data/articles';
 import { ArticleCard } from './article-card/article-card';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
+import { SiteContentService } from '../../core/services/site-content';
+
+interface TheEditHeading {
+  eyebrow: string;
+  headingLine1: string;
+  headingLine2: string;
+  supportLine1: string;
+  supportLine2: string;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+const HEADING_DEFAULT: TheEditHeading = {
+  eyebrow: 'The Edit',
+  headingLine1: 'Stories worth',
+  headingLine2: 'collecting.',
+  supportLine1: 'Inspiration. Curated.',
+  supportLine2: 'For the curious soul.',
+  ctaLabel: 'EXPLORE THE EDIT',
+  ctaHref: '#the-edit'
+};
 
 @Component({
   selector: 'app-the-edit',
@@ -12,5 +33,23 @@ import { AnimatedButton } from '../../shared/ui/animated-button/animated-button'
   styleUrl: './the-edit.css'
 })
 export class TheEdit {
-  readonly articles = ARTICLES;
+  private readonly siteContent = inject(SiteContentService);
+
+  readonly heading = signal<TheEditHeading>(HEADING_DEFAULT);
+  readonly articles = signal<Article[]>(ARTICLES);
+
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    const data = await this.siteContent.getTheEdit();
+    if (!data) {
+      return;
+    }
+    this.heading.update((current) => ({ ...current, ...data }));
+    if (data.articles && data.articles.length > 0) {
+      this.articles.set(data.articles);
+    }
+  }
 }

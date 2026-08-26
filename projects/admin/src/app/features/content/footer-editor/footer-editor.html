@@ -1,0 +1,102 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'Footer' }]"
+    title="Footer"
+    description="Enlaces, redes sociales y datos de contacto."
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Explore</p>
+        <button type="button" class="btn btn--secondary" (click)="addLink('explore')">Agregar enlace</button>
+      </div>
+      <label class="field">
+        <span>Encabezado de la columna</span>
+        <input type="text" formControlName="exploreHeading" />
+      </label>
+
+      <div cdkDropList class="footer-editor__links" (cdkDropListDropped)="dropExplore($event)">
+        @for (link of explore(); track $index) {
+          <div class="footer-editor__link" cdkDrag>
+            <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+              <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+              <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+            </svg>
+            <input type="text" placeholder="Texto" [value]="link.label" (input)="updateLink('explore', $index, { label: $any($event.target).value })" />
+            <input type="text" placeholder="Enlace" [value]="link.href" (input)="updateLink('explore', $index, { href: $any($event.target).value })" />
+            <button type="button" class="btn btn--secondary" (click)="removeLink('explore', $index)">Quitar</button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Company</p>
+        <button type="button" class="btn btn--secondary" (click)="addLink('company')">Agregar enlace</button>
+      </div>
+      <label class="field">
+        <span>Encabezado de la columna</span>
+        <input type="text" formControlName="companyHeading" />
+      </label>
+
+      <div cdkDropList class="footer-editor__links" (cdkDropListDropped)="dropCompany($event)">
+        @for (link of company(); track $index) {
+          <div class="footer-editor__link" cdkDrag>
+            <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+              <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+              <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+            </svg>
+            <input type="text" placeholder="Texto" [value]="link.label" (input)="updateLink('company', $index, { label: $any($event.target).value })" />
+            <input type="text" placeholder="Enlace" [value]="link.href" (input)="updateLink('company', $index, { href: $any($event.target).value })" />
+            <button type="button" class="btn btn--secondary" (click)="removeLink('company', $index)">Quitar</button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Follow (redes sociales)</p>
+        <button type="button" class="btn btn--secondary" (click)="addSocial()">Agregar red social</button>
+      </div>
+      <label class="field">
+        <span>Encabezado de la columna</span>
+        <input type="text" formControlName="followHeading" />
+      </label>
+
+      <div cdkDropList class="footer-editor__links" (cdkDropListDropped)="dropSocial($event)">
+        @for (item of social(); track $index) {
+          <div class="footer-editor__social" cdkDrag>
+            <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+              <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+              <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+            </svg>
+            <input type="text" placeholder="Plataforma (ej. instagram)" [value]="item.platform" (input)="updateSocial($index, { platform: $any($event.target).value })" />
+            <input type="text" placeholder="Texto" [value]="item.label" (input)="updateSocial($index, { label: $any($event.target).value })" />
+            <input type="text" placeholder="Enlace" [value]="item.href" (input)="updateSocial($index, { href: $any($event.target).value })" />
+            <button type="button" class="btn btn--secondary" (click)="removeSocial($index)">Quitar</button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Newsletter y copyright</p>
+      <label class="field">
+        <span>Encabezado del newsletter</span>
+        <input type="text" formControlName="newsletterHeading" />
+      </label>
+      <label class="field">
+        <span>Texto de copyright</span>
+        <input type="text" formControlName="copyrightText" />
+      </label>
+    </div>
+  </app-content-editor-layout>
+</form>

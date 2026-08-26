@@ -2,46 +2,43 @@
   <p>Cargando…</p>
 } @else {
   <div class="gallery">
-    <label class="gallery__upload">
-      <span>Subir imágenes</span>
-      <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" />
-    </label>
+    <app-image-uploader
+      confirmLabel="Subir imágenes"
+      [disabled]="uploading()"
+      (filesReady)="onFilesReady($event)"
+    />
 
-    @if (pending().length > 0) {
-      <ul class="gallery__pending">
-        @for (item of pending(); track item.id) {
-          <li>
-            <img [src]="item.previewUrl" alt="" />
-            <label class="gallery__pending-alt">
-              <span>Texto alternativo (obligatorio)</span>
-              <input
-                type="text"
-                [value]="item.altText"
-                (input)="onPendingAltInput(item.id, $event)"
-                placeholder="Describe la imagen…"
-              />
-            </label>
-            <button type="button" (click)="discardPending(item.id)" aria-label="Quitar de la cola">✕</button>
-          </li>
-        }
-      </ul>
-
-      <button type="button" class="gallery__upload-confirm btn btn--primary" [disabled]="!canUploadPending() || uploading()" (click)="uploadPending()">
-        {{ uploading() ? 'Subiendo…' : 'Subir ' + pending().length + ' imagen(es)' }}
-      </button>
+    @if (uploading()) {
+      <p class="field__hint">Subiendo…</p>
+    }
+    @if (uploadError()) {
+      <p class="field__hint field__hint--error">{{ uploadError() }}</p>
     }
 
-    @if (images().length === 0 && pending().length === 0) {
+    @if (images().length === 0) {
       <div class="gallery__empty">
         <p>Todavía no hay imágenes. Sube la primera con el botón de arriba.</p>
       </div>
-    } @else if (images().length > 0) {
+    } @else {
       <ul class="gallery__grid" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="drop($event)">
         @for (image of images(); track image.id) {
           <li class="gallery__item" cdkDrag>
             <img [src]="publicUrl(image)" [alt]="image.altText" />
             <div class="gallery__item-meta">
-              <span class="gallery__item-alt">{{ image.altText }}</span>
+              @if (editingAltId() === image.id) {
+                <input
+                  type="text"
+                  class="gallery__item-alt-input"
+                  [value]="image.altText"
+                  aria-label="Texto alternativo de la imagen"
+                  (blur)="saveAltText(image, $event)"
+                  (keydown.enter)="saveAltText(image, $event)"
+                />
+              } @else {
+                <button type="button" class="gallery__item-alt" (click)="startEditAlt(image)">
+                  {{ image.altText || 'Agregar texto alternativo…' }}
+                </button>
+              }
               @if (isCover(image)) {
                 <span class="gallery__item-cover-badge">Portada</span>
               } @else {

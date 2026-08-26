@@ -3,12 +3,13 @@ import { ActivatedRoute } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DestinationsService } from '../../../../core/services/destinations';
 import { ItineraryDay } from '../../../../core/models/destination.model';
+import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 
 type TextField = 'title' | 'description' | 'accommodation';
 
 @Component({
   selector: 'app-destination-itinerary',
-  imports: [DragDropModule],
+  imports: [DragDropModule, ConfirmDialog],
   templateUrl: './itinerary.html',
   styleUrl: './itinerary.css'
 })
@@ -20,6 +21,7 @@ export class Itinerary {
   readonly days = signal<ItineraryDay[]>([]);
   readonly loading = signal(true);
   readonly savingOrder = signal(false);
+  readonly dayPendingDelete = signal<ItineraryDay | null>(null);
 
   constructor() {
     void this.load();
@@ -36,7 +38,21 @@ export class Itinerary {
     this.days.update((days) => [...days, day]);
   }
 
-  async removeDay(day: ItineraryDay): Promise<void> {
+  requestRemoveDay(day: ItineraryDay): void {
+    this.dayPendingDelete.set(day);
+  }
+
+  cancelRemoveDay(): void {
+    this.dayPendingDelete.set(null);
+  }
+
+  async confirmRemoveDay(): Promise<void> {
+    const day = this.dayPendingDelete();
+    if (!day) {
+      return;
+    }
+    this.dayPendingDelete.set(null);
+
     await this.destinationsService.removeItineraryDay(day.id);
     const remaining = this.days().filter((d) => d.id !== day.id);
     this.days.set(remaining);

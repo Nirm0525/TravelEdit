@@ -8,15 +8,15 @@
 
   <div class="container the-edit__layout">
     <div class="the-edit__intro">
-      <app-section-title eyebrow="The Edit" theme="dark">
-        Stories worth<br />collecting.
-        <p support>Inspiration. Curated.<br />For the curious soul.</p>
+      <app-section-title [eyebrow]="heading().eyebrow" theme="dark">
+        {{ heading().headingLine1 }}<br />{{ heading().headingLine2 }}
+        <p support>{{ heading().supportLine1 }}<br />{{ heading().supportLine2 }}</p>
       </app-section-title>
-      <app-animated-button href="#the-edit" theme="dark" variant="outline">EXPLORE THE EDIT</app-animated-button>
+      <app-animated-button [href]="heading().ctaHref" theme="dark" variant="outline">{{ heading().ctaLabel }}</app-animated-button>
     </div>
 
     <div class="the-edit__articles">
-      @for (article of articles; track article.title) {
+      @for (article of articles(); track article.title) {
         <app-article-card [article]="article" />
       }
     </div>

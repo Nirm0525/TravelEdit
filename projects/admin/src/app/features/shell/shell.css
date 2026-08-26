@@ -10,22 +10,17 @@
   flex-direction: column;
 }
 
-.shell__topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  background: var(--surface-000);
-  border-bottom: 1px solid var(--line-200);
-}
-
 .shell__hamburger {
   display: none;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   align-items: center;
   justify-content: center;
   color: var(--ink-900);
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  margin: var(--space-sm) var(--space-sm) 0;
 }
 
 .shell__hamburger svg {
@@ -35,50 +30,7 @@
 
 .shell__hamburger:hover {
   cursor: pointer;
-}
-
-.shell__breadcrumb {
-  flex: 1;
-  font-size: var(--size-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--track-eyebrow);
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.shell__user {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--size-small);
-}
-
-.shell__user-name {
-  font-weight: 600;
-}
-
-.shell__signout {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  padding: var(--space-2xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: var(--size-small);
-  font-weight: 600;
-  transition: background 0.15s var(--ease-standard), color 0.15s var(--ease-standard);
-}
-
-.shell__signout svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  flex-shrink: 0;
-}
-
-.shell__signout:hover {
-  background: color-mix(in srgb, var(--danger-600) 8%, transparent);
-  color: var(--danger-600);
-  cursor: pointer;
+  background: var(--canvas-100);
 }
 
 .shell__content {

@@ -1,30 +1,21 @@
 <section class="about" id="about" aria-labelledby="about-title">
   <div class="about__media">
-    <img [src]="image.url" [alt]="image.alt" loading="lazy" decoding="async" />
+    <img [src]="content().imageUrl" [alt]="content().imageAlt" loading="lazy" decoding="async" />
   </div>
 
   <div class="about__content">
     <div class="container about__inner">
-      <p class="eyebrow">Our Story</p>
+      <p class="eyebrow">{{ content().eyebrow }}</p>
       <h2 id="about-title" class="about__title font-display" appRevealOnScroll>
-        Travel should<br />feel personal.
+        {{ content().titleLine1 }}<br />{{ content().titleLine2 }}
       </h2>
 
-      <p class="about__text">
-        The Travel Edit nació de una forma diferente de entender los viajes: creemos que el lujo no está en hacer
-        más, sino en elegir mejor.
-      </p>
-      <p class="about__text">
-        En conocer lugares extraordinarios, vivir experiencias auténticas y tener el tiempo para realmente
-        disfrutarlas.
-      </p>
-      <p class="about__text">
-        Por eso, cada viaje comienza contigo. Con lo que te inspira, lo que disfrutas y la forma en que quieres
-        descubrir el mundo.
-      </p>
+      <p class="about__text">{{ content().paragraph1 }}</p>
+      <p class="about__text">{{ content().paragraph2 }}</p>
+      <p class="about__text">{{ content().paragraph3 }}</p>
 
       <ul class="about__words">
-        @for (word of words; track word; let i = $index) {
+        @for (word of content().words; track word; let i = $index) {
           <li [appRevealOnScroll]="i * 0.15">{{ word }}</li>
         }
       </ul>

@@ -1,18 +1,2 @@
 <app-custom-cursor />
-<app-header />
-
-<main>
-  <app-hero />
-  <app-destinations />
-  <app-travel-process />
-  <app-experiences />
-  <app-the-edit />
-  <app-about />
-  <app-final-cta />
-</main>
-
-<app-footer />
-
-@defer (when travelEditFormRequested()) {
-  <app-travel-edit-form />
-}
+<router-outlet />

@@ -1,0 +1,58 @@
+.destinos-destacados__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.destinos-destacados__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.destinos-destacados__picker-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.destinos-destacados__picker-filters [aria-pressed='true'] {
+  background: var(--brand-600);
+  color: var(--brand-600-contrast);
+  border-color: var(--brand-600);
+}
+
+.destinos-destacados__picker-search {
+  flex: 1;
+  min-width: 10rem;
+  font: inherit;
+  font-size: var(--size-small);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+}
+
+.destinos-destacados__picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.destinos-destacados__picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+}
+
+.destinos-destacados__picker-row > div {
+  display: flex;
+  flex-direction: column;
+}

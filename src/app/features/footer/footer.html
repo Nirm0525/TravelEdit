@@ -15,25 +15,28 @@
     </div>
 
     <nav class="site-footer__column" aria-label="Explore">
-      <h3 class="site-footer__heading">Explore</h3>
-      <a href="#destinos">Destinations</a>
-      <a href="#experiencias">Experiences</a>
-      <a href="#the-edit">The Edit</a>
+      <h3 class="site-footer__heading">{{ content().exploreHeading }}</h3>
+      @for (link of content().explore; track link.label) {
+        <a [href]="link.href">{{ link.label }}</a>
+      }
     </nav>
 
     <nav class="site-footer__column" aria-label="Company">
-      <h3 class="site-footer__heading">Company</h3>
-      <a href="#about">About Us</a>
-      <a href="mailto:nora.rivas@traveldiunsa.com">Contact</a>
+      <h3 class="site-footer__heading">{{ content().companyHeading }}</h3>
+      @for (link of content().company; track link.label) {
+        <a [href]="link.href">{{ link.label }}</a>
+      }
     </nav>
 
     <nav class="site-footer__column" aria-label="Follow">
-      <h3 class="site-footer__heading">Follow</h3>
-      <a href="https://www.instagram.com/thetraveledithn/" target="_blank" rel="noopener">Instagram</a>
+      <h3 class="site-footer__heading">{{ content().followHeading }}</h3>
+      @for (link of content().social; track link.platform) {
+        <a [href]="link.href" target="_blank" rel="noopener">{{ link.label }}</a>
+      }
     </nav>
 
     <form class="site-footer__newsletter" (submit)="onSubmit($event)">
-      <h3 class="site-footer__heading">Travel inspiration, thoughtfully edited.</h3>
+      <h3 class="site-footer__heading">{{ content().newsletterHeading }}</h3>
       <div class="site-footer__newsletter-row">
         <label class="visually-hidden" for="footer-email">Your email</label>
         <input
@@ -55,7 +58,7 @@
   </div>
 
   <div class="container site-footer__bottom">
-    <p>© The Travel Edit {{ year }}</p>
+    <p>{{ content().copyrightText }}</p>
     <div class="site-footer__legal">
       <a href="/privacy.html">Privacy</a>
       <a href="/terms.html">Terms</a>

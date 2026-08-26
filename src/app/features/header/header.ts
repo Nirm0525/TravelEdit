@@ -1,7 +1,7 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { NAV_ITEMS } from '../../core/data/nav';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
-import { TravelEditFormService } from '../../core/services/travel-edit-form';
 
 @Component({
   selector: 'app-header',
@@ -11,7 +11,7 @@ import { TravelEditFormService } from '../../core/services/travel-edit-form';
   styleUrl: './header.css'
 })
 export class Header {
-  private readonly travelEditForm = inject(TravelEditFormService);
+  private readonly router = inject(Router);
 
   readonly navItems = NAV_ITEMS;
   readonly scrolled = signal(false);
@@ -33,6 +33,6 @@ export class Header {
 
   openTravelEditForm(): void {
     this.menuOpen.set(false);
-    this.travelEditForm.open();
+    void this.router.navigate(['/disenar-tu-viaje']);
   }
 }

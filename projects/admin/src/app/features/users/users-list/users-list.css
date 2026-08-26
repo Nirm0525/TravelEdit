@@ -38,23 +38,39 @@
 
 .users-list__actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-2xs);
   white-space: nowrap;
 }
 
 .users-list__action {
-  font-size: var(--size-small);
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
   color: var(--brand-600);
+}
+
+.users-list__action svg {
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .users-list__action:hover {
   cursor: pointer;
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--brand-600) 10%, transparent);
 }
 
 .users-list__action--danger {
   color: var(--danger-600);
+}
+
+.users-list__action--danger:hover {
+  background: color-mix(in srgb, var(--danger-600) 10%, transparent);
 }
 
 .users-list__danger-hint {

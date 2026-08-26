@@ -8,24 +8,60 @@
   opacity: 0.6;
 }
 
+.rich-text-editor--fullscreen {
+  position: fixed;
+  inset: var(--space-lg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -20px rgba(27, 24, 21, 0.45);
+}
+
+.rich-text-editor--fullscreen .rich-text-editor__surface,
+.rich-text-editor--fullscreen .rich-text-editor__source {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .rich-text-editor__toolbar {
   display: flex;
+  align-items: center;
   gap: var(--space-2xs);
   padding: var(--space-xs);
   border-bottom: 1px solid var(--line-200);
   flex-wrap: wrap;
 }
 
+.rich-text-editor__toolbar--secondary {
+  background: var(--canvas-100);
+}
+
 .rich-text-editor__toolbar button {
-  padding: var(--space-2xs) var(--space-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 var(--space-2xs);
   border-radius: var(--radius-sm);
   font-size: var(--size-small);
   color: var(--text-secondary);
 }
 
+.rich-text-editor__toolbar button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .rich-text-editor__toolbar button:hover {
   background: var(--canvas-100);
   cursor: pointer;
+}
+
+.rich-text-editor__toolbar button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .rich-text-editor__toolbar button.is-active {
@@ -34,9 +70,129 @@
   font-weight: 600;
 }
 
+.rich-text-editor__underline-label {
+  text-decoration: underline;
+}
+
+.rich-text-editor__strike-label {
+  text-decoration: line-through;
+}
+
+.rich-text-editor__clear-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.rich-text-editor__divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--line-200);
+  margin-inline: var(--space-2xs);
+  flex-shrink: 0;
+}
+
+.rich-text-editor__select {
+  height: 1.75rem;
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  color: var(--ink-900);
+  font: inherit;
+  font-size: var(--size-small);
+}
+
+.rich-text-editor__hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.rich-text-editor__dropdown {
+  position: relative;
+}
+
+.rich-text-editor__swatch-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+}
+
+.rich-text-editor__swatch-btn i {
+  width: 1.05rem;
+  height: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-200);
+}
+
+.rich-text-editor__menu {
+  position: absolute;
+  top: calc(100% + var(--space-2xs));
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-xs);
+  background: var(--surface-000);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 24px -12px rgba(27, 24, 21, 0.35);
+  min-width: 10rem;
+}
+
+.rich-text-editor__menu-reset {
+  text-align: left;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.rich-text-editor__menu-reset:hover {
+  background: var(--canvas-100);
+  cursor: pointer;
+}
+
+.rich-text-editor__swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-2xs);
+}
+
+.rich-text-editor__swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--line-200);
+  cursor: pointer;
+}
+
+.rich-text-editor__swatch.is-active {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+
 .rich-text-editor__surface {
   padding: var(--space-md);
   min-height: 12rem;
+}
+
+.rich-text-editor__source {
+  width: 100%;
+  min-height: 12rem;
+  padding: var(--space-md);
+  border: none;
+  resize: vertical;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: var(--size-small);
+  color: var(--ink-900);
+  background: var(--surface-000);
 }
 
 /* Tiptap monta el DOM de ProseMirror a mano, fuera del template de Angular:
@@ -48,4 +204,94 @@
 
 .rich-text-editor__surface ::ng-deep .ProseMirror p {
   margin: 0 0 var(--space-sm);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror h1,
+.rich-text-editor__surface ::ng-deep .ProseMirror h2,
+.rich-text-editor__surface ::ng-deep .ProseMirror h3,
+.rich-text-editor__surface ::ng-deep .ProseMirror h4 {
+  font-family: var(--font-display);
+  color: var(--brand-600);
+  margin: var(--space-md) 0 var(--space-xs);
+}
+
+/* Callout de marca: replica cómo se ve la cita en el sitio público
+   (article-detail.css) para que la vista previa del editor coincida. */
+.rich-text-editor__surface ::ng-deep .ProseMirror blockquote {
+  position: relative;
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) calc(var(--space-md) + 1.5rem);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--attention-600);
+  background: color-mix(in srgb, var(--brand-600) 8%, var(--surface-000));
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--brand-600);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror blockquote::before {
+  content: '\201C';
+  position: absolute;
+  left: var(--space-sm);
+  top: 0;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: 1.75rem;
+  line-height: 1.4;
+  color: var(--attention-600);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror blockquote p {
+  margin: 0;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror a {
+  color: var(--brand-600);
+  text-decoration: underline;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror ul[data-type="taskList"] li > label {
+  margin-top: 0.2rem;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: var(--space-md) 0;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror th,
+.rich-text-editor__surface ::ng-deep .ProseMirror td {
+  border: 1px solid var(--line-200);
+  padding: var(--space-2xs) var(--space-xs);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror th {
+  background: var(--canvas-100);
+  font-weight: 600;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.rich-text-editor__surface ::ng-deep .ProseMirror mark {
+  border-radius: 2px;
+  padding: 0 0.1em;
 }

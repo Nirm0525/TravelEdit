@@ -1,0 +1,247 @@
+<div class="dyt">
+  <header class="dyt-header">
+    <a routerLink="/" class="dyt-header__logo">
+      <img src="images/logos/thetraveledit2.png" alt="The Travel Edit" width="150" height="56" />
+    </a>
+    <a routerLink="/" class="dyt-header__back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+        <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>Volver</span>
+    </a>
+  </header>
+
+  @if (submitted()) {
+    <section class="dyt-success">
+      <div class="dyt-success__check" aria-hidden="true">✓</div>
+      <p class="eyebrow">Recibimos tu solicitud</p>
+      <h1 class="font-display">Gracias por confiar en Travel Edit.</h1>
+      <p class="dyt-success__text">
+        Nuestro equipo revisará la información de tu viaje y se pondrá en contacto contigo.
+      </p>
+      <a routerLink="/" class="dyt-success__cta">Volver a Travel Edit</a>
+    </section>
+  } @else {
+    <div class="dyt-layout">
+      <div class="dyt-media">
+        <img [src]="heroImage.url" [alt]="heroImage.alt" loading="lazy" decoding="async" />
+      </div>
+
+      <div class="dyt-content">
+        <div class="dyt-intro">
+          <p class="eyebrow">Diseña tu viaje</p>
+          <h1 class="font-display">Tu próximo destino comienza aquí.</h1>
+          <p class="dyt-intro__text">
+            Cuéntanos qué tienes en mente y diseñaremos una experiencia pensada especialmente para ti.
+          </p>
+        </div>
+
+        <form class="dyt-form" [formGroup]="form" (ngSubmit)="submit()">
+          <section class="dyt-section">
+            <p class="dyt-section__number">01</p>
+            <h2 class="font-display">Sobre ti</h2>
+
+            <label class="tef-field">
+              <span>First &amp; Last Name *</span>
+              <input type="text" formControlName="name" />
+              @if (form.controls.name.touched && form.controls.name.invalid) {
+                <span class="tef-field__hint">Please tell us your name.</span>
+              }
+            </label>
+
+            <label class="tef-field">
+              <span>Email *</span>
+              <input type="email" formControlName="email" />
+              @if (form.controls.email.touched && form.controls.email.invalid) {
+                <span class="tef-field__hint">Please enter a valid email.</span>
+              }
+            </label>
+
+            <label class="tef-field">
+              <span>Phone / WhatsApp *</span>
+              <input type="tel" formControlName="phone" />
+              @if (form.controls.phone.touched && form.controls.phone.invalid) {
+                <span class="tef-field__hint">We need a way to reach you.</span>
+              }
+            </label>
+
+            <label class="tef-field">
+              <span>Where are you based?</span>
+              <input type="text" formControlName="location" />
+            </label>
+
+            <fieldset class="tef-choice-group">
+              <legend>Who are you traveling with?</legend>
+              @for (option of travelingWithOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="travelingWith" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <div class="tef-field-row">
+              <label class="tef-field">
+                <span>Adults</span>
+                <input type="number" min="0" formControlName="adults" />
+              </label>
+              <label class="tef-field">
+                <span>Children</span>
+                <input type="number" min="0" formControlName="children" />
+              </label>
+            </div>
+
+            @if ((form.controls.children.value ?? 0) > 0) {
+              <label class="tef-field">
+                <span>Children's ages</span>
+                <input type="text" formControlName="childrenAges" placeholder="e.g. 4, 7, 12" />
+              </label>
+            }
+          </section>
+
+          <section class="dyt-section">
+            <p class="dyt-section__number">02</p>
+            <h2 class="font-display">Tu viaje</h2>
+
+            <label class="tef-field">
+              <span>Destination(s)</span>
+              <input type="text" formControlName="destinationInterestText" />
+            </label>
+
+            <label class="tef-field">
+              <span>Not sure yet? Tell us what's on your mind.</span>
+              <textarea rows="2" formControlName="destinationNotes"></textarea>
+            </label>
+
+            <p class="tef-section-label">When would you like to travel?</p>
+            <div class="tef-field-row">
+              <label class="tef-field">
+                <span>Departure date / Approximate date</span>
+                <input type="text" formControlName="departureDate" placeholder="e.g. March 2027, or exact date" />
+              </label>
+              <label class="tef-field">
+                <span>Return date / Number of nights</span>
+                <input type="text" formControlName="returnDate" placeholder="e.g. 10 nights" />
+              </label>
+            </div>
+
+            <label class="tef-checkbox">
+              <input type="checkbox" formControlName="datesFlexible" />
+              <span>My dates are flexible</span>
+            </label>
+
+            <fieldset class="tef-choice-group">
+              <legend>What are we celebrating?</legend>
+              @for (option of occasionOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="occasion" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="tef-choice-group tef-choice-group--grid">
+              <legend>What matters most to you? Choose all that apply.</legend>
+              @for (option of stylePreferenceOptions; track option) {
+                <label class="tef-choice">
+                  <input
+                    type="checkbox"
+                    [checked]="form.controls.stylePreferences.value.includes(option)"
+                    (change)="toggleStylePreference(option)"
+                  />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="tef-choice-group">
+              <legend>What pace feels right?</legend>
+              @for (option of paceOptions; track option.value) {
+                <label class="tef-choice tef-choice--described">
+                  <input type="radio" formControlName="pace" [value]="option.value" />
+                  <span>
+                    <strong>{{ option.value }}</strong> — {{ option.description }}
+                  </span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="tef-choice-group">
+              <legend>Your hotel style</legend>
+              @for (option of hotelStyleOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="hotelStyle" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="tef-choice-group">
+              <legend>
+                What budget are you comfortable with for the land portion of your trip?
+                <span class="tef-note">Excluding international airfare.</span>
+              </legend>
+              @for (option of budgetRangeOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="budgetRange" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <fieldset class="tef-choice-group">
+              <legend>How do you usually fly?</legend>
+              @for (option of flightClassOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="flightClass" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <label class="tef-field">
+              <span>Anything you absolutely love—or prefer to avoid when traveling?</span>
+              <textarea
+                rows="3"
+                formControlName="likesAndDislikes"
+                placeholder="Tell us about past trips you loved, hotels you didn't, dietary preferences, things you never want to do again…"
+              ></textarea>
+            </label>
+          </section>
+
+          <section class="dyt-section">
+            <p class="dyt-section__number">03</p>
+            <h2 class="font-display">Cuéntanos más</h2>
+
+            <label class="tef-field">
+              <span>What would make this trip unforgettable for you?</span>
+              <textarea rows="3" formControlName="unforgettableNote"></textarea>
+            </label>
+
+            <fieldset class="tef-choice-group">
+              <legend>How did you hear about The Travel Edit?</legend>
+              @for (option of hearAboutUsOptions; track option) {
+                <label class="tef-choice">
+                  <input type="radio" formControlName="hearAboutUs" [value]="option" />
+                  <span>{{ option }}</span>
+                </label>
+              }
+            </fieldset>
+
+            <div class="tef-turnstile" #turnstileContainer></div>
+
+            @if (errorMessage(); as message) {
+              <p class="tef-error" role="alert">{{ message }}</p>
+            }
+          </section>
+
+          <div class="dyt-submit-row">
+            <button type="submit" class="dyt-submit" [disabled]="submitting()">
+              {{ submitting() ? 'Enviando…' : 'Enviar solicitud →' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

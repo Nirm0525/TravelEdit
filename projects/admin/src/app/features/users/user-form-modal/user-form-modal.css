@@ -1,19 +1,19 @@
 .user-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .user-form__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xs);
+  gap: var(--space-xs);
   font-size: var(--size-small);
   font-weight: 500;
 }
@@ -22,7 +22,7 @@
 .field select {
   font: inherit;
   font-size: var(--size-body);
-  padding: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--line-200);
   border-radius: var(--radius-sm);
   background: var(--surface-000);

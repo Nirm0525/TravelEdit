@@ -1,0 +1,93 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal', link: '/contenido' }, { label: 'About' }]"
+    title="About"
+    description="Historia y presentación de la marca."
+    previewHref="/#about"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Imagen</p>
+      <div class="content-image-field">
+        <img [src]="previewUrl() ?? form.controls.imageUrl.value" [alt]="form.controls.imageAlt.value" />
+
+        <label class="content-image-field__upload">
+          <span>{{ uploading() ? 'Subiendo…' : 'Cambiar imagen' }}</span>
+          <input type="file" accept="image/*" aria-label="Seleccionar imagen" [disabled]="uploading()" (change)="onFileSelected($event)" />
+        </label>
+
+        @if (uploadError()) {
+          <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+        }
+
+        <label class="field">
+          <span>Texto alternativo de la imagen</span>
+          <input type="text" formControlName="imageAlt" />
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Contenido</p>
+
+      <label class="field">
+        <span>Eyebrow</span>
+        <input type="text" formControlName="eyebrow" />
+      </label>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Título — línea 1</span>
+          <input type="text" formControlName="titleLine1" />
+        </label>
+        <label class="field">
+          <span>Título — línea 2</span>
+          <input type="text" formControlName="titleLine2" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Párrafo 1</span>
+        <textarea formControlName="paragraph1" rows="2"></textarea>
+      </label>
+      <label class="field">
+        <span>Párrafo 2</span>
+        <textarea formControlName="paragraph2" rows="2"></textarea>
+      </label>
+      <label class="field">
+        <span>Párrafo 3</span>
+        <textarea formControlName="paragraph3" rows="2"></textarea>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <div class="content-list-item__header">
+        <p class="content-section__title">Palabras destacadas</p>
+        <button type="button" class="btn btn--secondary" (click)="addWord()">Agregar palabra</button>
+      </div>
+
+      <div cdkDropList class="about-editor__words" (cdkDropListDropped)="drop($event)">
+        @for (word of words(); track $index) {
+          <div class="about-editor__word" cdkDrag>
+            <svg class="content-list-item__drag-handle" cdkDragHandle viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="8" cy="6" r="1.5" /><circle cx="16" cy="6" r="1.5" />
+              <circle cx="8" cy="12" r="1.5" /><circle cx="16" cy="12" r="1.5" />
+              <circle cx="8" cy="18" r="1.5" /><circle cx="16" cy="18" r="1.5" />
+            </svg>
+            <input
+              type="text"
+              [value]="word"
+              [attr.aria-label]="'Palabra ' + ($index + 1)"
+              title="Palabra destacada"
+              (input)="updateWord($index, $any($event.target).value)"
+            />
+            <button type="button" class="btn btn--secondary" (click)="removeWord($index)">Quitar</button>
+          </div>
+        }
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

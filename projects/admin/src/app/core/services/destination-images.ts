@@ -41,6 +41,20 @@ export class DestinationImagesService {
     return this.supabase.client.storage.from(BUCKET).getPublicUrl(storagePath).data.publicUrl;
   }
 
+  /** Trae imágenes puntuales por ID (p. ej. las portadas de una página de destinos)
+   *  sin necesitar el destination_id — usado para miniaturas en el listado. */
+  async listByIds(ids: string[]): Promise<DestinationImage[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await this.supabase.client.from('destination_images').select('*').in('id', ids);
+    if (error) {
+      throw error;
+    }
+    return (data ?? []).map(toDestinationImage);
+  }
+
   async list(destinationId: string): Promise<DestinationImage[]> {
     const { data, error } = await this.supabase.client
       .from('destination_images')

@@ -1,5 +1,9 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="user-detail__error">
+    <p>{{ message }}</p>
+  </div>
 } @else if (user(); as u) {
   <app-admin-page-header
     [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Usuarios', link: '/usuarios' }, { label: 'Detalle' }]"

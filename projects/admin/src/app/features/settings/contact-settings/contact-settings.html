@@ -1,0 +1,51 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="breadcrumb"
+    title="Contacto"
+    description="Datos de contacto usados en el sitio y en las comunicaciones con clientes."
+    backLink="/configuracion"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <div class="content-grid">
+        <label class="field">
+          <span>Email principal</span>
+          <input type="email" formControlName="contact_email" placeholder="contacto@thetravel-edit.com" />
+        </label>
+
+        <label class="field">
+          <span>Email para solicitudes</span>
+          <input type="email" formControlName="leads_admin_email" />
+          @if (form.controls.leads_admin_email.touched && form.controls.leads_admin_email.invalid) {
+            <span class="field__hint field__hint--error">Ingresa un correo válido — es obligatorio.</span>
+          } @else {
+            <span class="field__hint">Correo que recibe cada solicitud enviada desde "Diseña tu viaje".</span>
+          }
+        </label>
+
+        <label class="field">
+          <span>Teléfono</span>
+          <input type="tel" formControlName="contact_phone" />
+        </label>
+
+        <label class="field">
+          <span>WhatsApp</span>
+          <input type="tel" formControlName="contact_whatsapp" />
+        </label>
+
+        <label class="field">
+          <span>Dirección</span>
+          <input type="text" formControlName="contact_address" />
+        </label>
+
+        <label class="field">
+          <span>Horario de atención</span>
+          <input type="text" formControlName="contact_hours" placeholder="Lun–Vie 9:00–18:00" />
+        </label>
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

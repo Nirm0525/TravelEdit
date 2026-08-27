@@ -20,6 +20,24 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard)
       },
       {
+        path: 'blog',
+        data: { title: 'Blog' },
+        canActivate: [permissionGuard('blog')],
+        loadComponent: () => import('./features/blog/blog-list/blog-list').then((m) => m.BlogList)
+      },
+      {
+        path: 'blog/nuevo',
+        data: { title: 'Nuevo artículo' },
+        canActivate: [permissionGuard('blog')],
+        loadComponent: () => import('./features/blog/blog-editor/blog-editor').then((m) => m.BlogEditor)
+      },
+      {
+        path: 'blog/:id',
+        data: { title: 'Editar artículo' },
+        canActivate: [permissionGuard('blog')],
+        loadComponent: () => import('./features/blog/blog-editor/blog-editor').then((m) => m.BlogEditor)
+      },
+      {
         path: 'destinos',
         data: { title: 'Destinos' },
         canActivate: [permissionGuard('destinos')],
@@ -156,6 +174,49 @@ export const routes: Routes = [
         data: { title: 'Detalle de usuario' },
         canActivate: [permissionGuard('usuarios')],
         loadComponent: () => import('./features/users/user-detail/user-detail').then((m) => m.UserDetail)
+      },
+      {
+        path: 'configuracion',
+        data: { title: 'Configuración' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/settings-overview/settings-overview').then((m) => m.SettingsOverview)
+      },
+      {
+        path: 'configuracion/general',
+        data: { title: 'General' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/general-settings/general-settings').then((m) => m.GeneralSettings)
+      },
+      {
+        path: 'configuracion/contacto',
+        data: { title: 'Contacto' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/contact-settings/contact-settings').then((m) => m.ContactSettings)
+      },
+      {
+        path: 'configuracion/correos',
+        data: { title: 'Correos' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/email-settings/email-settings').then((m) => m.EmailSettings)
+      },
+      {
+        path: 'configuracion/leads',
+        data: { title: 'Configuración de leads' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/leads-settings/leads-settings').then((m) => m.LeadsSettings)
+      },
+      {
+        path: 'configuracion/seguridad',
+        data: { title: 'Seguridad' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () => import('./features/settings/security-settings/security-settings').then((m) => m.SecuritySettings)
+      },
+      {
+        path: 'configuracion/apariencia',
+        data: { title: 'Apariencia' },
+        canActivate: [permissionGuard('configuracion')],
+        loadComponent: () =>
+          import('./features/settings/appearance-settings/appearance-settings').then((m) => m.AppearanceSettings)
       }
     ]
   },

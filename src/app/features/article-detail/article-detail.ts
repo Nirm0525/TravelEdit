@@ -1,8 +1,8 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { ARTICLES, Article } from '../../core/data/articles';
-import { SiteContentService } from '../../core/services/site-content';
+import { PublicArticlesService } from '../../core/services/public-articles';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 
 @Component({
@@ -12,19 +12,22 @@ import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
   styleUrl: './article-detail.css'
 })
 export class ArticleDetail {
-  private readonly siteContent = inject(SiteContentService);
+  private readonly publicArticles = inject(PublicArticlesService);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly slug = input.required<string>();
 
-  private readonly cmsArticles = signal<Article[] | null>(null);
+  private readonly liveArticle = signal<Article | null>(null);
 
   readonly article = computed<Article | null>(() => {
     const slug = this.slug();
-    const fromCms = this.cmsArticles()?.find((a) => a.slug === slug);
-    return fromCms ?? ARTICLES.find((a) => a.slug === slug) ?? null;
+    const live = this.liveArticle();
+    if (live && live.slug === slug) {
+      return live;
+    }
+    return ARTICLES.find((a) => a.slug === slug) ?? null;
   });
 
   // Angular's [innerHTML] sanitizer strips every `style` attribute outright,
@@ -80,13 +83,19 @@ export class ArticleDetail {
   });
 
   constructor() {
-    void this.load();
+    // El input `slug` viene del router (withComponentInputBinding) y todavía
+    // no tiene valor en el primer tick del constructor — leerlo fuera de un
+    // effect() dispara NG0950. El effect también hace que, si se navega de un
+    // artículo a otro sin recargar la página, se vuelva a pedir el nuevo slug.
+    effect(() => {
+      void this.load(this.slug());
+    });
   }
 
-  private async load(): Promise<void> {
-    const data = await this.siteContent.getTheEdit();
-    if (data?.articles) {
-      this.cmsArticles.set(data.articles as Article[]);
+  private async load(slug: string): Promise<void> {
+    const live = await this.publicArticles.getBySlug(slug);
+    if (live) {
+      this.liveArticle.set(live);
     }
 
     const current = this.article();

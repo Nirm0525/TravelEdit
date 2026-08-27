@@ -1,3 +1,11 @@
+.user-detail__error {
+  padding: var(--space-lg);
+  background: color-mix(in srgb, var(--danger-600) 6%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+  color: var(--danger-600);
+}
+
 .user-detail__card {
   background: var(--surface-000);
   border: 1px solid var(--line-200);

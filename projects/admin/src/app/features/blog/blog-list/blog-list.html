@@ -1,0 +1,118 @@
+<app-admin-page-header [breadcrumb]="breadcrumb" title="Blog">
+  <a class="btn btn--primary" routerLink="/blog/nuevo">+ Nuevo artículo</a>
+</app-admin-page-header>
+
+<div class="blog-list__toolbar">
+  <input
+    type="search"
+    class="blog-list__search"
+    placeholder="Buscar por título…"
+    [value]="search()"
+    (input)="onSearchInput($event)"
+  />
+
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn btn--secondary" (click)="clearFilters()">Limpiar filtros</button>
+  }
+</div>
+
+<div class="blog-list__filters" role="group" aria-label="Filtrar por estado">
+  <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">Todos</button>
+  <button type="button" [class.is-active]="statusFilter() === 'draft'" (click)="setStatusFilter('draft')">Borrador</button>
+  <button type="button" [class.is-active]="statusFilter() === 'published'" (click)="setStatusFilter('published')">Publicado</button>
+</div>
+
+@if (toggleError(); as message) {
+  <div class="blog-list__error">
+    <p>{{ message }}</p>
+  </div>
+}
+
+@if (deleteError(); as message) {
+  <div class="blog-list__error">
+    <p>{{ message }}</p>
+  </div>
+}
+
+@if (loadError(); as message) {
+  <div class="blog-list__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+<app-admin-table
+  [loading]="loading()"
+  [empty]="!loading() && items().length === 0"
+  [emptyMessage]="hasActiveFilters() ? 'No hay artículos que coincidan con estos filtros.' : 'Todavía no hay artículos.'"
+>
+  <table>
+    <thead>
+      <tr>
+        <th scope="col"><span class="visually-hidden">Portada</span></th>
+        <th scope="col">Título</th>
+        <th scope="col">Autor</th>
+        <th scope="col">Etiquetas</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Actualizado</th>
+        <th scope="col">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td class="blog-list__cover-cell">
+            @if (coverUrl(item); as cover) {
+              <img [src]="cover" [alt]="item.coverAltText || item.title" class="blog-list__cover" />
+            } @else {
+              <div class="blog-list__cover blog-list__cover--empty" aria-hidden="true"></div>
+            }
+          </td>
+          <td data-label="Título">
+            <a [routerLink]="['/blog', item.id]">{{ item.title }}</a>
+            <span class="blog-list__slug">{{ item.slug }}</span>
+          </td>
+          <td data-label="Autor">{{ authorLabel(item) }}</td>
+          <td data-label="Etiquetas">
+            @if (item.tags.length > 0) {
+              <span class="blog-list__tags">{{ item.tags.join(', ') }}</span>
+            } @else {
+              —
+            }
+          </td>
+          <td data-label="Estado">
+            <app-status-badge [label]="statusLabel[item.status]" [variant]="statusVariant[item.status]" />
+          </td>
+          <td data-label="Actualizado">{{ item.updatedAt | date: 'd MMM y' }}</td>
+          <td data-label="Acciones">
+            <div class="blog-list__actions">
+              <a [routerLink]="['/blog', item.id]">Editar</a>
+              <button type="button" [disabled]="togglingId() === item.id" (click)="toggleStatus(item)">
+                {{ togglingId() === item.id ? 'Guardando…' : statusActionLabel(item) }}
+              </button>
+              <button type="button" (click)="askDelete(item)">Eliminar</button>
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</app-admin-table>
+}
+
+@if (!loading() && !loadError() && items().length > 0) {
+  <div class="blog-list__pagination">
+    <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
+    <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} artículos</span>
+    <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!pendingDelete()"
+  title="Eliminar artículo"
+  [message]="'¿Seguro que quieres eliminar &quot;' + (pendingDelete()?.title ?? '') + '&quot;? Esta acción no se puede deshacer.'"
+  [confirmLabel]="deleting() ? 'Eliminando…' : 'Eliminar'"
+  [danger]="true"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

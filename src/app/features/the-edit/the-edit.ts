@@ -4,6 +4,9 @@ import { ArticleCard } from './article-card/article-card';
 import { SectionTitle } from '../../shared/ui/section-title/section-title';
 import { AnimatedButton } from '../../shared/ui/animated-button/animated-button';
 import { SiteContentService } from '../../core/services/site-content';
+import { PublicArticlesService } from '../../core/services/public-articles';
+
+const ARTICLES_LIMIT = 3;
 
 interface TheEditHeading {
   eyebrow: string;
@@ -34,6 +37,7 @@ const HEADING_DEFAULT: TheEditHeading = {
 })
 export class TheEdit {
   private readonly siteContent = inject(SiteContentService);
+  private readonly publicArticles = inject(PublicArticlesService);
 
   readonly heading = signal<TheEditHeading>(HEADING_DEFAULT);
   readonly articles = signal<Article[]>(ARTICLES);
@@ -43,13 +47,16 @@ export class TheEdit {
   }
 
   private async load(): Promise<void> {
-    const data = await this.siteContent.getTheEdit();
-    if (!data) {
-      return;
+    const [heading, articles] = await Promise.all([
+      this.siteContent.getTheEdit(),
+      this.publicArticles.listPublished(ARTICLES_LIMIT)
+    ]);
+
+    if (heading) {
+      this.heading.update((current) => ({ ...current, ...heading }));
     }
-    this.heading.update((current) => ({ ...current, ...data }));
-    if (data.articles && data.articles.length > 0) {
-      this.articles.set(data.articles);
+    if (articles.length > 0) {
+      this.articles.set(articles);
     }
   }
 }

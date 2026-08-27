@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { Lead, LeadNote, toLead, toLeadNote } from '../models/lead.model';
-import { LeadOrigin, LeadStatus } from '../models/lead-enums';
+import { LeadEmailStatus, LeadOrigin, LeadStatus } from '../models/lead-enums';
 
 export interface LeadListPage {
   items: Lead[];
@@ -14,9 +14,27 @@ export interface LeadListParams {
   pageSize: number;
   status?: LeadStatus;
   origin?: LeadOrigin;
-  destinationSearch?: string;
+  emailStatus?: LeadEmailStatus;
+  search?: string;
   createdFrom?: string;
   createdTo?: string;
+}
+
+export interface LeadStats {
+  total: number;
+  nuevas: number;
+  enSeguimiento: number;
+  cerradas: number;
+  emailSent: number;
+  emailPending: number;
+  emailPartial: number;
+  emailFailed: number;
+  emailNotConfigured: number;
+}
+
+/** El buscador combinado usa `.or()` de PostgREST — comas y paréntesis rompen esa sintaxis. */
+function escapeSearchTerm(term: string): string {
+  return term.replace(/[,()%]/g, ' ').trim();
 }
 
 @Injectable({
@@ -42,8 +60,16 @@ export class LeadsService {
     if (params.origin) {
       query = query.eq('origin', params.origin);
     }
-    if (params.destinationSearch) {
-      query = query.ilike('destination_interest_text', `%${params.destinationSearch}%`);
+    if (params.emailStatus) {
+      query = query.eq('email_status', params.emailStatus);
+    }
+    if (params.search) {
+      const term = escapeSearchTerm(params.search);
+      if (term) {
+        query = query.or(
+          `name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,destination_interest_text.ilike.%${term}%`
+        );
+      }
     }
     if (params.createdFrom) {
       query = query.gte('created_at', params.createdFrom);
@@ -74,8 +100,16 @@ export class LeadsService {
     if (params.origin) {
       query = query.eq('origin', params.origin);
     }
-    if (params.destinationSearch) {
-      query = query.ilike('destination_interest_text', `%${params.destinationSearch}%`);
+    if (params.emailStatus) {
+      query = query.eq('email_status', params.emailStatus);
+    }
+    if (params.search) {
+      const term = escapeSearchTerm(params.search);
+      if (term) {
+        query = query.or(
+          `name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,destination_interest_text.ilike.%${term}%`
+        );
+      }
     }
     if (params.createdFrom) {
       query = query.gte('created_at', params.createdFrom);
@@ -89,6 +123,68 @@ export class LeadsService {
       throw error;
     }
     return (data ?? []).map(toLead);
+  }
+
+  /** Conteos globales para las tarjetas de resumen del listado — no dependen de los filtros activos. */
+  async getStats(): Promise<LeadStats> {
+    const base = () => this.supabase.client.from('leads').select('*', { count: 'exact', head: true });
+
+    const [
+      totalRes,
+      nuevaRes,
+      contactadaRes,
+      propuestaRes,
+      ganadaRes,
+      perdidaRes,
+      sentRes,
+      pendingRes,
+      partialRes,
+      failedRes,
+      notConfiguredRes
+    ] = await Promise.all([
+      base(),
+      base().eq('status', 'nueva'),
+      base().eq('status', 'contactada'),
+      base().eq('status', 'propuesta_enviada'),
+      base().eq('status', 'cerrada_ganada'),
+      base().eq('status', 'cerrada_perdida'),
+      base().eq('email_status', 'sent'),
+      base().eq('email_status', 'pending'),
+      base().eq('email_status', 'partial'),
+      base().eq('email_status', 'failed'),
+      base().eq('email_status', 'not_configured')
+    ]);
+
+    const results = [
+      totalRes,
+      nuevaRes,
+      contactadaRes,
+      propuestaRes,
+      ganadaRes,
+      perdidaRes,
+      sentRes,
+      pendingRes,
+      partialRes,
+      failedRes,
+      notConfiguredRes
+    ];
+    for (const result of results) {
+      if (result.error) {
+        throw result.error;
+      }
+    }
+
+    return {
+      total: totalRes.count ?? 0,
+      nuevas: nuevaRes.count ?? 0,
+      enSeguimiento: (contactadaRes.count ?? 0) + (propuestaRes.count ?? 0),
+      cerradas: (ganadaRes.count ?? 0) + (perdidaRes.count ?? 0),
+      emailSent: sentRes.count ?? 0,
+      emailPending: pendingRes.count ?? 0,
+      emailPartial: partialRes.count ?? 0,
+      emailFailed: failedRes.count ?? 0,
+      emailNotConfigured: notConfiguredRes.count ?? 0
+    };
   }
 
   async getById(id: string): Promise<Lead | null> {

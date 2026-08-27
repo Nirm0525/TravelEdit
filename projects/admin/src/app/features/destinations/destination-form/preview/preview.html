@@ -1,5 +1,10 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="preview__error">
+    <p>{{ message }}</p>
+    <button type="button" (click)="load()">Reintentar</button>
+  </div>
 } @else if (destination(); as d) {
   <p class="preview__disclaimer">Así se vería en el sitio público — esto no publica nada, solo es una vista previa.</p>
 

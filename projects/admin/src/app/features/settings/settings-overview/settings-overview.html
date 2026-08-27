@@ -1,0 +1,9 @@
+<app-admin-page-header [breadcrumb]="breadcrumb" title="Configuración" />
+
+<p class="settings-overview__intro">Administra la configuración general de Travel Edit.</p>
+
+<div class="settings-overview__grid">
+  @for (category of categories; track category.key) {
+    <app-content-section-card [name]="category.name" [description]="category.description" [editLink]="category.editLink" />
+  }
+</div>

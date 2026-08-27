@@ -8,6 +8,19 @@
   color: var(--text-secondary);
 }
 
+.preview__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  max-width: 40rem;
+  background: color-mix(in srgb, var(--danger-600) 6%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+  color: var(--danger-600);
+}
+
 .preview {
   max-width: 40rem;
   background: #f6efe6;

@@ -15,6 +15,11 @@
     <button type="button" class="btn btn--secondary" (click)="retry()">Reintentar</button>
   </div>
 } @else {
+@if (roleChangeError(); as message) {
+  <div class="users-list__error">
+    <p>{{ message }}</p>
+  </div>
+}
 <app-admin-table
   [loading]="loading()"
   [empty]="!loading() && filtered().length === 0"

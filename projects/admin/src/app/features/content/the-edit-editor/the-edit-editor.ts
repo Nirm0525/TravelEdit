@@ -1,40 +1,18 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SiteContentService } from '../../../core/services/site-content';
-import { SiteContentImagesService } from '../../../core/services/site-content-images';
 import { EditArticle } from '../../../core/models/site-content.model';
 import { ContentEditorLayout } from '../../../shared/ui/content-editor-layout/content-editor-layout';
-import { RichTextEditor } from '../../../shared/ui/rich-text-editor/rich-text-editor';
-import { PreviewModal } from '../../../shared/ui/preview-modal/preview-modal';
-import { slugify } from '../../../core/utils/slugify';
-import { environment } from '../../../../environments/environment';
-
-const EMPTY_ARTICLE: EditArticle = {
-  slug: '',
-  category: '',
-  title: '',
-  excerpt: '',
-  author: '',
-  publishedAt: '',
-  image: '',
-  alt: '',
-  cardImage: '',
-  cardAlt: '',
-  body: ''
-};
-
-type ArticleImageField = 'image' | 'cardImage';
 
 @Component({
   selector: 'app-the-edit-editor',
-  imports: [ReactiveFormsModule, FormsModule, DragDropModule, ContentEditorLayout, RichTextEditor, PreviewModal],
+  imports: [ReactiveFormsModule, ContentEditorLayout, RouterLink],
   templateUrl: './the-edit-editor.html',
   styleUrl: './the-edit-editor.css'
 })
 export class TheEditEditor {
   private readonly siteContent = inject(SiteContentService);
-  private readonly images = inject(SiteContentImagesService);
   private readonly fb = inject(FormBuilder);
 
   readonly loading = signal(true);
@@ -42,17 +20,11 @@ export class TheEditEditor {
   readonly savedAt = signal<Date | null>(null);
   readonly error = signal<string | null>(null);
 
-  readonly articles = signal<EditArticle[]>([]);
-  readonly uploadingField = signal<{ index: number; field: ArticleImageField } | null>(null);
-  readonly uploadError = signal<string | null>(null);
-
-  readonly bodyImageUpload = (file: File): Promise<string> => this.images.uploadArticleImage(file);
-
-  readonly previewSlug = signal<string | null>(null);
-  readonly previewUrl = computed(() => {
-    const slug = this.previewSlug();
-    return slug ? `${environment.publicSiteUrl}/the-edit/${slug}` : null;
-  });
+  // Los artículos en sí ahora se administran desde /admin/blog (tabla `articles`).
+  // Esta sección solo edita el encabezado — el array se carga y se vuelve a
+  // guardar TAL CUAL, sin tocarlo, para no perder lo que ya vivía en
+  // site_content.the_edit.
+  private articles: EditArticle[] = [];
 
   readonly form = this.fb.group({
     eyebrow: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -70,68 +42,17 @@ export class TheEditEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getTheEdit();
-    this.form.patchValue(content);
-    // Artículos guardados antes de que existieran "author"/"publishedAt" no
-    // traen esas claves — sin esto, [value]="article.author" pone el string
-    // "undefined" en el input en vez de dejarlo vacío.
-    this.articles.set(content.articles.map((article) => ({ ...EMPTY_ARTICLE, ...article })));
-    this.loading.set(false);
-  }
-
-  updateArticle(index: number, patch: Partial<EditArticle>): void {
-    this.articles.update((list) => list.map((article, i) => (i === index ? { ...article, ...patch } : article)));
-  }
-
-  onTitleInput(index: number, title: string): void {
-    const article = this.articles()[index];
-    if (!article) {
-      return;
-    }
-    const patch: Partial<EditArticle> = { title };
-    if (!article.slug || article.slug === slugify(article.title)) {
-      patch.slug = slugify(title);
-    }
-    this.updateArticle(index, patch);
-  }
-
-  addArticle(): void {
-    this.articles.update((list) => [...list, { ...EMPTY_ARTICLE }]);
-  }
-
-  removeArticle(index: number): void {
-    this.articles.update((list) => list.filter((_, i) => i !== index));
-  }
-
-  drop(event: CdkDragDrop<EditArticle[]>): void {
-    const reordered = [...this.articles()];
-    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
-    this.articles.set(reordered);
-  }
-
-  async onImageSelected(index: number, field: ArticleImageField, event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) {
-      return;
-    }
-
-    this.uploadingField.set({ index, field });
-    this.uploadError.set(null);
+    this.error.set(null);
     try {
-      const url = await this.images.uploadArticleImage(file);
-      this.updateArticle(index, { [field]: url });
-    } catch {
-      this.uploadError.set('No se pudo subir la imagen. Intenta de nuevo.');
+      const content = await this.siteContent.getTheEdit();
+      this.form.patchValue(content);
+      this.articles = content.articles;
+    } catch (err) {
+      console.error('No se pudo cargar la sección "The Edit".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
     } finally {
-      this.uploadingField.set(null);
+      this.loading.set(false);
     }
-  }
-
-  isUploading(index: number, field: ArticleImageField): boolean {
-    const current = this.uploadingField();
-    return current?.index === index && current?.field === field;
   }
 
   async save(): Promise<void> {
@@ -143,7 +64,7 @@ export class TheEditEditor {
     this.saving.set(true);
     this.error.set(null);
     try {
-      await this.siteContent.updateTheEdit({ ...this.form.getRawValue(), articles: this.articles() });
+      await this.siteContent.updateTheEdit({ ...this.form.getRawValue(), articles: this.articles });
       this.savedAt.set(new Date());
     } catch {
       this.error.set('No se pudieron guardar los cambios. Intenta nuevamente.');

@@ -1,0 +1,87 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="breadcrumb"
+    title="Leads"
+    description="Configuración relacionada con las solicitudes recibidas desde Design Your Trip."
+    backLink="/configuracion"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <label class="field">
+        <span>Email que recibe nuevas solicitudes</span>
+        <input type="email" formControlName="leads_admin_email" />
+      </label>
+
+      <label class="field field--toggle">
+        <input type="checkbox" formControlName="email_notifications_enabled" />
+        <span class="field--toggle-text">
+          <span>Notificaciones por email al administrador</span>
+          <span>Si se apaga, submit-lead deja de enviar el correo de aviso — el lead se sigue guardando igual.</span>
+        </span>
+      </label>
+
+      <label class="field field--toggle">
+        <input type="checkbox" formControlName="customer_confirmation_enabled" />
+        <span class="field--toggle-text">
+          <span>Confirmación automática al cliente</span>
+          <span>Correo de "recibimos tu solicitud" que se envía al cliente que llenó el formulario.</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Reglas del formulario</p>
+      <p class="field__hint leads-settings__notice">
+        Estas dos opciones son informativas por ahora: todavía no están conectadas a la validación real del formulario
+        público ni de submit-lead, para no alterar ese flujo sin coordinarlo primero.
+      </p>
+
+      <label class="field field--toggle">
+        <input type="checkbox" formControlName="leads_phone_required" />
+        <span class="field--toggle-text">
+          <span>Mostrar teléfono como campo obligatorio</span>
+        </span>
+      </label>
+
+      <label class="field field--toggle">
+        <input type="checkbox" formControlName="leads_allow_no_destination" />
+        <span class="field--toggle-text">
+          <span>Permitir solicitudes sin destino seleccionado</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="content-section">
+      <p class="content-section__title">Cómo funciona el envío de correos</p>
+      <p class="field__hint">
+        El lead se guarda primero. Los correos se procesan después. Si el envío falla, la solicitud permanece almacenada.
+      </p>
+
+      @if (statsError()) {
+        <p class="field__hint field__hint--error">{{ statsError() }}</p>
+      } @else if (stats(); as s) {
+        <div class="leads-settings__stats">
+          <div class="leads-settings__stat">
+            <p class="leads-settings__stat-label">Enviados</p>
+            <p class="leads-settings__stat-value">{{ s.emailSent }}</p>
+          </div>
+          <div class="leads-settings__stat">
+            <p class="leads-settings__stat-label">Parciales</p>
+            <p class="leads-settings__stat-value">{{ s.emailPartial }}</p>
+          </div>
+          <div class="leads-settings__stat">
+            <p class="leads-settings__stat-label">Fallidos</p>
+            <p class="leads-settings__stat-value">{{ s.emailFailed }}</p>
+          </div>
+          <div class="leads-settings__stat">
+            <p class="leads-settings__stat-label">No configurados</p>
+            <p class="leads-settings__stat-value">{{ s.emailNotConfigured }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </app-content-editor-layout>
+</form>

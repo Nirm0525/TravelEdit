@@ -1,0 +1,59 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="breadcrumb"
+    title="Correos"
+    description="Qué correos utiliza el sistema para notificar solicitudes."
+    backLink="/configuracion"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="content-section__title">Proveedor de correo</p>
+      <div class="email-settings__status-row">
+        <span>Resend</span>
+        @if (statusError()) {
+          <app-status-badge label="No se pudo consultar" variant="neutral" />
+        } @else if (resendConfigured() === null) {
+          <app-status-badge label="Consultando…" variant="neutral" />
+        } @else if (resendConfigured()) {
+          <app-status-badge label="Configurado" variant="success" />
+        } @else {
+          <app-status-badge label="No configurado" variant="warning" />
+        }
+      </div>
+      @if (statusError()) {
+        <p class="field__hint field__hint--error">{{ statusError() }}</p>
+      } @else if (resendConfigured() === false) {
+        <p class="field__hint">
+          RESEND_API_KEY todavía no está configurado como secret en Supabase — las solicitudes se guardan igual, pero no se
+          envían correos.
+        </p>
+      }
+    </div>
+
+    <div class="content-section">
+      <div class="content-grid">
+        <label class="field">
+          <span>Correo remitente</span>
+          <input type="text" formControlName="resend_from_email" placeholder="The Travel Edit &lt;correo@dominio.com&gt;" />
+          <span class="field__hint">Usado como "De:" en los correos enviados vía Resend.</span>
+        </label>
+
+        <label class="field">
+          <span>Correo administrador</span>
+          <input type="email" formControlName="leads_admin_email" />
+          <span class="field__hint">Recibe la notificación de cada nueva solicitud (mismo valor que "Email para solicitudes" en Contacto).</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <p class="field__hint">
+        La API Key de Resend (RESEND_API_KEY) nunca se guarda ni se muestra aquí — permanece únicamente como secret de la Edge
+        Function <code>submit-lead</code> en Supabase.
+      </p>
+    </div>
+  </app-content-editor-layout>
+</form>

@@ -24,8 +24,10 @@ export class General implements HasUnsavedChanges {
   readonly tripTypeOptions = TRIP_TYPE_OPTIONS;
   readonly seasonOptions = SEASON_OPTIONS;
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
   readonly saving = signal(false);
   readonly savedAt = signal<Date | null>(null);
+  readonly saveError = signal<string | null>(null);
   private slugTouched = false;
   private readonly destinationId = this.route.parent!.snapshot.paramMap.get('id')!;
   private loadedValues: ReturnType<General['form']['getRawValue']> | null = null;
@@ -57,10 +59,15 @@ export class General implements HasUnsavedChanges {
     });
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     this.loading.set(true);
-    const destination = await this.destinationsService.getById(this.destinationId);
-    if (destination) {
+    this.loadError.set(null);
+    try {
+      const destination = await this.destinationsService.getById(this.destinationId);
+      if (!destination) {
+        this.loadError.set('No se encontró el destino.');
+        return;
+      }
       this.form.patchValue({
         title: destination.title,
         slug: destination.slug,
@@ -76,8 +83,12 @@ export class General implements HasUnsavedChanges {
       this.slugTouched = true;
       this.loadedValues = this.form.getRawValue();
       this.form.markAsPristine();
+    } catch (error) {
+      console.error('No se pudo cargar el destino.', error);
+      this.loadError.set('No se pudo cargar el destino. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
     }
-    this.loading.set(false);
   }
 
   hasUnsavedChanges(): boolean {
@@ -105,6 +116,7 @@ export class General implements HasUnsavedChanges {
     }
 
     this.saving.set(true);
+    this.saveError.set(null);
     try {
       const { longDescription, ...rest } = this.form.getRawValue();
       await this.destinationsService.update(this.destinationId, rest);
@@ -112,6 +124,9 @@ export class General implements HasUnsavedChanges {
       this.savedAt.set(new Date());
       this.loadedValues = this.form.getRawValue();
       this.form.markAsPristine();
+    } catch (error) {
+      console.error('No se pudo guardar el destino.', error);
+      this.saveError.set('No se pudo guardar el destino. Inténtalo nuevamente.');
     } finally {
       this.saving.set(false);
     }

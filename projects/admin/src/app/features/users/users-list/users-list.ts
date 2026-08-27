@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AdminUsersService } from '../../../core/services/admin-users';
-import { ProfilesService } from '../../../core/services/profiles';
+import { AuthService } from '../../../core/services/auth';
 import { AdminUser } from '../../../core/models/user.model';
 import { STAFF_ROLE_LABEL, StaffRole } from '../../../core/models/staff-role';
 import { relativeTime } from '../../../core/utils/relative-time';
@@ -21,7 +21,7 @@ const ROLE_OPTIONS: StaffRole[] = ['admin', 'editor', 'staff'];
 })
 export class UsersList {
   private readonly usersService = inject(AdminUsersService);
-  private readonly profilesService = inject(ProfilesService);
+  private readonly auth = inject(AuthService);
 
   readonly roleOptions = ROLE_OPTIONS;
   readonly roleLabels = STAFF_ROLE_LABEL;
@@ -31,6 +31,7 @@ export class UsersList {
   readonly users = signal<AdminUser[]>([]);
   readonly search = signal('');
   readonly savingId = signal<string | null>(null);
+  readonly roleChangeError = signal<string | null>(null);
 
   readonly formOpen = signal(false);
   readonly formMode = signal<UserFormMode>('create');
@@ -93,15 +94,34 @@ export class UsersList {
   }
 
   async onRoleChange(user: AdminUser, event: Event): Promise<void> {
-    const role = (event.target as HTMLSelectElement).value as StaffRole;
+    const select = event.target as HTMLSelectElement;
+    const role = select.value as StaffRole;
+    this.roleChangeError.set(null);
+
     if (role === user.role) {
+      return;
+    }
+
+    // Mismo bloqueo que ya aplica la Edge Function (admin-users) — evitarlo
+    // acá también da feedback inmediato en vez de esperar el 400 del server.
+    if (user.id === this.auth.profile()?.id) {
+      this.roleChangeError.set('No puedes cambiar tu propio rol.');
+      select.value = user.role;
       return;
     }
 
     this.savingId.set(user.id);
     try {
-      await this.profilesService.updateRole(user.id, role);
+      // Antes esto llamaba directo a ProfilesService.updateRole() (UPDATE
+      // directo a la tabla), que se salta la protección de auto-cambio de
+      // rol que sí tiene admin-users — un admin podía autodegradarse desde
+      // este selector sin ninguna validación. Pasa por la Edge Function para
+      // que quede sujeto a la misma verificación que el modal de edición.
+      await this.usersService.updateUser({ userId: user.id, role });
       this.users.update((list) => list.map((u) => (u.id === user.id ? { ...u, role } : u)));
+    } catch (error) {
+      this.roleChangeError.set(error instanceof Error ? error.message : 'No se pudo cambiar el rol.');
+      select.value = user.role;
     } finally {
       this.savingId.set(null);
     }

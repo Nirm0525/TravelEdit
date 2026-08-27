@@ -1,0 +1,63 @@
+<app-admin-page-header [breadcrumb]="breadcrumb" title="Seguridad" />
+
+<p class="security-settings__intro">Estado de las protecciones e integraciones del sitio.</p>
+
+@if (loading()) {
+  <div class="security-settings__skeleton">
+    <app-admin-skeleton height="7rem" />
+    <app-admin-skeleton height="7rem" />
+    <app-admin-skeleton height="7rem" />
+  </div>
+} @else {
+  @if (error()) {
+    <p class="security-settings__error">{{ error() }}</p>
+  }
+
+  <div class="security-settings__grid">
+    <div class="security-settings__card">
+      <p class="content-section__title">Turnstile — protección anti-spam</p>
+      <div class="security-settings__row">
+        <span>Estado</span>
+        @if (turnstileSecretConfigured() === null) {
+          <app-status-badge label="Sin datos" variant="neutral" />
+        } @else if (turnstileSecretConfigured()) {
+          <app-status-badge label="Configurado" variant="success" />
+        } @else {
+          <app-status-badge label="No configurado" variant="warning" />
+        }
+      </div>
+      <p class="field__hint">
+        La secret key de Turnstile nunca se muestra aquí — permanece únicamente en Supabase Secrets. La site key pública
+        vive en el sitio público (bundle separado del admin).
+      </p>
+    </div>
+
+    <div class="security-settings__card">
+      <p class="content-section__title">Resend — envío de correos</p>
+      <div class="security-settings__row">
+        <span>API key</span>
+        @if (resendConfigured() === null) {
+          <app-status-badge label="Sin datos" variant="neutral" />
+        } @else if (resendConfigured()) {
+          <app-status-badge label="Configurado" variant="success" />
+        } @else {
+          <app-status-badge label="No configurado" variant="warning" />
+        }
+      </div>
+      <p class="field__hint">La API key tampoco se muestra aquí — permanece únicamente en Supabase Secrets.</p>
+    </div>
+
+    <div class="security-settings__card">
+      <p class="content-section__title">Supabase</p>
+      <div class="security-settings__row">
+        <span>Proyecto</span>
+        <app-status-badge label="Conectado" variant="success" />
+      </div>
+      <p class="security-settings__value">{{ supabaseUrl }}</p>
+    </div>
+  </div>
+
+  @if (checkedAt(); as at) {
+    <p class="security-settings__checked-at">Última verificación: {{ at | date: 'd MMM y, HH:mm' }}</p>
+  }
+}

@@ -3,9 +3,9 @@
     <div class="preview-modal__panel" role="dialog" aria-modal="true" aria-label="Vista previa">
       <div class="preview-modal__header">
         <div class="preview-modal__tabs" role="tablist" aria-label="Tamaño de pantalla">
-          <button type="button" [class.is-active]="device() === 'desktop'" (click)="setDevice('desktop')">Desktop</button>
-          <button type="button" [class.is-active]="device() === 'tablet'" (click)="setDevice('tablet')">Tablet</button>
-          <button type="button" [class.is-active]="device() === 'mobile'" (click)="setDevice('mobile')">Mobile</button>
+          <button type="button" role="tab" [attr.aria-selected]="device() === 'desktop'" [class.is-active]="device() === 'desktop'" (click)="setDevice('desktop')">Desktop</button>
+          <button type="button" role="tab" [attr.aria-selected]="device() === 'tablet'" [class.is-active]="device() === 'tablet'" (click)="setDevice('tablet')">Tablet</button>
+          <button type="button" role="tab" [attr.aria-selected]="device() === 'mobile'" [class.is-active]="device() === 'mobile'" (click)="setDevice('mobile')">Mobile</button>
         </div>
         <button type="button" class="preview-modal__close" aria-label="Cerrar vista previa" title="Cerrar vista previa" (click)="close()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" /></svg>

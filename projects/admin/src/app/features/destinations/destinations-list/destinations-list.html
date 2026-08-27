@@ -30,6 +30,18 @@
   <button type="button" [class.is-active]="statusFilter() === 'archived'" (click)="setStatusFilter('archived')">Archivado</button>
 </div>
 
+@if (toggleError(); as message) {
+  <div class="destinations-list__error">
+    <p>{{ message }}</p>
+  </div>
+}
+
+@if (loadError(); as message) {
+  <div class="destinations-list__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
 <app-admin-table
   [loading]="loading()"
   [empty]="!loading() && items().length === 0"
@@ -72,7 +84,9 @@
               <a [routerLink]="['/destinos', item.id, 'general']">Editar</a>
               <a [routerLink]="['/destinos', item.id, 'galeria']">Imágenes</a>
               <a [routerLink]="['/destinos', item.id, 'itinerario']">Itinerario</a>
-              <button type="button" (click)="toggleStatus(item)">{{ statusActionLabel(item) }}</button>
+              <button type="button" [disabled]="togglingId() === item.id" (click)="toggleStatus(item)">
+                {{ togglingId() === item.id ? 'Guardando…' : statusActionLabel(item) }}
+              </button>
             </div>
           </td>
         </tr>
@@ -80,8 +94,9 @@
     </tbody>
   </table>
 </app-admin-table>
+}
 
-@if (!loading() && items().length > 0) {
+@if (!loading() && !loadError() && items().length > 0) {
   <div class="destinations-list__pagination">
     <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
     <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} destinos</span>

@@ -1,17 +1,69 @@
 <div class="leads-list">
   <header class="leads-list__header">
-    <h1 class="page-title">Solicitudes</h1>
+    <div>
+      <h1 class="page-title">Solicitudes de viaje</h1>
+      <p class="leads-list__subtitle">Gestiona las solicitudes recibidas desde Design Your Trip.</p>
+    </div>
     <button type="button" class="leads-list__export btn btn--secondary" [disabled]="exporting() || total() === 0" (click)="exportCsv()">
       {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
     </button>
   </header>
 
+  <div class="leads-list__stats">
+    @if (statsLoading()) {
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="leads-list__stat leads-list__stat--skeleton" aria-hidden="true"></div>
+      }
+    } @else if (stats(); as s) {
+      <div class="leads-list__stat">
+        <p class="leads-list__stat-label">Total</p>
+        <p class="leads-list__stat-value">{{ s.total }}</p>
+      </div>
+      <div class="leads-list__stat">
+        <p class="leads-list__stat-label">Nuevas</p>
+        <p class="leads-list__stat-value">{{ s.nuevas }}</p>
+      </div>
+      <div class="leads-list__stat">
+        <p class="leads-list__stat-label">En seguimiento</p>
+        <p class="leads-list__stat-value">{{ s.enSeguimiento }}</p>
+        <p class="leads-list__stat-hint">{{ s.cerradas }} cerradas</p>
+      </div>
+      <div class="leads-list__stat">
+        <p class="leads-list__stat-label">Email</p>
+        <p class="leads-list__stat-value">{{ s.emailSent }} enviados</p>
+        <p class="leads-list__stat-hint">{{ s.emailPending }} pendientes · {{ s.emailPartial + s.emailFailed }} fallidos</p>
+      </div>
+    }
+  </div>
+
   <form class="leads-list__filters" (ngSubmit)="applyFilters()">
+    <label class="leads-list__filter leads-list__filter--search">
+      <span>Buscar</span>
+      <input
+        type="search"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (input)="onSearchInput($event)"
+        name="search"
+        placeholder="Nombre, correo, teléfono o destino…"
+      />
+    </label>
+
     <label class="leads-list__filter">
       <span>Estado</span>
       <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" name="status">
         <option value="">Todos</option>
         @for (option of statusOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="leads-list__filter">
+      <span>Email</span>
+      <select [ngModel]="emailStatusFilter()" (ngModelChange)="emailStatusFilter.set($event)" name="emailStatus">
+        <option value="">Todos</option>
+        @for (option of emailStatusOptions; track option.value) {
           <option [value]="option.value">{{ option.label }}</option>
         }
       </select>
@@ -28,17 +80,6 @@
     </label>
 
     <label class="leads-list__filter">
-      <span>Destino de interés</span>
-      <input
-        type="text"
-        [ngModel]="destinationSearch()"
-        (ngModelChange)="destinationSearch.set($event)"
-        name="destinationSearch"
-        placeholder="Buscar…"
-      />
-    </label>
-
-    <label class="leads-list__filter">
       <span>Desde</span>
       <input type="date" [ngModel]="createdFrom()" (ngModelChange)="createdFrom.set($event)" name="createdFrom" />
     </label>
@@ -51,7 +92,12 @@
     <button type="submit" class="leads-list__apply btn btn--primary">Filtrar</button>
   </form>
 
-  @if (loading()) {
+  @if (loadError(); as err) {
+    <div class="leads-list__error">
+      <p>{{ err }}</p>
+      <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+    </div>
+  } @else if (loading()) {
     <div class="leads-list__skeleton" aria-hidden="true">
       @for (row of [1, 2, 3, 4, 5]; track row) {
         <div class="leads-list__skeleton-row"></div>
@@ -59,35 +105,56 @@
     </div>
   } @else if (items().length === 0) {
     <div class="leads-list__empty">
-      <p>No hay solicitudes con estos filtros.</p>
-      <p>En cuanto alguien complete el formulario "Diseña tu viaje" del sitio, va a aparecer aquí.</p>
+      @if (hasActiveFilters()) {
+        <p>No hay solicitudes con estos filtros.</p>
+        <p>Probá ajustando la búsqueda o los filtros aplicados.</p>
+      } @else {
+        <p>Sin solicitudes de viaje.</p>
+        <p>Las nuevas solicitudes enviadas desde Design Your Trip aparecerán aquí.</p>
+      }
     </div>
   } @else {
     <table class="leads-list__table">
       <thead>
         <tr>
-          <th scope="col">Nombre</th>
-          <th scope="col">Destino de interés</th>
-          <th scope="col">Origen</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Email</th>
+          <th scope="col">Teléfono</th>
+          <th scope="col">Destino</th>
+          <th scope="col">Fecha de viaje</th>
+          <th scope="col">Viajeros</th>
           <th scope="col">Estado</th>
+          <th scope="col">Email</th>
           <th scope="col">Creado</th>
+          <th scope="col">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @for (item of items(); track item.id) {
           <tr [class.leads-list__row--stale]="isStale(item)">
-            <td data-label="Nombre">
+            <td data-label="Cliente">
               <a [routerLink]="['/solicitudes', item.id]">{{ item.name }}</a>
               @if (isStale(item)) {
                 <span class="leads-list__stale-badge">&gt;48h sin responder</span>
               }
             </td>
-            <td data-label="Destino de interés">{{ item.destinationInterestText || '—' }}</td>
-            <td data-label="Origen">{{ originLabel[item.origin] }}</td>
+            <td data-label="Correo electrónico">{{ item.email }}</td>
+            <td data-label="Teléfono">{{ item.phone || '—' }}</td>
+            <td data-label="Destino">{{ item.destinationInterestText || '—' }}</td>
+            <td data-label="Fecha de viaje">{{ item.details.departureDate || '—' }}</td>
+            <td data-label="Viajeros">{{ travelersLabel(item) }}</td>
             <td data-label="Estado">
               <span class="leads-list__status" [attr.data-status]="item.status">{{ statusLabel[item.status] }}</span>
             </td>
+            <td data-label="Estado del email">
+              <span class="leads-list__email-status" [attr.data-email-status]="item.emailStatus">
+                {{ emailStatusLabel[item.emailStatus] }}
+              </span>
+            </td>
             <td data-label="Creado">{{ item.createdAt | date: 'd MMM y, HH:mm' }}</td>
+            <td data-label="Acciones">
+              <a class="leads-list__action" [routerLink]="['/solicitudes', item.id]">Ver detalle</a>
+            </td>
           </tr>
         }
       </tbody>
@@ -95,7 +162,7 @@
 
     <div class="leads-list__pagination">
       <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
-      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} solicitudes</span>
+      <span>{{ rangeStart() }}–{{ rangeEnd() }} de {{ total() }} solicitudes</span>
       <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
     </div>
   }

@@ -1,5 +1,10 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="destination-form__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load(destinationId!)">Reintentar</button>
+  </div>
 } @else if (destination(); as d) {
   <header class="destination-form__header">
     <div>
@@ -9,16 +14,26 @@
 
     <div class="destination-form__actions">
       @if (d.status !== 'published') {
-        <button type="button" class="btn btn--primary" (click)="setStatus('published')">Publicar destino</button>
+        <button type="button" class="btn btn--primary" [disabled]="statusUpdating()" (click)="setStatus('published')">
+          {{ statusUpdating() ? 'Publicando…' : 'Publicar destino' }}
+        </button>
       }
       @if (d.status === 'published') {
-        <button type="button" class="btn btn--secondary" (click)="setStatus('archived')">Archivar</button>
+        <button type="button" class="btn btn--secondary" [disabled]="statusUpdating()" (click)="setStatus('archived')">
+          {{ statusUpdating() ? 'Archivando…' : 'Archivar' }}
+        </button>
       }
       @if (d.status === 'archived') {
-        <button type="button" class="btn btn--secondary" (click)="setStatus('draft')">Volver a borrador</button>
+        <button type="button" class="btn btn--secondary" [disabled]="statusUpdating()" (click)="setStatus('draft')">
+          {{ statusUpdating() ? 'Guardando…' : 'Volver a borrador' }}
+        </button>
       }
     </div>
   </header>
+
+  @if (statusError(); as message) {
+    <p class="destination-form__inline-error">{{ message }}</p>
+  }
 
   <nav class="destination-form__tabs" aria-label="Secciones del destino">
     <a routerLink="general" routerLinkActive="is-active">General</a>
@@ -48,6 +63,9 @@
           {{ deleting() ? 'Eliminando…' : 'Eliminar definitivamente' }}
         </button>
       </div>
+      @if (deleteError(); as message) {
+        <p class="destination-form__inline-error">{{ message }}</p>
+      }
     </section>
   }
 } @else {

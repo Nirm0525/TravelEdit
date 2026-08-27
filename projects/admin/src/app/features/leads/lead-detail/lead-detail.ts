@@ -5,12 +5,22 @@ import { LeadsService } from '../../../core/services/leads';
 import { AuthService } from '../../../core/services/auth';
 import { ProfilesService } from '../../../core/services/profiles';
 import { Lead, LeadNote } from '../../../core/models/lead.model';
-import { LeadStatus } from '../../../core/models/lead-enums';
-import { LEAD_STATUS_OPTIONS } from '../../../core/data/lead-options';
+import { LeadEmailStatus, LeadStatus } from '../../../core/models/lead-enums';
+import { LEAD_EMAIL_STATUS_LABEL, LEAD_STATUS_OPTIONS } from '../../../core/data/lead-options';
+import { StatusBadge, StatusBadgeVariant } from '../../../shared/ui/status-badge/status-badge';
+import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
+
+const EMAIL_STATUS_VARIANT: Record<LeadEmailStatus, StatusBadgeVariant> = {
+  pending: 'warning',
+  sent: 'success',
+  partial: 'warning',
+  failed: 'danger',
+  not_configured: 'neutral'
+};
 
 @Component({
   selector: 'app-lead-detail',
-  imports: [DatePipe],
+  imports: [DatePipe, StatusBadge, ConfirmDialog],
   templateUrl: './lead-detail.html',
   styleUrl: './lead-detail.css'
 })
@@ -24,15 +34,24 @@ export class LeadDetail {
   private readonly leadId = this.route.snapshot.paramMap.get('id')!;
 
   readonly statusOptions = LEAD_STATUS_OPTIONS;
+  readonly emailStatusLabel = LEAD_EMAIL_STATUS_LABEL;
+  readonly emailStatusVariant = EMAIL_STATUS_VARIANT;
   readonly isAdmin = this.auth.isAdmin;
 
   readonly lead = signal<Lead | null>(null);
   readonly notes = signal<LeadNote[]>([]);
   readonly staffNames = signal<Map<string, string>>(new Map());
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
   readonly newNote = signal('');
   readonly savingNote = signal(false);
-  readonly deleteConfirming = signal(false);
+  readonly deleteConfirmOpen = signal(false);
+  readonly deleting = signal(false);
+  readonly deleteError = signal<string | null>(null);
+  readonly statusUpdating = signal(false);
+  readonly statusError = signal<string | null>(null);
+  readonly assigning = signal(false);
+  readonly assignError = signal<string | null>(null);
 
   readonly detailFields: Array<{ label: string; value: () => string | null }> = [
     { label: 'Dónde vive', value: () => this.lead()?.details.location || null },
@@ -59,15 +78,22 @@ export class LeadDetail {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const [lead, notes, staffNames] = await Promise.all([
-      this.leadsService.getById(this.leadId),
-      this.leadsService.listNotes(this.leadId),
-      this.profiles.nameMap()
-    ]);
-    this.lead.set(lead);
-    this.notes.set(notes);
-    this.staffNames.set(staffNames);
-    this.loading.set(false);
+    this.loadError.set(null);
+    try {
+      const [lead, notes, staffNames] = await Promise.all([
+        this.leadsService.getById(this.leadId),
+        this.leadsService.listNotes(this.leadId),
+        this.profiles.nameMap()
+      ]);
+      this.lead.set(lead);
+      this.notes.set(notes);
+      this.staffNames.set(staffNames);
+    } catch (error) {
+      console.error('No se pudo cargar la solicitud.', error);
+      this.loadError.set('No pudimos cargar la solicitud. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   authorName(authorId: string): string {
@@ -99,18 +125,36 @@ export class LeadDetail {
 
   async setStatus(status: LeadStatus): Promise<void> {
     const current = this.lead();
-    if (!current) {
+    if (!current || this.statusUpdating() || current.status === status) {
       return;
     }
-    this.lead.set(await this.leadsService.updateStatus(current.id, status));
+    this.statusUpdating.set(true);
+    this.statusError.set(null);
+    try {
+      this.lead.set(await this.leadsService.updateStatus(current.id, status));
+    } catch (error) {
+      console.error('No se pudo actualizar el estado de la solicitud.', error);
+      this.statusError.set('No pudimos actualizar el estado. Inténtalo nuevamente.');
+    } finally {
+      this.statusUpdating.set(false);
+    }
   }
 
   async assignToMe(): Promise<void> {
     const current = this.lead();
-    if (!current) {
+    if (!current || this.assigning()) {
       return;
     }
-    this.lead.set(await this.leadsService.assignToMe(current.id));
+    this.assigning.set(true);
+    this.assignError.set(null);
+    try {
+      this.lead.set(await this.leadsService.assignToMe(current.id));
+    } catch (error) {
+      console.error('No se pudo asignar la solicitud.', error);
+      this.assignError.set('No pudimos asignarte esta solicitud. Inténtalo nuevamente.');
+    } finally {
+      this.assigning.set(false);
+    }
   }
 
   isAssignedToMe(): boolean {
@@ -138,15 +182,29 @@ export class LeadDetail {
   }
 
   requestDelete(): void {
-    if (this.deleteConfirming()) {
-      void this.remove();
-      return;
-    }
-    this.deleteConfirming.set(true);
+    this.deleteError.set(null);
+    this.deleteConfirmOpen.set(true);
   }
 
-  private async remove(): Promise<void> {
-    await this.leadsService.remove(this.leadId);
-    await this.router.navigateByUrl('/solicitudes');
+  cancelDelete(): void {
+    this.deleteConfirmOpen.set(false);
+  }
+
+  async confirmDelete(): Promise<void> {
+    if (this.deleting()) {
+      return;
+    }
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    try {
+      await this.leadsService.remove(this.leadId);
+      this.deleteConfirmOpen.set(false);
+      await this.router.navigateByUrl('/solicitudes');
+    } catch (error) {
+      console.error('No se pudo eliminar la solicitud.', error);
+      this.deleteError.set('No pudimos eliminar la solicitud. Inténtalo nuevamente.');
+    } finally {
+      this.deleting.set(false);
+    }
   }
 }

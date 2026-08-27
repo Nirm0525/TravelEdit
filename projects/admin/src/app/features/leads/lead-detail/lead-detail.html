@@ -1,5 +1,9 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as err) {
+  <div class="lead-detail__error">
+    <p>{{ err }}</p>
+  </div>
 } @else if (lead(); as l) {
   <header class="lead-detail__header">
     <div>
@@ -17,7 +21,12 @@
       @if (assignedToName(); as name) {
         <span>Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
       } @else {
-        <button type="button" class="btn btn--secondary" (click)="assignToMe()">Asignarme esta solicitud</button>
+        <button type="button" class="btn btn--secondary" [disabled]="assigning()" (click)="assignToMe()">
+          {{ assigning() ? 'Asignando…' : 'Asignarme esta solicitud' }}
+        </button>
+      }
+      @if (assignError(); as aErr) {
+        <p class="lead-detail__inline-error">{{ aErr }}</p>
       }
     </div>
   </header>
@@ -27,27 +36,70 @@
       <button
         type="button"
         [class.is-active]="l.status === option.value"
+        [disabled]="statusUpdating()"
         (click)="setStatus(option.value)"
       >
         {{ option.label }}
       </button>
     }
   </div>
+  @if (statusError(); as sErr) {
+    <p class="lead-detail__inline-error">{{ sErr }}</p>
+  }
 
   <div class="lead-detail__grid">
     <section class="lead-detail__section">
       <h2 class="section-title">Su viaje</h2>
-      @if (l.destinationInterestText) {
-        <p class="lead-detail__field"><strong>Destino de interés:</strong> {{ l.destinationInterestText }}</p>
-      }
-      @if (l.message) {
-        <p class="lead-detail__field"><strong>Mensaje:</strong> {{ l.message }}</p>
-      }
-      @for (field of detailFields; track field.label) {
-        @if (field.value(); as value) {
-          <p class="lead-detail__field"><strong>{{ field.label }}:</strong> {{ value }}</p>
+      <dl class="lead-detail__fields">
+        @if (l.destinationInterestText) {
+          <div class="lead-detail__field">
+            <dt>Destino de interés</dt>
+            <dd>{{ l.destinationInterestText }}</dd>
+          </div>
         }
+        @if (l.message) {
+          <div class="lead-detail__field">
+            <dt>Mensaje</dt>
+            <dd>{{ l.message }}</dd>
+          </div>
+        }
+        @for (field of detailFields; track field.label) {
+          @if (field.value(); as value) {
+            <div class="lead-detail__field">
+              <dt>{{ field.label }}</dt>
+              <dd>{{ value }}</dd>
+            </div>
+          }
+        }
+      </dl>
+    </section>
+
+    <section class="lead-detail__section">
+      <h2 class="section-title">Email</h2>
+      <div class="lead-detail__email-badge">
+        <app-status-badge [label]="emailStatusLabel[l.emailStatus]" [variant]="emailStatusVariant[l.emailStatus]" />
+      </div>
+      @if (l.emailStatus === 'not_configured') {
+        <p class="lead-detail__email-hint">
+          La solicitud fue recibida correctamente. Todavía no hay un servicio de email configurado para notificaciones automáticas.
+        </p>
+      } @else if (l.emailStatus === 'sent' && l.emailSentAt) {
+        <p class="lead-detail__email-hint">Enviado el {{ l.emailSentAt | date: 'd MMM y, HH:mm' }}.</p>
+      } @else if (l.emailStatus === 'failed' || l.emailStatus === 'partial') {
+        <p class="lead-detail__email-error">El correo no pudo enviarse.</p>
+        @if (l.emailError) {
+          <p class="lead-detail__email-error-detail">{{ l.emailError }}</p>
+        }
+      } @else if (l.emailStatus === 'pending') {
+        <p class="lead-detail__email-hint">El envío todavía está pendiente.</p>
       }
+
+      <div class="lead-detail__email-retry">
+        <button type="button" class="btn btn--secondary" disabled title="Disponible cuando el reenvío de emails esté configurado en el backend.">
+          Reintentar envío
+        </button>
+        <p class="lead-detail__email-retry-hint">Disponible cuando se configure el envío de emails.</p>
+      </div>
     </section>
 
     <section class="lead-detail__section">
@@ -84,10 +136,21 @@
 
   @if (isAdmin()) {
     <section class="lead-detail__danger">
-      <button type="button" class="btn btn--danger" (click)="requestDelete()">
-        {{ deleteConfirming() ? '¿Seguro? Confirmar eliminación' : 'Eliminar solicitud' }}
-      </button>
+      @if (deleteError(); as delErr) {
+        <p class="lead-detail__delete-error">{{ delErr }}</p>
+      }
+      <button type="button" class="btn lead-detail__delete-btn" (click)="requestDelete()">Eliminar solicitud</button>
     </section>
+
+    <app-confirm-dialog
+      [open]="deleteConfirmOpen()"
+      title="Eliminar solicitud"
+      message="¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer."
+      [confirmLabel]="deleting() ? 'Eliminando…' : 'Eliminar'"
+      [danger]="false"
+      (confirmed)="confirmDelete()"
+      (cancelled)="cancelDelete()"
+    />
   }
 } @else {
   <p>No se encontró la solicitud.</p>

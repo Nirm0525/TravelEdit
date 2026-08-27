@@ -1,0 +1,52 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="breadcrumb"
+    title="General"
+    description="Nombre del sitio, empresa, URL pública, idioma y estado."
+    backLink="/configuracion"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <div class="content-grid">
+        <label class="field">
+          <span>Nombre del sitio</span>
+          <input type="text" formControlName="site_name" />
+        </label>
+
+        <label class="field">
+          <span>Nombre de la empresa</span>
+          <input type="text" formControlName="company_name" />
+        </label>
+
+        <label class="field">
+          <span>URL pública</span>
+          <input type="text" formControlName="public_site_url" placeholder="https://thetravel-edit.com" />
+        </label>
+
+        <label class="field">
+          <span>Zona horaria</span>
+          <input type="text" formControlName="timezone" placeholder="America/Tegucigalpa" />
+        </label>
+
+        <label class="field">
+          <span>Idioma</span>
+          <select formControlName="language">
+            <option value="es">Español</option>
+            <option value="en">Inglés</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Estado del sitio</span>
+          <select formControlName="site_status">
+            <option value="active">Activo</option>
+            <option value="maintenance">Mantenimiento</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

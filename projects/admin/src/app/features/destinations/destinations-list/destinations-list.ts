@@ -39,9 +39,12 @@ export class DestinationsList {
   readonly total = signal(0);
   readonly page = signal(1);
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
   readonly statusFilter = signal<DestinationStatus | ''>('');
   readonly tripTypeFilter = signal<TripType | ''>('');
   readonly search = signal('');
+  readonly togglingId = signal<string | null>(null);
+  readonly toggleError = signal<string | null>(null);
 
   readonly pageSize = PAGE_SIZE;
   private searchDebounce?: ReturnType<typeof setTimeout>;
@@ -52,17 +55,24 @@ export class DestinationsList {
 
   async load(): Promise<void> {
     this.loading.set(true);
-    const result = await this.destinationsService.list({
-      page: this.page(),
-      pageSize: this.pageSize,
-      status: this.statusFilter() || undefined,
-      tripType: this.tripTypeFilter() || undefined,
-      search: this.search().trim() || undefined
-    });
-    this.items.set(result.items);
-    this.total.set(result.total);
-    await this.loadCovers(result.items);
-    this.loading.set(false);
+    this.loadError.set(null);
+    try {
+      const result = await this.destinationsService.list({
+        page: this.page(),
+        pageSize: this.pageSize,
+        status: this.statusFilter() || undefined,
+        tripType: this.tripTypeFilter() || undefined,
+        search: this.search().trim() || undefined
+      });
+      this.items.set(result.items);
+      this.total.set(result.total);
+      await this.loadCovers(result.items);
+    } catch (error) {
+      console.error('No se pudieron cargar los destinos.', error);
+      this.loadError.set('No se pudieron cargar los destinos. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   private async loadCovers(items: Destination[]): Promise<void> {
@@ -130,8 +140,22 @@ export class DestinationsList {
   }
 
   async toggleStatus(item: Destination): Promise<void> {
+    if (this.togglingId()) {
+      return;
+    }
     const next: DestinationStatus = item.status === 'published' ? 'archived' : 'published';
-    await this.destinationsService.updateStatus(item.id, next);
-    await this.load();
+    this.togglingId.set(item.id);
+    this.toggleError.set(null);
+    try {
+      await this.destinationsService.updateStatus(item.id, next);
+      await this.load();
+    } catch (error) {
+      console.error('No se pudo actualizar el estado del destino.', error);
+      this.toggleError.set(
+        next === 'published' ? 'No se pudo publicar el destino. Inténtalo nuevamente.' : 'No se pudo archivar el destino. Inténtalo nuevamente.'
+      );
+    } finally {
+      this.togglingId.set(null);
+    }
   }
 }

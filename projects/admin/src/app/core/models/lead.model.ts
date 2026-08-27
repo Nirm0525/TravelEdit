@@ -1,6 +1,7 @@
 import { Database } from './database.types';
-import { LeadOrigin, LeadStatus } from './lead-enums';
+import { LeadEmailStatus, LeadOrigin, LeadStatus } from './lead-enums';
 import { LeadTripDetails, toLeadTripDetails } from './lead-trip-details';
+import { sanitizeEmailError } from '../utils/sanitize-email-error';
 
 type LeadRow = Database['public']['Tables']['leads']['Row'];
 type LeadNoteRow = Database['public']['Tables']['lead_notes']['Row'];
@@ -19,6 +20,9 @@ export interface Lead {
   assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
+  emailStatus: LeadEmailStatus;
+  emailSentAt: string | null;
+  emailError: string | null;
 }
 
 export interface LeadNote {
@@ -43,7 +47,10 @@ export function toLead(row: LeadRow): Lead {
     status: row.status,
     assignedTo: row.assigned_to,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    emailStatus: row.email_status,
+    emailSentAt: row.email_sent_at,
+    emailError: sanitizeEmailError(row.email_error)
   };
 }
 

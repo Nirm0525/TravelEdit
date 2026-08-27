@@ -104,13 +104,20 @@ export class DestinationImagesService {
   }
 
   /** Sin garantía de atomicidad entre filas: el orden de la galería es cosmético,
-   *  no crítico como el itinerario, así que no justifica una función RPC. */
+   *  no crítico como el itinerario, así que no justifica una función RPC. Pero
+   *  cada resultado SÍ se revisa — antes se descartaba el `error` de cada
+   *  update en paralelo, así que un fallo parcial quedaba invisible y el
+   *  caller creía que todo se había guardado. */
   async reorder(orderedIds: string[]): Promise<void> {
-    await Promise.all(
+    const results = await Promise.all(
       orderedIds.map((id, index) =>
         this.supabase.client.from('destination_images').update({ position: index }).eq('id', id)
       )
     );
+    const failed = results.find((result) => result.error);
+    if (failed?.error) {
+      throw failed.error;
+    }
   }
 
   async setCover(destinationId: string, imageId: string | null): Promise<void> {

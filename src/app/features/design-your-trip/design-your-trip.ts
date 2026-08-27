@@ -25,6 +25,7 @@ declare global {
         container: HTMLElement,
         options: { sitekey: string; callback: (token: string) => void }
       ) => string;
+      remove: (widgetId: string) => void;
     };
   }
 }
@@ -61,6 +62,7 @@ export class DesignYourTrip {
   readonly hearAboutUsOptions = HEAR_ABOUT_US_OPTIONS;
 
   private readonly turnstileContainer = viewChild<ElementRef<HTMLElement>>('turnstileContainer');
+  private turnstileWidgetId: string | null = null;
 
   readonly form = this.fb.group({
     name: this.fb.control('', Validators.required),
@@ -143,13 +145,27 @@ export class DesignYourTrip {
   }
 
   async submit(): Promise<void> {
+    // Único gate real de campos: form.invalid solo depende de name/email/phone,
+    // los únicos controles con Validators — ningún campo opcional puede bloquear
+    // esto. markAllAsTouched() hace que se vea exactamente cuál falta.
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Revisa los campos obligatorios antes de enviar.');
       return;
     }
 
-    if (this.submitting() || !this.turnstileToken()) {
+    // Clic repetido mientras ya se está enviando: se ignora en silencio (el
+    // botón ya está disabled/"Enviando…", esto es solo un cinturón extra) —
+    // antes compartía el mismo mensaje que "falta el anti-spam", lo cual
+    // confundía dos causas distintas.
+    if (this.submitting()) {
+      return;
+    }
+
+    // Verificación anti-spam de Turnstile — no es una validación de campos del
+    // formulario, es una capa aparte. Si el widget todavía no resolvió, no hay
+    // nada mal con lo que el usuario completó.
+    if (!this.turnstileToken()) {
       this.errorMessage.set('Completa la verificación anti-spam antes de enviar.');
       return;
     }
@@ -157,46 +173,63 @@ export class DesignYourTrip {
     this.submitting.set(true);
     this.errorMessage.set(null);
 
-    const raw = this.form.getRawValue();
-    const details: LeadTripDetails = {
-      location: raw.location,
-      travelingWith: raw.travelingWith,
-      adults: raw.adults,
-      children: raw.children,
-      childrenAges: raw.childrenAges,
-      destinationNotes: raw.destinationNotes,
-      departureDate: raw.departureDate,
-      returnDate: raw.returnDate,
-      nights: raw.nights,
-      datesFlexible: raw.datesFlexible,
-      occasion: raw.occasion,
-      stylePreferences: raw.stylePreferences,
-      pace: raw.pace,
-      hotelStyle: raw.hotelStyle,
-      budgetRange: raw.budgetRange,
-      flightClass: raw.flightClass,
-      likesAndDislikes: raw.likesAndDislikes,
-      unforgettableNote: raw.unforgettableNote,
-      hearAboutUs: raw.hearAboutUs
-    };
+    try {
+      const raw = this.form.getRawValue();
+      const details: LeadTripDetails = {
+        location: raw.location,
+        travelingWith: raw.travelingWith,
+        adults: raw.adults,
+        children: raw.children,
+        childrenAges: raw.childrenAges,
+        destinationNotes: raw.destinationNotes,
+        departureDate: raw.departureDate,
+        returnDate: raw.returnDate,
+        nights: raw.nights,
+        datesFlexible: raw.datesFlexible,
+        occasion: raw.occasion,
+        stylePreferences: raw.stylePreferences,
+        pace: raw.pace,
+        hotelStyle: raw.hotelStyle,
+        budgetRange: raw.budgetRange,
+        flightClass: raw.flightClass,
+        likesAndDislikes: raw.likesAndDislikes,
+        unforgettableNote: raw.unforgettableNote,
+        hearAboutUs: raw.hearAboutUs
+      };
 
-    const result = await this.leadSubmission.submit({
-      name: raw.name,
-      email: raw.email,
-      phone: raw.phone,
-      destinationInterestText: raw.destinationInterestText,
-      details,
-      turnstileToken: this.turnstileToken()!
-    });
+      const result = await this.leadSubmission.submit({
+        name: raw.name,
+        email: raw.email,
+        phone: raw.phone,
+        destinationInterestText: raw.destinationInterestText,
+        details,
+        turnstileToken: this.turnstileToken()!
+      });
 
-    this.submitting.set(false);
+      if (!result.ok) {
+        this.errorMessage.set(result.error);
+        return;
+      }
 
-    if (!result.ok) {
-      this.errorMessage.set(result.error);
-      return;
+      // El widget de Turnstile puede dejar su iframe/overlay huérfano si el
+      // contenedor se destruye (al pasar a la pantalla de éxito) sin avisarle
+      // primero — eso deja clics bloqueados en toda la página. Se limpia antes
+      // de que Angular retire el formulario del DOM.
+      if (this.turnstileWidgetId) {
+        window.turnstile?.remove(this.turnstileWidgetId);
+        this.turnstileWidgetId = null;
+      }
+
+      this.submitted.set(true);
+    } catch (error) {
+      // Nunca debería llegar acá (LeadSubmissionService ya atrapa sus propios
+      // errores), pero sin este catch una excepción inesperada dejaría
+      // `submitting` en true para siempre y el botón bloqueado.
+      console.error('DesignYourTrip.submit: error inesperado', error);
+      this.errorMessage.set('No pudimos enviar tu solicitud. Inténtalo nuevamente.');
+    } finally {
+      this.submitting.set(false);
     }
-
-    this.submitted.set(true);
   }
 
   private async renderTurnstile(container: HTMLElement): Promise<void> {
@@ -206,10 +239,11 @@ export class DesignYourTrip {
     }
 
     await this.loadTurnstileScript();
-    window.turnstile?.render(container, {
-      sitekey: siteKey,
-      callback: (token) => this.turnstileToken.set(token)
-    });
+    this.turnstileWidgetId =
+      window.turnstile?.render(container, {
+        sitekey: siteKey,
+        callback: (token) => this.turnstileToken.set(token)
+      }) ?? null;
   }
 
   private loadTurnstileScript(): Promise<void> {

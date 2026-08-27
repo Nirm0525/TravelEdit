@@ -1,0 +1,6 @@
+.email-settings__status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 600;
+}

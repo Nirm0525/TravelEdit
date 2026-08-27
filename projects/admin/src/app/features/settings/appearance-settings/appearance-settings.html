@@ -1,0 +1,48 @@
+<form [formGroup]="form" (ngSubmit)="save()">
+  <app-content-editor-layout
+    [breadcrumb]="breadcrumb"
+    title="Apariencia"
+    description="Logo, favicon y color de acento de la marca."
+    backLink="/configuracion"
+    [loading]="loading()"
+    [saving]="saving()"
+    [saved]="!!savedAt()"
+    [errorMessage]="error()"
+  >
+    <div class="content-section">
+      <p class="field__hint appearance-settings__notice">
+        Estos valores se guardan en Supabase, pero todavía no se aplican automáticamente al sitio público — hoy el logo, el
+        favicon y el color de marca siguen viniendo de los archivos estáticos del proyecto. Conectar esto al sitio en vivo
+        requiere una integración adicional.
+      </p>
+
+      <div class="content-grid">
+        <label class="field">
+          <span>Nombre visible del sitio</span>
+          <input type="text" formControlName="site_name" />
+        </label>
+
+        <label class="field">
+          <span>Logo (ruta o URL)</span>
+          <input type="text" formControlName="appearance_logo_url" />
+        </label>
+
+        <label class="field">
+          <span>Favicon (ruta o URL)</span>
+          <input type="text" formControlName="appearance_favicon_url" />
+        </label>
+
+        <label class="field">
+          <span>Color de acento</span>
+          <div class="appearance-settings__color-row">
+            <input type="color" formControlName="appearance_accent_color" class="appearance-settings__swatch" />
+            <input type="text" formControlName="appearance_accent_color" placeholder="#7A2338" />
+          </div>
+          @if (form.controls.appearance_accent_color.touched && form.controls.appearance_accent_color.invalid) {
+            <span class="field__hint field__hint--error">Usa un color hexadecimal, ej. #7A2338.</span>
+          }
+        </label>
+      </div>
+    </div>
+  </app-content-editor-layout>
+</form>

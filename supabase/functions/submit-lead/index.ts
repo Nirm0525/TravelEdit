@@ -100,61 +100,160 @@ async function hashIp(ip: string): Promise<string> {
     .join('');
 }
 
-const NOTIFICATION_EMAIL = 'marcela@travelinternational.org';
+// Fallbacks — se usan solo si el secret correspondiente no está configurado
+// en Supabase, para no romper el envío existente. LEADS_ADMIN_EMAIL y
+// RESEND_FROM_EMAIL los sobreescribe una vez estén cargados como secrets.
+const FALLBACK_ADMIN_EMAIL = 'marcela@travelinternational.org';
+// onboarding@resend.dev es el remitente de pruebas de Resend: funciona sin
+// verificar ningún dominio propio, pero no es apto para producción real —
+// una vez thetravel-edit.com esté verificado en Resend, RESEND_FROM_EMAIL
+// debe apuntar a un remitente de ese dominio.
+const FALLBACK_FROM_EMAIL = 'The Travel Edit <onboarding@resend.dev>';
 
-/** Best-effort: si Resend no está configurado o falla, no debe tumbar la
- *  solicitud — el lead ya quedó guardado en la base, que es la fuente de
- *  verdad. Esto es solo un aviso adicional. */
-async function sendNotificationEmail(
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+interface EmailContent {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+function formatDetailsRows(details: LeadTripDetails): Array<[string, string]> {
+  const travelers = [
+    details.adults != null ? `${details.adults} adulto(s)` : null,
+    details.children != null && details.children > 0
+      ? `${details.children} niño(s)${details.childrenAges ? ` (${details.childrenAges})` : ''}`
+      : null
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const dates = [
+    details.departureDate ? `Salida: ${details.departureDate}` : null,
+    details.returnDate ? `Regreso/duración: ${details.returnDate}` : null,
+    details.datesFlexible ? 'Fechas flexibles' : null
+  ]
+    .filter(Boolean)
+    .join(' — ');
+
+  const rows: Array<[string, string | undefined]> = [
+    ['Dónde está basado', details.location],
+    ['Viaja con', details.travelingWith],
+    ['Viajeros', travelers || undefined],
+    ['Fechas', dates || undefined],
+    ['Notas sobre el destino', details.destinationNotes],
+    ['Ocasión', details.occasion],
+    ['Preferencias de estilo', details.stylePreferences?.length ? details.stylePreferences.join(', ') : undefined],
+    ['Ritmo del viaje', details.pace],
+    ['Estilo de hotel', details.hotelStyle],
+    ['Presupuesto (porción terrestre)', details.budgetRange],
+    ['Clase de vuelo', details.flightClass],
+    ['Gustos / a evitar', details.likesAndDislikes],
+    ['Qué haría el viaje inolvidable', details.unforgettableNote],
+    ['Cómo nos conoció', details.hearAboutUs]
+  ];
+
+  return rows.filter((row): row is [string, string] => !!row[1]);
+}
+
+function buildAdminEmail(
   name: string,
   email: string,
   phone: string,
   destinationInterestText: string | null,
   details: LeadTripDetails
-): Promise<void> {
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) {
-    return;
-  }
-
-  const rows: Array<[string, string | undefined]> = [
+): EmailContent {
+  const rows: Array<[string, string]> = [
     ['Nombre', name],
     ['Correo', email],
     ['Teléfono', phone],
-    ['Destino de interés', destinationInterestText ?? undefined],
-    ['Viaja con', details.travelingWith],
-    ['Ocasión', details.occasion],
-    ['Presupuesto', details.budgetRange],
-    ['Cómo nos conoció', details.hearAboutUs]
+    ...(destinationInterestText ? ([['Destino de interés', destinationInterestText]] as Array<[string, string]>) : []),
+    ...formatDetailsRows(details)
   ];
 
   const html = `
-    <h2>Nueva solicitud — The Travel Edit</h2>
-    <table cellpadding="6">
+    <h2>Nueva solicitud de viaje — Design Your Trip</h2>
+    <table cellpadding="6" cellspacing="0" border="0">
       ${rows
-        .filter(([, value]) => !!value)
-        .map(([label, value]) => `<tr><td><strong>${label}</strong></td><td>${value}</td></tr>`)
+        .map(([label, value]) => `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(value)}</td></tr>`)
         .join('')}
     </table>
-    <p>Revisa el detalle completo en el panel administrativo.</p>
+    <p>Responde directamente a este correo para escribirle al cliente.</p>
   `;
+  const text = rows.map(([label, value]) => `${label}: ${value}`).join('\n');
 
+  return { subject: 'Nueva solicitud de viaje — Design Your Trip', html, text };
+}
+
+function buildCustomerEmail(name: string): EmailContent {
+  const safeName = escapeHtml(name);
+  const html = `
+    <p>Hola ${safeName},</p>
+    <p>Hemos recibido correctamente tu solicitud de viaje.</p>
+    <p>Nuestro equipo revisará la información y se pondrá en contacto contigo para ayudarte a planificar tu experiencia.</p>
+    <p>Gracias por confiar en Travel Edit.</p>
+    <p>Travel Edit</p>
+  `;
+  const text = [
+    `Hola ${name},`,
+    '',
+    'Hemos recibido correctamente tu solicitud de viaje.',
+    '',
+    'Nuestro equipo revisará la información y se pondrá en contacto contigo para ayudarte a planificar tu experiencia.',
+    '',
+    'Gracias por confiar en Travel Edit.',
+    '',
+    'Travel Edit'
+  ].join('\n');
+
+  return { subject: 'Recibimos tu solicitud de viaje — Travel Edit', html, text };
+}
+
+interface EmailResult {
+  sent: boolean;
+  error?: string;
+}
+
+/** Nunca debe tumbar la solicitud — el lead ya está guardado, que es la
+ *  fuente de verdad. Un fallo aquí solo se refleja en email_status. */
+async function sendViaResend(
+  apiKey: string,
+  fromEmail: string,
+  payload: { to: string[]; subject: string; html: string; text: string; replyTo?: string }
+): Promise<EmailResult> {
   try {
-    await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'The Travel Edit <onboarding@resend.dev>',
-        to: [NOTIFICATION_EMAIL],
-        subject: `Nueva solicitud de ${name}`,
-        html
+        from: fromEmail,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+        ...(payload.replyTo ? { reply_to: payload.replyTo } : {})
       })
     });
-  } catch {
-    // best-effort, no bloquea la respuesta al usuario
+
+    if (!response.ok) {
+      console.error('sendViaResend: Resend respondió', response.status, await response.text());
+      return { sent: false, error: `Resend respondió ${response.status}` };
+    }
+
+    return { sent: true };
+  } catch (err) {
+    console.error('sendViaResend: error inesperado enviando email', err);
+    return { sent: false, error: 'error de red hacia Resend' };
   }
 }
 
@@ -210,6 +309,54 @@ async function verifyTurnstile(token: string, remoteIp: string): Promise<boolean
   }
 }
 
+interface OperationalSettings {
+  resendFromEmail: string | null;
+  leadsAdminEmail: string | null;
+  emailNotificationsEnabled: boolean;
+  customerConfirmationEnabled: boolean;
+}
+
+// Lee únicamente valores NO sensibles de site_settings (panel admin >
+// Configuración > Leads/Correos) como override opcional de los secrets.
+// RESEND_API_KEY jamás se lee de aquí — sigue viniendo solo de
+// Deno.env.get. Cualquier fallo (tabla no existe todavía, red, etc.) cae en
+// los mismos valores que el comportamiento actual, para no romper el envío
+// de leads por un problema en una función que es puramente cosmética.
+// deno-lint-ignore no-explicit-any
+async function fetchOperationalSettings(serviceClient: any): Promise<OperationalSettings> {
+  const defaults: OperationalSettings = {
+    resendFromEmail: null,
+    leadsAdminEmail: null,
+    emailNotificationsEnabled: true,
+    customerConfirmationEnabled: true
+  };
+
+  try {
+    const { data, error } = await serviceClient
+      .from('site_settings')
+      .select('key, value')
+      .in('key', ['resend_from_email', 'leads_admin_email', 'email_notifications_enabled', 'customer_confirmation_enabled']);
+
+    if (error || !data) {
+      return defaults;
+    }
+
+    const values = new Map<string, unknown>(data.map((row: { key: string; value: unknown }) => [row.key, row.value]));
+    const resendFromEmail = values.get('resend_from_email');
+    const leadsAdminEmail = values.get('leads_admin_email');
+
+    return {
+      resendFromEmail: typeof resendFromEmail === 'string' && resendFromEmail ? resendFromEmail : null,
+      leadsAdminEmail: typeof leadsAdminEmail === 'string' && leadsAdminEmail ? leadsAdminEmail : null,
+      emailNotificationsEnabled: values.get('email_notifications_enabled') !== false,
+      customerConfirmationEnabled: values.get('customer_confirmation_enabled') !== false
+    };
+  } catch (err) {
+    console.error('submit-lead: no se pudo leer site_settings, se usan los valores por defecto.', err);
+    return defaults;
+  }
+}
+
 Deno.serve(async (req) => {
   const cors = corsHeadersFor(req);
 
@@ -237,6 +384,7 @@ Deno.serve(async (req) => {
     if (!name || !isValidEmail(email) || !phone) {
       return json({ error: 'Nombre, correo válido y teléfono son obligatorios.' }, 400);
     }
+    console.log('Lead received');
 
     if (!body.turnstileToken) {
       return json({ error: 'Falta la verificación anti-spam.' }, 400);
@@ -267,23 +415,118 @@ Deno.serve(async (req) => {
     if (!captchaOk) {
       return json({ error: 'No se pudo verificar que eres una persona.' }, 400);
     }
+    console.log('Turnstile validated');
+
+    const destinationInterestText = body.destinationInterestText?.trim() || null;
+    const details = body.details ?? {};
 
     const origin: Origin = 'formulario_web';
-    const { error } = await serviceClient.from('leads').insert({
-      name,
-      email,
-      phone,
-      destination_interest_text: body.destinationInterestText?.trim() || null,
-      details: body.details ?? {},
-      origin
-    });
+    const { data: insertedLead, error } = await serviceClient
+      .from('leads')
+      .insert({
+        name,
+        email,
+        phone,
+        destination_interest_text: destinationInterestText,
+        details,
+        origin
+      })
+      .select('id')
+      .single();
 
-    if (error) {
+    if (error || !insertedLead) {
       console.error('submit-lead: insert en leads falló', error);
       return json({ error: 'No se pudo enviar la solicitud.' }, 500);
     }
+    console.log('Lead inserted', insertedLead.id);
 
-    await sendNotificationEmail(name, email, phone, body.destinationInterestText?.trim() || null, body.details ?? {});
+    // El lead YA está guardado en este punto — es la fuente de verdad. Todo
+    // lo que sigue es best-effort: si Resend falla, el lead se conserva
+    // igual, y solo queda registrado en email_status para dar seguimiento
+    // manual después. Nunca debe perderse una solicitud por un problema
+    // temporal del proveedor de correo.
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    let emailStatus: 'not_configured' | 'sent' | 'partial' | 'failed' = 'not_configured';
+    let emailSentAt: string | null = null;
+    let emailError: string | null = null;
+
+    if (!resendApiKey) {
+      console.error('submit-lead: RESEND_API_KEY no configurado — el lead quedó guardado, no se envían emails.');
+    } else {
+      const opSettings = await fetchOperationalSettings(serviceClient);
+      const fromEmail = opSettings.resendFromEmail || Deno.env.get('RESEND_FROM_EMAIL') || FALLBACK_FROM_EMAIL;
+      const adminEmail = opSettings.leadsAdminEmail || Deno.env.get('LEADS_ADMIN_EMAIL') || FALLBACK_ADMIN_EMAIL;
+
+      // 'skipped' = el admin apagó esa notificación desde Configuración > Leads,
+      // no cuenta como intento fallido para el cálculo de emailStatus de abajo.
+      type SendOutcome = 'sent' | 'failed' | 'skipped';
+      let adminOutcome: SendOutcome = 'skipped';
+      let customerOutcome: SendOutcome = 'skipped';
+      let adminErrorMsg: string | undefined;
+      let customerErrorMsg: string | undefined;
+
+      if (opSettings.emailNotificationsEnabled) {
+        const admin = buildAdminEmail(name, email, phone, destinationInterestText, details);
+        // reply_to = el correo ya validado del cliente, nunca uno arbitrario
+        // que venga de otro campo del body — así "Responder" en el correo del
+        // admin va directo al cliente sin que el cliente controle el `from`.
+        const adminResult = await sendViaResend(resendApiKey, fromEmail, {
+          to: [adminEmail],
+          subject: admin.subject,
+          html: admin.html,
+          text: admin.text,
+          replyTo: email
+        });
+        adminOutcome = adminResult.sent ? 'sent' : 'failed';
+        adminErrorMsg = adminResult.error;
+        console.log(adminResult.sent ? 'Admin email sent' : 'Admin email failed');
+      } else {
+        console.log('Admin email skipped (email_notifications_enabled = false)');
+      }
+
+      if (opSettings.customerConfirmationEnabled) {
+        const customer = buildCustomerEmail(name);
+        const customerResult = await sendViaResend(resendApiKey, fromEmail, {
+          to: [email],
+          subject: customer.subject,
+          html: customer.html,
+          text: customer.text
+        });
+        customerOutcome = customerResult.sent ? 'sent' : 'failed';
+        customerErrorMsg = customerResult.error;
+        console.log(customerResult.sent ? 'Customer email sent' : 'Customer email failed');
+      } else {
+        console.log('Customer email skipped (customer_confirmation_enabled = false)');
+      }
+
+      const attempted = [adminOutcome, customerOutcome].filter((outcome): outcome is 'sent' | 'failed' => outcome !== 'skipped');
+
+      if (attempted.length === 0) {
+        // Ambas notificaciones apagadas a propósito desde Configuración — no
+        // se intentó ningún envío, mismo estado que "sin proveedor" porque
+        // ninguno de los dos describe mejor "nadie lo intentó".
+        emailStatus = 'not_configured';
+      } else {
+        const sentCount = attempted.filter((outcome) => outcome === 'sent').length;
+        emailStatus = sentCount === attempted.length ? 'sent' : sentCount > 0 ? 'partial' : 'failed';
+        emailSentAt = sentCount > 0 ? new Date().toISOString() : null;
+      }
+
+      const errors = [
+        adminErrorMsg ? `admin: ${adminErrorMsg}` : null,
+        customerErrorMsg ? `cliente: ${customerErrorMsg}` : null
+      ].filter((e): e is string => !!e);
+      emailError = errors.length ? errors.join(' | ') : null;
+    }
+
+    try {
+      await serviceClient
+        .from('leads')
+        .update({ email_status: emailStatus, email_sent_at: emailSentAt, email_error: emailError })
+        .eq('id', insertedLead.id);
+    } catch (err) {
+      console.error('submit-lead: no se pudo actualizar email_status', err);
+    }
 
     return json({ ok: true }, 200);
   } catch (err) {

@@ -1,16 +1,4 @@
 <div class="dyt">
-  <header class="dyt-header">
-    <a routerLink="/" class="dyt-header__logo">
-      <img src="images/logos/thetraveledit2.png" alt="The Travel Edit" width="150" height="56" />
-    </a>
-    <a routerLink="/" class="dyt-header__back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-        <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      <span>Volver</span>
-    </a>
-  </header>
-
   @if (submitted()) {
     <section class="dyt-success">
       <div class="dyt-success__check" aria-hidden="true">✓</div>
@@ -22,6 +10,18 @@
       <a routerLink="/" class="dyt-success__cta">Volver a Travel Edit</a>
     </section>
   } @else {
+    <header class="dyt-header">
+      <a routerLink="/" class="dyt-header__logo">
+        <img src="images/logos/thetraveledit2.png" alt="The Travel Edit" width="150" height="56" />
+      </a>
+      <a routerLink="/" class="dyt-header__back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="M19 12H5M11 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>Volver</span>
+      </a>
+    </header>
+
     <div class="dyt-layout">
       <div class="dyt-media">
         <img [src]="heroImage.url" [alt]="heroImage.alt" loading="lazy" decoding="async" />

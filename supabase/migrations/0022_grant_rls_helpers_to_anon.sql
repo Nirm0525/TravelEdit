@@ -1,0 +1,37 @@
+-- Fix: usuarios anónimos no podían leer NINGUNA fila de las tablas cuyas
+-- policies de SELECT combinan `status = 'published'` con `is_staff()` /
+-- `can_manage_content()` (destinations, destination_images, itinerary_days,
+-- articles) — no solo las filas draft, TODAS, incluidas las publicadas.
+--
+-- Causa raíz verificada en vivo (REST directo con la anon key real del
+-- sitio público, sin sesión):
+--   GET /rest/v1/destinations  -> 42501 "permission denied for function can_manage_content"
+--   GET /rest/v1/articles      -> 42501 "permission denied for function is_staff"
+--
+-- `is_staff()`, `can_manage_content()` y `app_user_role()` son
+-- `security definer` (correcto — necesitan leer `profiles` con más
+-- privilegio que el rol que las llama), pero su GRANT EXECUTE nunca incluyó
+-- a `anon`:
+--   select grantee from information_schema.routine_privileges
+--   where routine_name in ('is_staff','can_manage_content','app_user_role');
+--   -> solo authenticated, service_role, postgres.
+--
+-- Postgres exige permiso de EXECUTE sobre cualquier función referenciada en
+-- la expresión de una RLS policy para poder planificar la consulta, incluso
+-- en la rama de un OR que nunca terminaría siendo cierta para esa fila — no
+-- alcanza con que la función jamás se ejecute en la práctica. Por eso el
+-- primer operando (`status = 'published'`) ser verdadero no evita el error:
+-- Postgres igual necesita permiso para poder incluir `can_manage_content()`
+-- en el plan.
+--
+-- Esto afecta hoy en producción, no solo al nuevo módulo Blog: la sección
+-- "Destinos destacados" del home, la página de cada destino, su itinerario
+-- y su galería dependen de PublicDestinationsService, que lee `destinations`
+-- / `destination_images` sin sesión — con este bug, esas lecturas fallan
+-- igual para un visitante anónimo. No es un cambio de alcance de acceso:
+-- las policies ya decían explícitamente "público si status = published, o
+-- si can_manage_content()/is_staff()" — este grant es lo que falta para que
+-- esa condición ya escrita realmente se pueda evaluar.
+grant execute on function is_staff() to anon;
+grant execute on function can_manage_content() to anon;
+grant execute on function app_user_role() to anon;

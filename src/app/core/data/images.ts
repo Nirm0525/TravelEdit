@@ -78,17 +78,17 @@ export const IMAGES = {
     credit: 'Micaela Peduzi / Unsplash'
   },
   articleSlowTravel: {
-    url: 'https://images.unsplash.com/photo-1760365942157-36df5ac3efd4?q=80&w=1200&h=800&fit=crop&auto=format',
+    url: 'https://images.unsplash.com/photo-1760365942157-36df5ac3efd4?q=80&w=2400&h=1600&fit=crop&auto=format',
     alt: 'Paisaje de montañas verdes visto a través de la ventana de un tren en movimiento',
     credit: 'Soham Banerjee / Unsplash'
   },
   articleItaly: {
-    url: 'https://images.unsplash.com/photo-1702742910382-76c82eca9b55?q=80&w=1200&h=800&fit=crop&auto=format',
+    url: 'https://images.unsplash.com/photo-1702742910382-76c82eca9b55?q=80&w=2400&h=1600&fit=crop&auto=format',
     alt: 'Vista aérea de un pueblo en la campiña de la Toscana, Italia',
     credit: 'Laura Chouette / Unsplash'
   },
   articleBaliHiddenGems: {
-    url: 'https://images.unsplash.com/photo-1575573333701-d644e92a5160?q=80&w=1200&h=800&fit=crop&auto=format',
+    url: 'https://images.unsplash.com/photo-1575573333701-d644e92a5160?q=80&w=2400&h=1600&fit=crop&auto=format',
     alt: 'Cascada escondida en la selva de Bali rodeada de vegetación tropical',
     credit: 'Khamkéo / Unsplash'
   },

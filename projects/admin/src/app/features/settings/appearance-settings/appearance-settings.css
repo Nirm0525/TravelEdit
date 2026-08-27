@@ -1,0 +1,24 @@
+.appearance-settings__notice {
+  margin-bottom: var(--space-md);
+}
+
+.appearance-settings__color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.appearance-settings__swatch {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.appearance-settings__color-row input[type='text'] {
+  flex: 1;
+}

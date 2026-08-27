@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { EXPERIENCES, Experience } from '../../core/data/experiences';
 import { ExperienceCard } from './experience-card/experience-card';
 import { ExperienceIcon } from './experience-icon/experience-icon';
@@ -22,7 +23,7 @@ const HEADING_DEFAULT: ExperiencesHeading = {
 @Component({
   selector: 'app-experiences',
   standalone: true,
-  imports: [ExperienceCard, ExperienceIcon, SectionTitle],
+  imports: [ExperienceCard, ExperienceIcon, SectionTitle, RouterLink],
   templateUrl: './experiences.html',
   styleUrl: './experiences.css'
 })

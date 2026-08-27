@@ -23,6 +23,7 @@ export class UserDetail {
 
   readonly roleLabels = STAFF_ROLE_LABEL;
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
   readonly user = signal<AdminUser | null>(null);
   readonly activity = signal<AuditLogItem[]>([]);
 
@@ -32,13 +33,20 @@ export class UserDetail {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const [users, activity] = await Promise.all([
-      this.usersService.listUsers(),
-      this.auditLog.listByActor(this.userId, 20)
-    ]);
-    this.user.set(users.find((u) => u.id === this.userId) ?? null);
-    this.activity.set(activity);
-    this.loading.set(false);
+    this.loadError.set(null);
+    try {
+      const [users, activity] = await Promise.all([
+        this.usersService.listUsers(),
+        this.auditLog.listByActor(this.userId, 20)
+      ]);
+      this.user.set(users.find((u) => u.id === this.userId) ?? null);
+      this.activity.set(activity);
+    } catch (error) {
+      console.error('No se pudo cargar el detalle del usuario.', error);
+      this.loadError.set(error instanceof Error ? error.message : 'No se pudo cargar el detalle del usuario.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   lastActive(user: AdminUser): string {

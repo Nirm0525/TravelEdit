@@ -1,5 +1,10 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="gallery__error">
+    <p>{{ message }}</p>
+    <button type="button" (click)="load()">Reintentar</button>
+  </div>
 } @else {
   <div class="gallery">
     <app-image-uploader
@@ -13,6 +18,14 @@
     }
     @if (uploadError()) {
       <p class="field__hint field__hint--error">{{ uploadError() }}</p>
+    }
+    @if (galleryError(); as message) {
+      <div class="gallery__error">
+        <p>{{ message }}</p>
+      </div>
+    }
+    @if (reordering()) {
+      <p class="field__hint">Guardando orden…</p>
     }
 
     @if (images().length === 0) {
@@ -42,14 +55,17 @@
               @if (isCover(image)) {
                 <span class="gallery__item-cover-badge">Portada</span>
               } @else {
-                <button type="button" (click)="setCover(image)">Marcar portada</button>
+                <button type="button" [disabled]="settingCoverId() !== null" (click)="setCover(image)">
+                  {{ settingCoverId() === image.id ? 'Guardando…' : 'Marcar portada' }}
+                </button>
               }
               <button
                 type="button"
                 class="gallery__item-delete"
+                [disabled]="deletingId() !== null"
                 (click)="requestDelete(image)"
               >
-                {{ confirmingDeleteId() === image.id ? '¿Seguro? Confirmar' : 'Eliminar' }}
+                {{ deletingId() === image.id ? 'Eliminando…' : confirmingDeleteId() === image.id ? '¿Seguro? Confirmar' : 'Eliminar' }}
               </button>
             </div>
           </li>

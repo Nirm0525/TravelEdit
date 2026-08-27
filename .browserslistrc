@@ -1,0 +1,13 @@
+# El editor (Edge Tools / webhint compat-api) sin este archivo cae a un
+# baseline que incluye navegadores viejos y marca color-mix() como no
+# soportado — se usa en toda la app (styles.css, badges, estados de error)
+# desde antes de esta lista, así que el target real siempre fue "navegadores
+# evergreen modernos", nunca IE/Chrome viejo. Esta es la config por defecto
+# que trae `ng new`.
+last 2 Chrome versions
+last 1 Firefox version
+last 2 Edge major versions
+last 2 Safari major versions
+last 2 iOS major versions
+Firefox ESR
+not IE 11

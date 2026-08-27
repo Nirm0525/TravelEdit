@@ -25,16 +25,31 @@
         }
       </div>
 
-      <div class="experiences__stage" data-cursor="view">
+      <div class="experiences__stage">
         @for (experience of experiences(); track experience.slug; let i = $index) {
-          <img
-            [src]="experience.image"
-            [alt]="experience.alt"
-            class="experiences__stage-image"
-            [class.experiences__stage-image--active]="activeIndex() === i"
-            loading="lazy"
-            decoding="async"
-          />
+          <div class="experiences__panel" [class.experiences__panel--active]="activeIndex() === i">
+            @if (experience.cards; as cards) {
+              <div class="experiences__fan">
+                @for (card of cards; track card.label) {
+                  <a class="experiences__fan-card" routerLink="/disenar-tu-viaje" data-cursor="view">
+                    <span class="experiences__fan-inner">
+                      <img [src]="card.image" [alt]="card.alt" loading="lazy" decoding="async" />
+                      <span class="experiences__fan-label">{{ card.label }}</span>
+                    </span>
+                  </a>
+                }
+              </div>
+            } @else {
+              <img
+                [src]="experience.image"
+                [alt]="experience.alt"
+                class="experiences__stage-image"
+                loading="lazy"
+                decoding="async"
+                data-cursor="view"
+              />
+            }
+          </div>
         }
       </div>
     </div>

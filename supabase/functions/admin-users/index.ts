@@ -21,6 +21,7 @@ const PERMANENT_BAN = '876600h'; // ~100 años — "desactivado" hasta que se re
 // público) son los puertos locales reales usados durante este desarrollo.
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:4200',
+  'http://localhost:4201',
   'http://localhost:4301',
   'http://localhost:4305',
   'https://thetravel-edit.com'

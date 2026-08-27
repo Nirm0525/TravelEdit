@@ -1,6 +1,6 @@
 import { StaffRole } from './staff-role';
 import { DestinationStatus, Season, TripType } from './destination-enums';
-import { LeadOrigin, LeadStatus } from './lead-enums';
+import { LeadEmailStatus, LeadOrigin, LeadStatus } from './lead-enums';
 
 export interface Database {
   public: {
@@ -138,6 +138,9 @@ export interface Database {
           assigned_to: string | null;
           created_at: string;
           updated_at: string;
+          email_status: LeadEmailStatus;
+          email_sent_at: string | null;
+          email_error: string | null;
         };
         Insert: {
           name: string;
@@ -202,6 +205,73 @@ export interface Database {
         };
         Insert: Record<string, never>;
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      site_settings: {
+        Row: {
+          id: string;
+          key: string;
+          value: unknown;
+          description: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: unknown;
+          description?: string | null;
+        };
+        Update: {
+          value?: unknown;
+          description?: string | null;
+        };
+        Relationships: [];
+      };
+      articles: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          author_id: string | null;
+          author_name: string | null;
+          excerpt: string;
+          cover_storage_path: string | null;
+          cover_alt_text: string | null;
+          body: string;
+          tags: string[];
+          status: string;
+          scheduled_at: string | null;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          slug: string;
+          title: string;
+          author_id?: string | null;
+          author_name?: string | null;
+          excerpt?: string;
+          cover_storage_path?: string | null;
+          cover_alt_text?: string | null;
+          body?: string;
+          tags?: string[];
+          status?: string;
+          scheduled_at?: string | null;
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          author_id?: string | null;
+          author_name?: string | null;
+          excerpt?: string;
+          cover_storage_path?: string | null;
+          cover_alt_text?: string | null;
+          body?: string;
+          tags?: string[];
+          status?: string;
+          scheduled_at?: string | null;
+          published_at?: string | null;
+        };
         Relationships: [];
       };
     };

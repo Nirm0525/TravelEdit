@@ -1,0 +1,30 @@
+.leads-settings__notice {
+  margin-bottom: var(--space-sm);
+}
+
+.leads-settings__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.leads-settings__stat {
+  background: var(--canvas-100);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.leads-settings__stat-label {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--track-eyebrow);
+  margin: 0 0 var(--space-2xs);
+}
+
+.leads-settings__stat-value {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+}

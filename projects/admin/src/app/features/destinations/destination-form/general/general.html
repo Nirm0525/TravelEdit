@@ -1,5 +1,10 @@
 @if (loading()) {
   <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="destination-general__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
 } @else {
   <form class="destination-general" [formGroup]="form" (ngSubmit)="save()">
     <div class="destination-general__grid">
@@ -74,9 +79,12 @@
       <button type="submit" class="btn btn--primary" [disabled]="saving()">
         {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
       </button>
-      @if (savedAt()) {
+      @if (savedAt() && !form.dirty) {
         <span class="destination-general__saved">Guardado.</span>
       }
     </div>
+    @if (saveError(); as message) {
+      <p class="destination-general__error-text">{{ message }}</p>
+    }
   </form>
 }

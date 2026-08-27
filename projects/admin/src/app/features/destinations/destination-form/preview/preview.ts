@@ -21,22 +21,30 @@ export class Preview {
   readonly days = signal<ItineraryDay[]>([]);
   readonly images = signal<DestinationImage[]>([]);
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
 
   constructor() {
     void this.load();
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     this.loading.set(true);
-    const [destination, days, images] = await Promise.all([
-      this.destinationsService.getById(this.destinationId),
-      this.destinationsService.listItineraryDays(this.destinationId),
-      this.imagesService.list(this.destinationId)
-    ]);
-    this.destination.set(destination);
-    this.days.set(days);
-    this.images.set(images);
-    this.loading.set(false);
+    this.loadError.set(null);
+    try {
+      const [destination, days, images] = await Promise.all([
+        this.destinationsService.getById(this.destinationId),
+        this.destinationsService.listItineraryDays(this.destinationId),
+        this.imagesService.list(this.destinationId)
+      ]);
+      this.destination.set(destination);
+      this.days.set(days);
+      this.images.set(images);
+    } catch (error) {
+      console.error('No se pudo cargar la vista previa.', error);
+      this.loadError.set('No se pudo cargar la vista previa. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   publicUrl(image: DestinationImage): string {

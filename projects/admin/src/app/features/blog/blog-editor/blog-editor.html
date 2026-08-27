@@ -1,0 +1,140 @@
+@if (loadError(); as message) {
+  <app-admin-page-header
+    [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Blog', link: '/blog' }, { label: 'Artículo' }]"
+    title="Artículo"
+  />
+  <div class="blog-editor__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <app-content-editor-layout
+      [breadcrumb]="[
+        { label: 'Panel', link: '/dashboard' },
+        { label: 'Blog', link: '/blog' },
+        { label: isNew() ? 'Nuevo artículo' : form.controls.title.value || 'Editar artículo' }
+      ]"
+      [title]="isNew() ? 'Nuevo artículo' : 'Editar artículo'"
+      description="Título, portada y contenido del artículo del blog."
+      [previewHref]="status() === 'published' && form.controls.slug.value ? '/the-edit/' + form.controls.slug.value : null"
+      backLink="/blog"
+      [loading]="loading()"
+      [saving]="saving()"
+      [saved]="saved()"
+      [errorMessage]="errorMessage()"
+    >
+      @if (!isNew()) {
+        <div class="blog-editor__status-bar">
+          <span class="badge" [class.badge--success]="status() === 'published'" [class.badge--neutral]="status() === 'draft'">
+            {{ statusLabel[status()] }}
+          </span>
+          <button type="button" class="btn btn--secondary" [disabled]="publishing()" (click)="toggleStatus()">
+            {{ publishing() ? 'Guardando…' : statusActionLabel() }}
+          </button>
+          <button type="button" class="btn btn--danger blog-editor__delete-btn" (click)="askDelete()">Eliminar artículo</button>
+        </div>
+        @if (publishError()) {
+          <p class="field__hint field__hint--error">{{ publishError() }}</p>
+        }
+      }
+
+      <div class="content-section">
+        <label class="field">
+          <span>Título</span>
+          <input type="text" formControlName="title" (input)="onTitleInput()" />
+          @if (form.controls.title.touched && form.controls.title.invalid) {
+            <span class="field__hint field__hint--error">El título es obligatorio.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span>Slug (URL del artículo)</span>
+          <input type="text" formControlName="slug" (blur)="onSlugBlur()" />
+          @if (form.controls.slug.value) {
+            <span class="field__hint">/the-edit/{{ form.controls.slug.value }}</span>
+          }
+          @if (form.controls.slug.touched && form.controls.slug.invalid) {
+            <span class="field__hint field__hint--error">El slug es obligatorio.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span>Extracto</span>
+          <textarea rows="2" formControlName="excerpt"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Etiquetas</span>
+          <input type="text" formControlName="tagsText" placeholder="Separadas por comas" />
+        </label>
+
+        <div class="content-grid">
+          <label class="field">
+            <span>Autor</span>
+            <select formControlName="authorId">
+              <option [ngValue]="null">Sin asignar</option>
+              @for (option of authorOptions(); track option.id) {
+                <option [ngValue]="option.id">{{ option.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Firma personalizada (opcional)</span>
+            <input type="text" formControlName="authorName" />
+            <span class="field__hint">Si la completas, se muestra en vez del autor seleccionado.</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Publicación programada (opcional)</span>
+          <input type="datetime-local" formControlName="scheduledAt" />
+        </label>
+      </div>
+
+      <div class="content-section">
+        <p class="content-section__title">Portada</p>
+        @if (coverError()) {
+          <p class="field__hint field__hint--error">{{ coverError() }}</p>
+        }
+        @if (coverPreviewUrl(); as cover) {
+          <div class="content-image-field">
+            <img [src]="cover" [alt]="coverAltTextValue()" />
+            <button type="button" class="btn btn--secondary" (click)="removeCover()">Quitar portada</button>
+          </div>
+        } @else {
+          <app-image-uploader
+            [multiple]="false"
+            [requireAltText]="true"
+            [disabled]="uploadingCover()"
+            confirmLabel="Subir portada"
+            (filesReady)="onCoverReady($event)"
+          />
+        }
+        @if (uploadingCover()) {
+          <p class="field__hint">Subiendo imagen…</p>
+        }
+      </div>
+
+      <div class="content-section">
+        <label class="field">
+          <span>Contenido</span>
+          <app-rich-text-editor formControlName="body" [imageUpload]="bodyImageUpload" />
+        </label>
+      </div>
+    </app-content-editor-layout>
+  </form>
+
+  <app-confirm-dialog
+    [open]="deleteConfirmOpen()"
+    title="Eliminar artículo"
+    message="¿Seguro que quieres eliminar este artículo? Esta acción no se puede deshacer."
+    [confirmLabel]="deleting() ? 'Eliminando…' : 'Eliminar'"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  />
+  @if (deleteError()) {
+    <p class="field__hint field__hint--error blog-editor__delete-error">{{ deleteError() }}</p>
+  }
+}

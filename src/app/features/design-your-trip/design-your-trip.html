@@ -74,7 +74,14 @@
 
             <label class="tef-field">
               <span>Phone / WhatsApp *</span>
-              <input type="tel" formControlName="phone" />
+              <div class="tef-phone">
+                <select class="tef-phone__code" formControlName="phoneCountryCode" aria-label="Country code">
+                  @for (country of countryCodes; track country.name) {
+                    <option [value]="country.dialCode">{{ country.flag }} {{ country.dialCode }}</option>
+                  }
+                </select>
+                <input type="tel" class="tef-phone__number" formControlName="phone" />
+              </div>
               @if (form.controls.phone.touched && form.controls.phone.invalid) {
                 <span class="tef-field__hint">We need a way to reach you.</span>
               }
@@ -134,11 +141,17 @@
             <div class="tef-field-row">
               <label class="tef-field">
                 <span>Departure date / Approximate date</span>
-                <input type="text" formControlName="departureDate" placeholder="e.g. March 2027, or exact date" />
+                <div class="tef-date">
+                  <input type="text" formControlName="departureDate" placeholder="e.g. March 2027, or exact date" />
+                  <app-date-picker label="Choose a departure date" (dateSelected)="onDepartureDateSelected($event)" />
+                </div>
               </label>
               <label class="tef-field">
                 <span>Return date / Number of nights</span>
-                <input type="text" formControlName="returnDate" placeholder="e.g. 10 nights" />
+                <div class="tef-date">
+                  <input type="text" formControlName="returnDate" placeholder="e.g. 10 nights" />
+                  <app-date-picker label="Choose a return date" (dateSelected)="onReturnDateSelected($event)" />
+                </div>
               </label>
             </div>
 
@@ -248,6 +261,11 @@
             </fieldset>
 
             <div class="tef-turnstile" #turnstileContainer></div>
+            @if (turnstileUnavailable()) {
+              <p class="tef-field__hint">
+                No pudimos cargar la verificación de seguridad. Puedes intentar de nuevo más tarde o escribirnos directamente.
+              </p>
+            }
           </section>
           }
 

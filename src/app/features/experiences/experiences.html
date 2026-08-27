@@ -5,58 +5,58 @@
       <p support>{{ heading().support }}</p>
     </app-section-title>
 
-    <div class="experiences__desktop">
-      <div class="experiences__tabs" role="tablist" aria-label="Tipos de experiencia">
-        @for (experience of experiences(); track experience.slug; let i = $index) {
-          <button
-            type="button"
-            role="tab"
-            class="experiences__tab"
-            [class.experiences__tab--active]="activeIndex() === i"
-            [attr.aria-selected]="activeIndex() === i"
-            (mouseenter)="setActive(i)"
-            (focus)="setActive(i)"
-          >
-            <span class="experiences__tab-icon" aria-hidden="true">
-              <app-experience-icon [type]="experience.icon" />
-            </span>
-            <span class="experiences__tab-name font-display">{{ experience.name }}</span>
-          </button>
-        }
-      </div>
-
-      <div class="experiences__stage">
-        @for (experience of experiences(); track experience.slug; let i = $index) {
-          <div class="experiences__panel" [class.experiences__panel--active]="activeIndex() === i">
-            @if (experience.cards; as cards) {
-              <div class="experiences__fan">
-                @for (card of cards; track card.label) {
-                  <a class="experiences__fan-card" routerLink="/disenar-tu-viaje" data-cursor="view">
-                    <span class="experiences__fan-inner">
-                      <img [src]="card.image" [alt]="card.alt" loading="lazy" decoding="async" />
-                      <span class="experiences__fan-label">{{ card.label }}</span>
-                    </span>
-                  </a>
-                }
-              </div>
-            } @else {
-              <img
-                [src]="experience.image"
-                [alt]="experience.alt"
-                class="experiences__stage-image"
-                loading="lazy"
-                decoding="async"
-                data-cursor="view"
-              />
-            }
-          </div>
-        }
-      </div>
+    <div class="experiences__tabs" role="tablist" aria-label="Tipos de experiencia">
+      @for (experience of experiences(); track experience.slug; let i = $index) {
+        <button
+          type="button"
+          role="tab"
+          class="experiences__tab"
+          [class.experiences__tab--active]="activeIndex() === i"
+          [attr.aria-selected]="activeIndex() === i"
+          (mouseenter)="setActive(i)"
+          (focus)="setActive(i)"
+          (click)="setActive(i)"
+        >
+          <span class="experiences__tab-icon" aria-hidden="true">
+            <app-experience-icon [type]="experience.icon" />
+          </span>
+          <span class="experiences__tab-name font-display">{{ experience.name }}</span>
+        </button>
+      }
     </div>
 
-    <div class="experiences__mobile">
-      @for (experience of experiences(); track experience.slug) {
-        <app-experience-card [experience]="experience" />
+    <div class="experiences__stage">
+      @for (experience of experiences(); track experience.slug; let i = $index) {
+        <div class="experiences__panel" [class.experiences__panel--active]="activeIndex() === i">
+          @if (experience.cards; as cards) {
+            <div class="experiences__fan" (mouseenter)="pauseCycle()" (mouseleave)="resumeCycle()">
+              @for (card of cards; track card.label; let c = $index) {
+                <div
+                  class="experiences__fan-card"
+                  [class.experiences__fan-card--front]="cardPosition(c, cards.length) === 'front'"
+                  [class.experiences__fan-card--left]="cardPosition(c, cards.length) === 'left'"
+                  [class.experiences__fan-card--right]="cardPosition(c, cards.length) === 'right'"
+                >
+                  <img [src]="card.image" [alt]="card.alt" loading="lazy" decoding="async" />
+                  <span class="experiences__fan-scrim" aria-hidden="true"></span>
+                  <span class="experiences__fan-caption">
+                    <span class="experiences__fan-eyebrow">{{ experience.name }}</span>
+                    <span class="experiences__fan-label font-display">{{ card.label }}</span>
+                    <span class="experiences__fan-description">{{ card.description }}</span>
+                  </span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="experiences__fan-card experiences__fan-card--front">
+              <img [src]="experience.image" [alt]="experience.alt" loading="lazy" decoding="async" />
+              <span class="experiences__fan-scrim" aria-hidden="true"></span>
+              <span class="experiences__fan-caption">
+                <span class="experiences__fan-label font-display">{{ experience.name }}</span>
+              </span>
+            </div>
+          }
+        </div>
       }
     </div>
   </div>

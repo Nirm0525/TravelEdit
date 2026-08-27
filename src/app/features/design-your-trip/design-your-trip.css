@@ -48,6 +48,23 @@
   transform: translateX(-0.15rem);
 }
 
+.dyt-header {
+  transition: background 0.25s var(--ease-editorial);
+}
+
+.dyt-header:hover {
+  background: var(--color-wine);
+}
+
+.dyt-header__logo {
+  border-radius: 0.25rem;
+  transition: opacity 0.2s var(--ease-editorial);
+}
+
+.dyt-header__logo:hover {
+  opacity: 0.8;
+}
+
 .dyt-layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -287,6 +304,44 @@
   color: var(--color-burgundy);
   font-size: 0.8125rem;
   font-weight: 400;
+}
+
+.tef-phone {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tef-phone__code {
+  flex: 0 0 auto;
+  width: 6.5rem;
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.9rem 0.5rem;
+  border: 1px solid var(--color-stone);
+  border-radius: 0.25rem;
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.tef-phone__code:focus-visible {
+  outline: 2px solid var(--color-burgundy);
+  outline-offset: 1px;
+}
+
+.tef-phone__number {
+  flex: 1;
+  min-width: 0;
+}
+
+.tef-date {
+  display: flex;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.tef-date input {
+  flex: 1;
+  min-width: 0;
 }
 
 .tef-section-label {

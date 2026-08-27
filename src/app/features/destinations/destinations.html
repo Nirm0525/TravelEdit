@@ -21,8 +21,8 @@
     (mouseleave)="onViewportPointerLeave()"
   >
     <ul class="destinations__track" #track>
-      <li *ngFor="let destination of destinations(); trackBy: trackBySlug">
-        <app-destination-card [destination]="destination" />
+      <li *ngFor="let destination of destinations(); trackBy: trackBySlug; let i = index">
+        <app-destination-card [destination]="destination" [index]="i" />
       </li>
     </ul>
   </div>

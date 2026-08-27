@@ -1,87 +1,263 @@
 .experiences {
   background: var(--color-cream);
   padding-block: var(--space-2xl);
+  overflow: hidden;
 }
 
-.experiences__desktop {
+/* Selector de categoría — funciona igual en mobile y desktop: mouseenter para
+   hover con teclado/mouse, click para tocar en pantallas táctiles. Se
+   desplaza horizontalmente en vez de romper el ancho de la página. */
+.experiences__tabs {
+  display: flex;
+  justify-content: center;
+  gap: clamp(1.25rem, 5vw, 3.5rem);
+  margin-top: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(32, 24, 20, 0.12);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+@supports (color: color-mix(in srgb, var(--color-ink) 12%, transparent)) {
+  .experiences__tabs {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  }
+}
+
+.experiences__tabs::-webkit-scrollbar {
   display: none;
 }
 
-.experiences__mobile {
-  margin-top: var(--space-lg);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md) var(--space-sm);
+.experiences__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.625rem;
+  opacity: 0.5;
+  transition: opacity 0.3s var(--ease-editorial);
+}
+
+.experiences__tab--active {
+  opacity: 1;
+}
+
+.experiences__tab-icon {
+  width: 1.875rem;
+  height: 1.875rem;
+  color: var(--color-burgundy);
+}
+
+.experiences__tab-name {
+  font-size: 1rem;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+/* ---------- Escenario / abanico ---------- */
+
+.experiences__stage {
+  position: relative;
+  margin-top: var(--space-xl);
+}
+
+.experiences__panel {
+  display: none;
+}
+
+.experiences__panel--active {
+  display: block;
+}
+
+.experiences__fan {
+  display: flex;
+  justify-content: center;
+}
+
+/* Tarjetas puramente visuales — no navegan a ningún lado. */
+.experiences__fan-card {
+  position: relative;
+  display: block;
+  width: 88vw;
+  max-width: 26rem;
+  aspect-ratio: 3 / 4;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 1.25rem 2.5rem rgba(22, 17, 15, 0.16);
+  transition: transform 0.6s var(--ease-editorial), box-shadow 0.5s var(--ease-editorial);
+}
+
+.experiences__fan-card ~ .experiences__fan-card {
+  display: none;
+}
+
+.experiences__fan-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.1s var(--ease-editorial);
+}
+
+.experiences__fan-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0) 55%, rgba(22, 17, 15, 0.72) 100%);
+}
+
+.experiences__fan-caption {
+  position: absolute;
+  left: 1.375rem;
+  right: 1.375rem;
+  bottom: 1.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.experiences__fan-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-warm-beige);
+}
+
+.experiences__fan-label {
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--color-cream);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+}
+
+.experiences__fan-description {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 300;
+  line-height: 1.4;
+  color: rgba(246, 239, 230, 0.82);
+}
+
+.experiences__fan-card:hover img {
+  transform: scale(1.05);
+}
+
+@media (min-width: 40rem) {
+  .experiences__fan-card {
+    max-width: 22rem;
+  }
 }
 
 @media (min-width: 64rem) {
-  .experiences__desktop {
-    display: block;
-    margin-top: var(--space-xl);
-  }
-
-  .experiences__mobile {
-    display: none;
-  }
-
   .experiences__tabs {
-    display: flex;
-    justify-content: center;
-    gap: clamp(1.5rem, 4vw, 3.5rem);
-    border-bottom: 1px solid rgba(32, 24, 20, 0.12);
-    padding-bottom: var(--space-md);
-  }
-
-  @supports (color: color-mix(in srgb, var(--color-ink) 12%, transparent)) {
-    .experiences__tabs {
-      border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
-    }
-  }
-
-  .experiences__tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.625rem;
-    opacity: 0.55;
-    transition: opacity 0.3s var(--ease-editorial);
-  }
-
-  .experiences__tab--active {
-    opacity: 1;
+    overflow-x: visible;
   }
 
   .experiences__tab-icon {
     width: 2.25rem;
     height: 2.25rem;
-    color: var(--color-burgundy);
   }
 
   .experiences__tab-name {
     font-size: 1.125rem;
-    color: var(--color-ink);
   }
 
   .experiences__stage {
-    position: relative;
-    margin-top: var(--space-lg);
-    margin-inline: auto;
-    width: min(100%, 64rem);
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
+    margin-top: var(--space-md);
+    height: 42rem;
   }
 
-  .experiences__stage-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
+  /* .experiences__panel es display:block con solo hijos position:absolute
+     adentro — sin height:100% acá, su alto real sería 0 (ningún contenido en
+     flujo normal que lo empuje), y entonces el top:50% de las tarjetas se
+     resolvería contra ese 0 en vez del alto real de 42rem del stage. Eso
+     hacía que la tarjeta central terminara flotando sobre las pestañas. */
+  .experiences__panel--active {
     height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.6s var(--ease-editorial);
   }
 
-  .experiences__stage-image--active {
-    opacity: 1;
+  .experiences__fan {
+    position: relative;
+    height: 100%;
+  }
+
+  .experiences__fan-card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 26rem;
+    max-width: none;
+    aspect-ratio: auto;
+    height: 34rem;
+  }
+
+  .experiences__fan-card ~ .experiences__fan-card {
+    display: block;
+  }
+
+  .experiences__fan-card--front {
+    width: 32rem;
+    height: 41rem;
+    z-index: 3;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+
+  .experiences__fan-card--left {
+    z-index: 1;
+    transform: translate(-135%, -46%) rotate(-6deg);
+  }
+
+  .experiences__fan-card--right {
+    z-index: 1;
+    transform: translate(35%, -46%) rotate(6deg);
+  }
+
+  .experiences__fan-card--left:hover {
+    transform: translate(-135%, -46%) rotate(-6deg) translateY(-0.75rem);
+  }
+
+  .experiences__fan-card--right:hover {
+    transform: translate(35%, -46%) rotate(6deg) translateY(-0.75rem);
+  }
+
+  .experiences__fan-card--front:hover {
+    transform: translate(-50%, -50%) scale(1.02) translateY(-0.75rem);
+  }
+
+  .experiences__fan-card--left,
+  .experiences__fan-card--right {
+    box-shadow: 0 1rem 2.5rem rgba(22, 17, 15, 0.14);
+    opacity: 0.92;
+  }
+
+  .experiences__fan-card--front {
+    box-shadow: 0 2rem 4rem rgba(22, 17, 15, 0.22);
+  }
+
+  .experiences__fan-eyebrow {
+    font-size: 0.75rem;
+  }
+
+  .experiences__fan-label {
+    font-size: 1.75rem;
+  }
+
+  .experiences__fan-description {
+    font-size: 0.875rem;
+  }
+
+  .experiences__fan-caption {
+    left: 1.75rem;
+    right: 1.75rem;
+    bottom: 1.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experiences__fan-card,
+  .experiences__fan-card img {
+    transition-duration: 0.01ms !important;
   }
 }

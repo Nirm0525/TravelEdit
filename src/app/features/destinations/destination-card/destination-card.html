@@ -1,14 +1,16 @@
 <figure class="destination-card">
   <div class="destination-card__frame" data-cursor="view">
-    <img
-      [src]="destination().image"
-      [alt]="destination().alt"
-      title="Destination"
-      [attr.title]="destination().alt"
-      loading="lazy"
-      decoding="async"
-      draggable="false"
-    />
+    <div class="destination-card__ambient" [style.animation-delay.s]="index() * -3.7">
+      <img
+        [src]="destination().image"
+        [alt]="destination().alt"
+        title="Destination"
+        [attr.title]="destination().alt"
+        loading="lazy"
+        decoding="async"
+        draggable="false"
+      />
+    </div>
     <div class="destination-card__overlay" aria-hidden="true">
       <span>EXPLORE</span>
     </div>

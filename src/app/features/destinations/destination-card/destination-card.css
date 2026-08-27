@@ -16,6 +16,27 @@
   background: var(--color-stone);
 }
 
+/* Zoom/pan lento y continuo — la foto es estática, pero esta capa la hace
+   sentir "viva" en vez de congelada, sin necesitar video real por destino.
+   Vive en un wrapper aparte del <img> para que esta animación (transform)
+   y el zoom por hover (también transform, pero en el <img>) no se peleen
+   por la misma propiedad del mismo elemento. */
+.destination-card__ambient {
+  position: absolute;
+  inset: 0;
+  animation: destination-card-breathe 24s ease-in-out infinite;
+}
+
+@keyframes destination-card-breathe {
+  0%,
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.09) translate(-1.4%, 1.1%);
+  }
+}
+
 .destination-card__frame img {
   width: 100%;
   height: 100%;
@@ -71,4 +92,10 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-stone);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .destination-card__ambient {
+    animation: none;
+  }
 }

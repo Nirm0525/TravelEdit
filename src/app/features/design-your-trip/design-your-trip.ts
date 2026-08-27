@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { IMAGES } from '../../core/data/images';
 import { LeadSubmissionService } from '../../core/services/lead-submission';
 import { environment } from '../../../environments/environment';
+import { COUNTRY_CODES, DEFAULT_COUNTRY_DIAL_CODE } from '../../core/data/country-codes';
+import { DatePicker } from '../../shared/ui/date-picker/date-picker';
 import {
   BUDGET_RANGE_OPTIONS,
   FLIGHT_CLASS_OPTIONS,
@@ -32,7 +34,7 @@ declare global {
 
 @Component({
   selector: 'app-design-your-trip',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, DatePicker],
   templateUrl: './design-your-trip.html',
   styleUrl: './design-your-trip.css'
 })
@@ -43,11 +45,17 @@ export class DesignYourTrip {
   private readonly meta = inject(Meta);
 
   readonly heroImage = IMAGES.designYourTrip;
+  readonly countryCodes = COUNTRY_CODES;
 
   readonly submitting = signal(false);
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly turnstileToken = signal<string | null>(null);
+  // Se pone en true si environment.turnstileSiteKey viene vacío — sin esto,
+  // el widget simplemente no aparece y el usuario ve el mismo mensaje
+  // genérico de "completa la verificación" sin ninguna pista de que en
+  // realidad es un problema de configuración, no algo que él pueda arreglar.
+  readonly turnstileUnavailable = signal(false);
 
   readonly totalSteps = 3;
   readonly currentStep = signal(1);
@@ -67,6 +75,7 @@ export class DesignYourTrip {
   readonly form = this.fb.group({
     name: this.fb.control('', Validators.required),
     email: this.fb.control('', [Validators.required, Validators.email]),
+    phoneCountryCode: this.fb.control(DEFAULT_COUNTRY_DIAL_CODE),
     phone: this.fb.control('', Validators.required),
     location: this.fb.control(''),
     travelingWith: this.fb.control<(typeof TRAVELING_WITH_OPTIONS)[number] | null>(null),
@@ -107,6 +116,14 @@ export class DesignYourTrip {
         void this.renderTurnstile(container);
       }
     });
+  }
+
+  onDepartureDateSelected(formatted: string): void {
+    this.form.controls.departureDate.setValue(formatted);
+  }
+
+  onReturnDateSelected(formatted: string): void {
+    this.form.controls.returnDate.setValue(formatted);
   }
 
   toggleStylePreference(option: StylePreference): void {
@@ -166,7 +183,11 @@ export class DesignYourTrip {
     // formulario, es una capa aparte. Si el widget todavía no resolvió, no hay
     // nada mal con lo que el usuario completó.
     if (!this.turnstileToken()) {
-      this.errorMessage.set('Completa la verificación anti-spam antes de enviar.');
+      this.errorMessage.set(
+        this.turnstileUnavailable()
+          ? 'No pudimos cargar la verificación de seguridad en este momento. Escríbenos directamente y con gusto te ayudamos.'
+          : 'Completa la verificación anti-spam antes de enviar.'
+      );
       return;
     }
 
@@ -200,7 +221,7 @@ export class DesignYourTrip {
       const result = await this.leadSubmission.submit({
         name: raw.name,
         email: raw.email,
-        phone: raw.phone,
+        phone: `${raw.phoneCountryCode} ${raw.phone}`.trim(),
         destinationInterestText: raw.destinationInterestText,
         details,
         turnstileToken: this.turnstileToken()!
@@ -235,6 +256,14 @@ export class DesignYourTrip {
   private async renderTurnstile(container: HTMLElement): Promise<void> {
     const siteKey = environment.turnstileSiteKey;
     if (!siteKey) {
+      // No es un fallo silencioso más: sin TURNSTILE_SITE_KEY configurada en
+      // el entorno de build, el widget nunca aparece y el usuario queda
+      // bloqueado en el paso final sin ninguna pista de por qué — esto deja
+      // rastro en la consola y cambia el mensaje que ve si intenta enviar.
+      console.error(
+        'DesignYourTrip: falta environment.turnstileSiteKey — revisa la variable TURNSTILE_SITE_KEY en el entorno de build.'
+      );
+      this.turnstileUnavailable.set(true);
       return;
     }
 

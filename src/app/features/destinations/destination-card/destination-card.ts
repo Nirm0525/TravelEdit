@@ -9,4 +9,7 @@ import { Destination } from '../../../core/data/destinations';
 })
 export class DestinationCard {
   readonly destination = input.required<Destination>();
+  // Solo para escalonar el delay de la animación ambiente (ver .css) — que
+  // no todas las tarjetas "respiren" sincronizadas al mismo tiempo.
+  readonly index = input(0);
 }

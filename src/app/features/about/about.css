@@ -25,6 +25,8 @@
 }
 
 .about__title {
+  font-family: "Cormorant", serif;
+  font-style: normal;
   font-size: var(--size-h1);
   color: var(--color-ink);
   margin-block: var(--space-sm) var(--space-md);

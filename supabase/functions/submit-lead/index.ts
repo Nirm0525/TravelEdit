@@ -149,7 +149,160 @@ function formatDetailsRows(details: LeadTripDetails): Array<[string, string]> {
   return rows.filter((row): row is [string, string] => !!row[1]);
 }
 
+const MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+const SITE = 'https://thetravel-edit.com';
+
+function formatFechaCorta(date: Date): string {
+  return `${date.getDate()} ${MESES_CORTOS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+// Header y footer compartidos por ambos correos (cliente y admin) — mismo
+// sistema visual de marca en los dos. Los clientes de correo no cargan
+// @font-face ni CSS externo, así que la tipografía usa Georgia como
+// aproximación web-safe de la serif de marca, y el layout es a base de
+// tablas para máxima compatibilidad (Outlook desktop en particular no
+// soporta flexbox/grid).
+function emailHeaderHtml(): string {
+  return `
+    <tr>
+      <td align="center" style="padding:8px 24px 24px;">
+        <img src="${SITE}/images/logos/thetraveleditlogo1.png" width="140" alt="The Travel Edit" style="display:block; margin:0 auto 12px;" />
+        <div style="border-top:1px solid #C79A5B; width:100%; margin:0 0 12px;"></div>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; letter-spacing:3px; color:#8A7F76;">BECAUSE LUXURY IS PERSONAL</p>
+        <div style="border-top:1px solid #C79A5B; width:100%; margin:12px 0 0;"></div>
+      </td>
+    </tr>`;
+}
+
+function emailFooterHtml(legalLine: string): string {
+  return `
+    <tr>
+      <td style="background:#CAAE97; padding:24px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td valign="middle">
+              <img src="${SITE}/images/logos/thetraveledit2.png" width="90" alt="The Travel Edit" style="display:block;" />
+            </td>
+            <td valign="middle" align="right" style="font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#16110F; line-height:1.6;">
+              info@thetravel-edit.com<br />www.thetravel-edit.com
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#4A1F26; padding:16px 32px;">
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97;">${legalLine}</p>
+      </td>
+    </tr>`;
+}
+
+function emailShellHtml(bodyRowsHtml: string, legalLine: string): string {
+  return `
+<!doctype html>
+<html>
+  <body style="margin:0; padding:0; background:#F6EFE6;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EFE6;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:100%; background:#F6EFE6;">
+            ${emailHeaderHtml()}
+            ${bodyRowsHtml}
+            ${emailFooterHtml(legalLine)}
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function buildCustomerEmail(name: string): EmailContent {
+  const safeName = escapeHtml(name);
+  const fecha = formatFechaCorta(new Date());
+
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 32px 36px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">SOLICITUD RECIBIDA &middot; ${fecha}</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; line-height:1.25; color:#F6EFE6;">Hola ${safeName},<br />ya estamos en ello.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 32px 8px;">
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:1.6; color:#16110F;">Nuestro equipo ya está revisando la información que nos compartiste para empezar a diseñar tu experiencia.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:20px 32px 4px;">
+        <p style="margin:0 0 12px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#8A7F76;">QUÉ SIGUE</p>
+        <div style="border-top:1px solid #C79A5B;"></div>
+      </td>
+    </tr>
+
+    ${[
+      ['01', 'REVISIÓN', 'Estudiamos tu solicitud, destinos y fechas propuestas.'],
+      ['02', 'CONTACTO', 'Un asesor te escribe en menos de 24 horas hábiles.'],
+      ['03', 'PROPUESTA', 'Recibes un itinerario hecho enteramente a tu medida.']
+    ]
+      .map(
+        ([n, label, desc]) => `
+    <tr>
+      <td style="padding:16px 32px;">
+        <table role="presentation" cellpadding="0" cellspacing="0">
+          <tr>
+            <td valign="top" style="padding-right:16px; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:22px; color:#CAAE97; width:36px;">${n}</td>
+            <td valign="top">
+              <p style="margin:0 0 4px; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:1px; color:#7A2338;">${label}</p>
+              <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:1.5; color:#16110F;">${desc}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`
+      )
+      .join('')}
+
+    <tr>
+      <td style="padding:24px 32px 8px;">
+        <a href="${SITE}" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:2px; padding:14px 28px;">EXPLORA TRAVEL EDIT</a>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:20px 32px 32px;">
+        <div style="border-top:1px solid #C79A5B; margin:0 0 20px;"></div>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:17px; color:#6D2A34;">Gracias por confiar en nosotros.</p>
+      </td>
+    </tr>`;
+
+  const html = emailShellHtml(bodyRows, 'Recibes este correo porque solicitaste información de viaje en The Travel Edit.');
+
+  const text = [
+    `Hola ${name}, ya estamos en ello.`,
+    '',
+    'Nuestro equipo ya está revisando la información que nos compartiste para empezar a diseñar tu experiencia.',
+    '',
+    'Qué sigue:',
+    '01 Revisión — Estudiamos tu solicitud, destinos y fechas propuestas.',
+    '02 Contacto — Un asesor te escribe en menos de 24 horas hábiles.',
+    '03 Propuesta — Recibes un itinerario hecho enteramente a tu medida.',
+    '',
+    `Explora Travel Edit: ${SITE}`,
+    '',
+    'Gracias por confiar en nosotros.',
+    '',
+    'The Travel Edit'
+  ].join('\n');
+
+  return { subject: 'Recibimos tu solicitud de viaje — The Travel Edit', html, text };
+}
+
 function buildAdminEmail(
+  leadId: string,
   name: string,
   email: string,
   phone: string,
@@ -163,43 +316,68 @@ function buildAdminEmail(
     ...(destinationInterestText ? ([['Destino de interés', destinationInterestText]] as Array<[string, string]>) : []),
     ...formatDetailsRows(details)
   ];
+  const fecha = formatFechaCorta(new Date());
+  const firstName = escapeHtml(name.split(' ')[0] || name);
+  const leadUrl = `${SITE}/admin/solicitudes/${leadId}`;
 
-  const html = `
-    <h2>Nueva solicitud de viaje — Design Your Trip</h2>
-    <table cellpadding="6" cellspacing="0" border="0">
-      ${rows
-        .map(([label, value]) => `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(value)}</td></tr>`)
-        .join('')}
-    </table>
-    <p>Responde directamente a este correo para escribirle al cliente.</p>
-  `;
-  const text = rows.map(([label, value]) => `${label}: ${value}`).join('\n');
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 32px 36px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">NUEVA SOLICITUD &middot; ${fecha}</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; line-height:1.25; color:#F6EFE6;">${firstName} quiere<br />diseñar su viaje.</p>
+      </td>
+    </tr>
 
-  return { subject: 'Nueva solicitud de viaje — Design Your Trip', html, text };
-}
+    <tr>
+      <td style="padding:28px 32px 8px;">
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:1.6; color:#16110F;">Llegó una nueva solicitud por Design Your Trip. Aquí está el detalle completo:</p>
+      </td>
+    </tr>
 
-function buildCustomerEmail(name: string): EmailContent {
-  const safeName = escapeHtml(name);
-  const html = `
-    <p>Hola ${safeName},</p>
-    <p>Hemos recibido correctamente tu solicitud de viaje.</p>
-    <p>Nuestro equipo revisará la información y se pondrá en contacto contigo para ayudarte a planificar tu experiencia.</p>
-    <p>Gracias por confiar en Travel Edit.</p>
-    <p>Travel Edit</p>
-  `;
+    <tr>
+      <td style="padding:20px 32px 4px;">
+        <p style="margin:0 0 12px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#8A7F76;">DETALLE DE LA SOLICITUD</p>
+        <div style="border-top:1px solid #C79A5B;"></div>
+      </td>
+    </tr>
+
+    ${rows
+      .map(
+        ([label, value]) => `
+    <tr>
+      <td style="padding:12px 32px; border-bottom:1px solid #EAE0D2;">
+        <p style="margin:0 0 4px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:1px; color:#7A2338;">${escapeHtml(label).toUpperCase()}</p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:1.5; color:#16110F;">${escapeHtml(value)}</p>
+      </td>
+    </tr>`
+      )
+      .join('')}
+
+    <tr>
+      <td style="padding:24px 32px 8px;">
+        <a href="${leadUrl}" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:2px; padding:14px 28px;">VER SOLICITUD COMPLETA</a>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:20px 32px 32px;">
+        <div style="border-top:1px solid #C79A5B; margin:0 0 20px;"></div>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:17px; color:#6D2A34;">Responde directamente a este correo para escribirle a ${firstName}.</p>
+      </td>
+    </tr>`;
+
+  const html = emailShellHtml(bodyRows, 'Notificación automática del formulario Design Your Trip de The Travel Edit.');
   const text = [
-    `Hola ${name},`,
+    `Nueva solicitud de ${name} (${fecha})`,
     '',
-    'Hemos recibido correctamente tu solicitud de viaje.',
+    ...rows.map(([label, value]) => `${label}: ${value}`),
     '',
-    'Nuestro equipo revisará la información y se pondrá en contacto contigo para ayudarte a planificar tu experiencia.',
+    `Ver solicitud completa: ${leadUrl}`,
     '',
-    'Gracias por confiar en Travel Edit.',
-    '',
-    'Travel Edit'
+    `Responde directamente a este correo para escribirle a ${firstName}.`
   ].join('\n');
 
-  return { subject: 'Recibimos tu solicitud de viaje — Travel Edit', html, text };
+  return { subject: `Nueva solicitud de ${name} — Design Your Trip`, html, text };
 }
 
 interface EmailResult {
@@ -388,7 +566,7 @@ Deno.serve(async (req) => {
       let customerErrorMsg: string | undefined;
 
       if (opSettings.emailNotificationsEnabled) {
-        const admin = buildAdminEmail(name, email, phone, destinationInterestText, details);
+        const admin = buildAdminEmail(insertedLead.id, name, email, phone, destinationInterestText, details);
         // reply_to = el correo ya validado del cliente, nunca uno arbitrario
         // que venga de otro campo del body — así "Responder" en el correo del
         // admin va directo al cliente sin que el cliente controle el `from`.

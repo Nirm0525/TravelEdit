@@ -32,7 +32,6 @@ export class Hero implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly reducedMotion = inject(ReducedMotionService);
   private readonly titleWords = viewChildren<ElementRef<HTMLElement>>('word');
-  private readonly subtitle = viewChild<ElementRef<HTMLElement>>('subtitle');
   private readonly lead = viewChild<ElementRef<HTMLElement>>('lead');
   private readonly actions = viewChild<ElementRef<HTMLElement>>('actions');
   private readonly bg = viewChild<ElementRef<HTMLElement>>('bg');
@@ -65,8 +64,7 @@ export class Hero implements AfterViewInit, OnDestroy {
         stagger: 0.12,
         ease: 'power3.out'
       }, '-=0.8')
-      .from(this.subtitle()?.nativeElement ?? [], { y: 16, opacity: 0, duration: 0.7, ease: 'power2.out' }, '-=0.35')
-      .from(this.lead()?.nativeElement ?? [], { y: 16, opacity: 0, duration: 0.7, ease: 'power2.out' }, '-=0.45')
+      .from(this.lead()?.nativeElement ?? [], { y: 16, opacity: 0, duration: 0.7, ease: 'power2.out' }, '-=0.1')
       .from(this.actions()?.nativeElement ?? [], { y: 16, opacity: 0, duration: 0.7, ease: 'power2.out' }, '-=0.45');
 
     const sectionEl = this.section()?.nativeElement;

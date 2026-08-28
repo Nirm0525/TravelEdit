@@ -20,6 +20,8 @@
 }
 
 .section-title__heading {
+  font-family: "Cormorant", serif;
+  font-style: normal;
   font-size: var(--size-h2);
   color: var(--color-ink);
 }

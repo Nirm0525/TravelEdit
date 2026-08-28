@@ -4,7 +4,6 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { SiteContentService } from '../../../core/services/site-content';
 import { DestinationsService } from '../../../core/services/destinations';
 import { Destination } from '../../../core/models/destination.model';
-import { DestinationStatus } from '../../../core/models/destination-enums';
 import { DESTINATION_STATUS_LABEL } from '../../../core/data/destination-options';
 import { ContentEditorLayout } from '../../../shared/ui/content-editor-layout/content-editor-layout';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
@@ -29,8 +28,10 @@ export class DestinosDestacadosEditor {
 
   readonly selected = signal<Destination[]>([]);
 
+  // Solo destinos publicados pueden formar parte de "Destinos destacados" —
+  // por eso el picker nunca ofrece navegar a "Borradores" (antes tenía un
+  // toggle de estado; se fijó a 'published' a propósito).
   readonly pickerOpen = signal(false);
-  readonly pickerStatus = signal<DestinationStatus>('published');
   readonly pickerSearch = signal('');
   readonly pickerResults = signal<Destination[]>([]);
   readonly pickerLoading = signal(false);
@@ -84,11 +85,6 @@ export class DestinosDestacadosEditor {
     this.pickerOpen.set(false);
   }
 
-  setPickerStatus(status: DestinationStatus): void {
-    this.pickerStatus.set(status);
-    void this.loadPicker();
-  }
-
   onPickerSearch(event: Event): void {
     this.pickerSearch.set((event.target as HTMLInputElement).value);
     void this.loadPicker();
@@ -100,7 +96,7 @@ export class DestinosDestacadosEditor {
       const page = await this.destinationsService.list({
         page: 1,
         pageSize: 50,
-        status: this.pickerStatus(),
+        status: 'published',
         search: this.pickerSearch() || undefined
       });
       const selectedIds = new Set(this.selected().map((d) => d.id));
@@ -118,6 +114,20 @@ export class DestinosDestacadosEditor {
   async save(): Promise<void> {
     if (this.form.invalid || this.saving()) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    // Defensa en el punto de guardado: si un destino ya seleccionado pasó a
+    // draft/archivado después (p.ej. alguien lo despublicó mientras tanto),
+    // el badge "Ya no disponible" ya lo advierte visualmente — esto impide
+    // que además quede persistido como destacado.
+    const unavailable = this.selected().filter((d) => this.isUnavailable(d));
+    if (unavailable.length > 0) {
+      this.error.set(
+        `Quita "${unavailable.map((d) => d.title).join('", "')}" de la lista antes de guardar — ya no ${
+          unavailable.length === 1 ? 'está publicado' : 'están publicados'
+        }.`
+      );
       return;
     }
 

@@ -76,24 +76,26 @@
                 <path d="M13.5 6.5l4 4" stroke-linecap="round" />
               </svg>
             </button>
-            <button
-              type="button"
-              class="users-list__action users-list__action--danger"
-              [attr.aria-label]="'Eliminar ' + user.fullName"
-              title="Eliminar"
-              (click)="requestDelete(user)"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M5 7h14" stroke-linecap="round" />
-                <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke-linecap="round" stroke-linejoin="round" />
-                <path
-                  d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path d="M10 11v6M14 11v6" stroke-linecap="round" />
-              </svg>
-            </button>
+            @if (!isSelf(user)) {
+              <button
+                type="button"
+                class="users-list__action users-list__action--danger"
+                [attr.aria-label]="'Eliminar ' + user.fullName"
+                title="Eliminar"
+                (click)="requestDelete(user)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M5 7h14" stroke-linecap="round" />
+                  <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path d="M10 11v6M14 11v6" stroke-linecap="round" />
+                </svg>
+              </button>
+            }
           </td>
         </tr>
       }

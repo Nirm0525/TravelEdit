@@ -11,6 +11,11 @@
       <app-admin-skeleton height="14rem" />
     }
   </div>
+} @else if (loadError(); as message) {
+  <div class="dashboard__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
 } @else if (data(); as d) {
   <div class="dashboard__stats">
     <div class="dashboard__stat">

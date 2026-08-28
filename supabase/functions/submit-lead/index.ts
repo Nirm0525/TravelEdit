@@ -21,6 +21,7 @@ const RATE_LIMIT_MAX_ATTEMPTS = 5;
 // que llama — nada de "*".
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:4200',
+  'http://localhost:4201',
   'http://localhost:4301',
   'http://localhost:4305',
   'https://thetravel-edit.com'

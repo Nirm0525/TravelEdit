@@ -75,23 +75,7 @@
 
 <app-admin-modal [open]="pickerOpen()" title="Agregar destino" (closed)="closePicker()">
   <div class="destinos-destacados__picker-filters">
-    <button
-      type="button"
-      class="btn btn--secondary"
-      [class.is-loading]="false"
-      [attr.aria-pressed]="pickerStatus() === 'published'"
-      (click)="setPickerStatus('published')"
-    >
-      Publicados
-    </button>
-    <button
-      type="button"
-      class="btn btn--secondary"
-      [attr.aria-pressed]="pickerStatus() === 'draft'"
-      (click)="setPickerStatus('draft')"
-    >
-      Borradores
-    </button>
+    <p class="field__hint">Solo se muestran destinos publicados.</p>
     <input type="search" class="destinos-destacados__picker-search" placeholder="Buscar por título…" (input)="onPickerSearch($event)" />
   </div>
 

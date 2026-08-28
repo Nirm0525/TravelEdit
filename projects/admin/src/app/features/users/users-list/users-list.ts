@@ -93,6 +93,12 @@ export class UsersList {
     return user.status === 'inactive' ? 'badge--danger' : 'badge--warning';
   }
 
+  // El backend (admin-users) ya bloquea la autoeliminación — esto solo evita
+  // ofrecer el botón para una acción que sabemos de antemano que va a fallar.
+  isSelf(user: AdminUser): boolean {
+    return user.id === this.auth.profile()?.id;
+  }
+
   async onRoleChange(user: AdminUser, event: Event): Promise<void> {
     const select = event.target as HTMLSelectElement;
     const role = select.value as StaffRole;

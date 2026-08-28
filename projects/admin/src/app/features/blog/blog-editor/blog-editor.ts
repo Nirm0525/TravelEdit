@@ -50,6 +50,7 @@ export class BlogEditor {
   private readonly router = inject(Router);
 
   readonly statusLabel = ARTICLE_STATUS_LABEL;
+  readonly isAdmin = this.auth.isAdmin;
 
   readonly articleId = signal<string | null>(this.route.snapshot.paramMap.get('id'));
   readonly isNew = computed(() => !this.articleId());

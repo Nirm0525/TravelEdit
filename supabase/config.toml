@@ -1,0 +1,10 @@
+# submit-lead recibe solicitudes del formulario público "Design Your Trip" —
+# un visitante nunca tiene sesión de Supabase Auth, así que la verificación
+# de JWT a nivel de gateway (el valor por defecto) rechaza cada request con
+# UNAUTHORIZED_NO_AUTH_HEADER antes de que el código de la función corra.
+# La función ya tiene su propia protección (rate-limit por IP vía
+# lead_submission_attempts, validación de payload/email) y usa la service
+# role internamente para el insert — verify_jwt no aporta nada aquí, solo
+# bloquea al público al que está destinada.
+[functions.submit-lead]
+verify_jwt = false

@@ -19,16 +19,24 @@ export class Dashboard {
 
   readonly profile = this.auth.profile;
   readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
   readonly data = signal<DashboardData | null>(null);
 
   constructor() {
     void this.load();
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     this.loading.set(true);
-    this.data.set(await this.dashboardService.load());
-    this.loading.set(false);
+    this.loadError.set(null);
+    try {
+      this.data.set(await this.dashboardService.load());
+    } catch (error) {
+      console.error('No se pudo cargar el dashboard.', error);
+      this.loadError.set('No se pudo cargar el dashboard. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   ageInDays(isoDate: string): number {

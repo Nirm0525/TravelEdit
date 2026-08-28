@@ -1,3 +1,16 @@
+.dashboard__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  background: color-mix(in srgb, var(--danger-600) 6%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+  color: var(--danger-600);
+}
+
 .dashboard__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));

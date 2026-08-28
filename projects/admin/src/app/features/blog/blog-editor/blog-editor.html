@@ -32,7 +32,9 @@
           <button type="button" class="btn btn--secondary" [disabled]="publishing()" (click)="toggleStatus()">
             {{ publishing() ? 'Guardando…' : statusActionLabel() }}
           </button>
-          <button type="button" class="btn btn--danger blog-editor__delete-btn" (click)="askDelete()">Eliminar artículo</button>
+          @if (isAdmin()) {
+            <button type="button" class="btn btn--danger blog-editor__delete-btn" (click)="askDelete()">Eliminar artículo</button>
+          }
         </div>
         @if (publishError()) {
           <p class="field__hint field__hint--error">{{ publishError() }}</p>

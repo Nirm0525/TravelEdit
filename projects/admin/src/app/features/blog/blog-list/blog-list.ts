@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ArticlesService } from '../../../core/services/articles';
 import { ArticleImagesService } from '../../../core/services/article-images';
 import { ProfilesService } from '../../../core/services/profiles';
+import { AuthService } from '../../../core/services/auth';
 import { Article, ArticleStatus } from '../../../core/models/article.model';
 import { ARTICLE_STATUS_LABEL } from '../../../core/data/article-options';
 import { AdminPageHeader, BreadcrumbItem } from '../../../shared/ui/admin-page-header/admin-page-header';
@@ -29,6 +30,9 @@ export class BlogList {
   private readonly articlesService = inject(ArticlesService);
   private readonly images = inject(ArticleImagesService);
   private readonly profiles = inject(ProfilesService);
+  private readonly auth = inject(AuthService);
+
+  readonly isAdmin = this.auth.isAdmin;
 
   readonly breadcrumb: BreadcrumbItem[] = [{ label: 'Panel', link: '/dashboard' }, { label: 'Blog' }];
   readonly statusLabel = ARTICLE_STATUS_LABEL;

@@ -48,3 +48,4 @@ Thumbs.db
 /projects/admin/src/environments/environment.ts
 /projects/admin/src/environments/environment.development.ts
 
+.vercel

@@ -1,10 +1,9 @@
-import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { IMAGES } from '../../core/data/images';
 import { LeadSubmissionService } from '../../core/services/lead-submission';
-import { environment } from '../../../environments/environment';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_DIAL_CODE } from '../../core/data/country-codes';
 import { DatePicker } from '../../shared/ui/date-picker/date-picker';
 import {
@@ -19,18 +18,6 @@ import {
   StylePreference,
   TRAVELING_WITH_OPTIONS
 } from '../../core/models/lead-trip-details';
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (
-        container: HTMLElement,
-        options: { sitekey: string; callback: (token: string) => void }
-      ) => string;
-      remove: (widgetId: string) => void;
-    };
-  }
-}
 
 @Component({
   selector: 'app-design-your-trip',
@@ -50,12 +37,6 @@ export class DesignYourTrip {
   readonly submitting = signal(false);
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly turnstileToken = signal<string | null>(null);
-  // Se pone en true si environment.turnstileSiteKey viene vacío — sin esto,
-  // el widget simplemente no aparece y el usuario ve el mismo mensaje
-  // genérico de "completa la verificación" sin ninguna pista de que en
-  // realidad es un problema de configuración, no algo que él pueda arreglar.
-  readonly turnstileUnavailable = signal(false);
 
   readonly totalSteps = 3;
   readonly currentStep = signal(1);
@@ -68,9 +49,6 @@ export class DesignYourTrip {
   readonly budgetRangeOptions = BUDGET_RANGE_OPTIONS;
   readonly flightClassOptions = FLIGHT_CLASS_OPTIONS;
   readonly hearAboutUsOptions = HEAR_ABOUT_US_OPTIONS;
-
-  private readonly turnstileContainer = viewChild<ElementRef<HTMLElement>>('turnstileContainer');
-  private turnstileWidgetId: string | null = null;
 
   readonly form = this.fb.group({
     name: this.fb.control('', Validators.required),
@@ -108,13 +86,6 @@ export class DesignYourTrip {
     this.meta.updateTag({
       name: 'description',
       content: 'Cuéntanos qué tienes en mente y diseñaremos una experiencia de viaje pensada especialmente para ti.'
-    });
-
-    effect(() => {
-      const container = this.turnstileContainer()?.nativeElement;
-      if (container) {
-        void this.renderTurnstile(container);
-      }
     });
   }
 
@@ -172,22 +143,8 @@ export class DesignYourTrip {
     }
 
     // Clic repetido mientras ya se está enviando: se ignora en silencio (el
-    // botón ya está disabled/"Enviando…", esto es solo un cinturón extra) —
-    // antes compartía el mismo mensaje que "falta el anti-spam", lo cual
-    // confundía dos causas distintas.
+    // botón ya está disabled/"Enviando…", esto es solo un cinturón extra).
     if (this.submitting()) {
-      return;
-    }
-
-    // Verificación anti-spam de Turnstile — no es una validación de campos del
-    // formulario, es una capa aparte. Si el widget todavía no resolvió, no hay
-    // nada mal con lo que el usuario completó.
-    if (!this.turnstileToken()) {
-      this.errorMessage.set(
-        this.turnstileUnavailable()
-          ? 'No pudimos cargar la verificación de seguridad en este momento. Escríbenos directamente y con gusto te ayudamos.'
-          : 'Completa la verificación anti-spam antes de enviar.'
-      );
       return;
     }
 
@@ -223,22 +180,12 @@ export class DesignYourTrip {
         email: raw.email,
         phone: `${raw.phoneCountryCode} ${raw.phone}`.trim(),
         destinationInterestText: raw.destinationInterestText,
-        details,
-        turnstileToken: this.turnstileToken()!
+        details
       });
 
       if (!result.ok) {
         this.errorMessage.set(result.error);
         return;
-      }
-
-      // El widget de Turnstile puede dejar su iframe/overlay huérfano si el
-      // contenedor se destruye (al pasar a la pantalla de éxito) sin avisarle
-      // primero — eso deja clics bloqueados en toda la página. Se limpia antes
-      // de que Angular retire el formulario del DOM.
-      if (this.turnstileWidgetId) {
-        window.turnstile?.remove(this.turnstileWidgetId);
-        this.turnstileWidgetId = null;
       }
 
       this.submitted.set(true);
@@ -251,42 +198,5 @@ export class DesignYourTrip {
     } finally {
       this.submitting.set(false);
     }
-  }
-
-  private async renderTurnstile(container: HTMLElement): Promise<void> {
-    const siteKey = environment.turnstileSiteKey;
-    if (!siteKey) {
-      // No es un fallo silencioso más: sin TURNSTILE_SITE_KEY configurada en
-      // el entorno de build, el widget nunca aparece y el usuario queda
-      // bloqueado en el paso final sin ninguna pista de por qué — esto deja
-      // rastro en la consola y cambia el mensaje que ve si intenta enviar.
-      console.error(
-        'DesignYourTrip: falta environment.turnstileSiteKey — revisa la variable TURNSTILE_SITE_KEY en el entorno de build.'
-      );
-      this.turnstileUnavailable.set(true);
-      return;
-    }
-
-    await this.loadTurnstileScript();
-    this.turnstileWidgetId =
-      window.turnstile?.render(container, {
-        sitekey: siteKey,
-        callback: (token) => this.turnstileToken.set(token)
-      }) ?? null;
-  }
-
-  private loadTurnstileScript(): Promise<void> {
-    if (window.turnstile) {
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => resolve();
-      document.head.appendChild(script);
-    });
   }
 }

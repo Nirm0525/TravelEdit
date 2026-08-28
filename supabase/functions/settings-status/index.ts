@@ -1,12 +1,12 @@
 // Edge Function: settings-status
 //
-// El panel de Configuración necesita mostrar si RESEND_API_KEY y
-// TURNSTILE_SECRET_KEY están configurados, pero esos secrets nunca deben
-// llegar al navegador — ni siquiera parcialmente. Esta función corre en el
-// runtime de la Edge Function (el único lugar donde Deno.env tiene esos
-// valores) y responde solo con booleanos. Mismo patrón de autenticación que
-// admin-users: primero confirma la sesión con la anon key, después vuelve a
-// confirmar el rol admin con la service role antes de responder nada.
+// El panel de Configuración necesita mostrar si RESEND_API_KEY está
+// configurado, pero ese secret nunca debe llegar al navegador — ni siquiera
+// parcialmente. Esta función corre en el runtime de la Edge Function (el
+// único lugar donde Deno.env tiene ese valor) y responde solo con
+// booleanos. Mismo patrón de autenticación que admin-users: primero
+// confirma la sesión con la anon key, después vuelve a confirmar el rol
+// admin con la service role antes de responder nada.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const ALLOWED_ORIGINS = new Set([
@@ -82,8 +82,7 @@ Deno.serve(async (req) => {
   // Solo booleanos — nunca el valor del secret, ni siquiera un fragmento.
   return json(
     {
-      resendConfigured: !!Deno.env.get('RESEND_API_KEY'),
-      turnstileSecretConfigured: !!Deno.env.get('TURNSTILE_SECRET_KEY')
+      resendConfigured: !!Deno.env.get('RESEND_API_KEY')
     },
     200
   );

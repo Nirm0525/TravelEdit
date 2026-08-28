@@ -415,11 +415,6 @@
   font-weight: 700;
 }
 
-.tef-turnstile {
-  margin: var(--space-sm) 0;
-  min-height: 65px;
-}
-
 .tef-error {
   color: var(--color-burgundy);
   font-size: 0.875rem;

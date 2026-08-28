@@ -1,8 +1,8 @@
 export type SiteStatus = 'active' | 'maintenance';
 
 // Todas las claves conocidas de site_settings, con su tipo real. Ninguna
-// almacena secretos — RESEND_API_KEY y TURNSTILE_SECRET_KEY viven solo en
-// Supabase Edge Function Secrets (ver supabase/migrations/0019_site_settings.sql).
+// almacena secretos — RESEND_API_KEY vive solo en Supabase Edge Function
+// Secrets (ver supabase/migrations/0019_site_settings.sql).
 export interface SiteSettingsMap {
   site_name: string;
   company_name: string;
@@ -32,7 +32,6 @@ export type SiteSettingKey = keyof SiteSettingsMap;
 // ningún secret, solo si está configurado o no (ver 0. Seguridad).
 export interface IntegrationStatus {
   resendConfigured: boolean;
-  turnstileSecretConfigured: boolean;
 }
 
 // Mismos valores sembrados por la migración 0019 — sirven como fallback en

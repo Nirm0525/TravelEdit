@@ -1,10 +1,16 @@
 // Edge Function: submit-lead
 //
 // El formulario público llama aquí, nunca inserta directo en `leads` — no
-// hay política de INSERT anónimo (ver 0003_leads.sql). Esta función valida
-// el captcha, aplica un rate-limit por IP y hace el insert ella misma con
-// la service role, fijando status/assigned_to — el cliente no controla eso
-// aunque lo intente, porque esos valores no vienen del body de la request.
+// hay política de INSERT anónimo (ver 0003_leads.sql). Esta función aplica
+// un rate-limit por IP y hace el insert ella misma con la service role,
+// fijando status/assigned_to — el cliente no controla eso aunque lo intente,
+// porque esos valores no vienen del body de la request.
+//
+// Travel Edit no usa Cloudflare Turnstile (se quitó por completo — ver
+// commit que elimina turnstileToken/TURNSTILE_SITE_KEY/TURNSTILE_SECRET_KEY
+// de todo el proyecto). La única protección anti-abuso hoy es el rate-limit
+// por IP de abajo, vía `lead_submission_attempts` — independiente de
+// Turnstile, ya existía antes y sigue igual.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const RATE_LIMIT_WINDOW_MINUTES = 10;
@@ -33,26 +39,6 @@ function corsHeadersFor(req: Request): Record<string, string> {
   }
   return headers;
 }
-
-// El header Origin/CORS solo lo respeta un navegador — un POST directo
-// (curl, script) lo ignora por completo y de todos modos llegaría hasta el
-// insert. `hostname` en la respuesta de siteverify es el dominio donde
-// Cloudflare realmente vio resolverse el widget, así que es la señal server-
-// side confiable: mismos dominios que ya confiamos para CORS.
-const ALLOWED_HOSTNAMES = new Set(Array.from(ALLOWED_ORIGINS, (o) => new URL(o).hostname));
-
-// Los tres secrets de prueba documentados por Cloudflare (siempre aprueban /
-// siempre bloquean / fuerza challenge) devuelven siempre hostname:
-// "example.com" en siteverify, sin importar la página real — no dan
-// protección real, así que mientras se use uno de estos no tiene sentido
-// exigir que el hostname cuadre. En cuanto TURNSTILE_SECRET_KEY sea un
-// secret real de Cloudflare, esta lista deja de aplicar y el check de abajo
-// se vuelve estricto.
-const CLOUDFLARE_TEST_SECRETS = new Set([
-  '1x0000000000000000000000000000000AA',
-  '2x0000000000000000000000000000000AA',
-  '3x0000000000000000000000000000000AA'
-]);
 
 const ORIGIN_VALUES = ['formulario_web', 'whatsapp', 'instagram', 'referido', 'email', 'otro'] as const;
 type Origin = (typeof ORIGIN_VALUES)[number];
@@ -85,7 +71,6 @@ interface LeadRequestBody {
   phone?: string;
   destinationInterestText?: string;
   details?: LeadTripDetails;
-  turnstileToken?: string;
 }
 
 function isValidEmail(value: string): boolean {
@@ -257,58 +242,6 @@ async function sendViaResend(
   }
 }
 
-/** Nunca confiar en que el frontend diga "Turnstile aprobado" — esta es la
- *  única verificación que cuenta, y ocurre server-side contra Cloudflare.
- *  Cualquier fallo (red, Cloudflare caído, secret ausente, hostname que no
- *  cuadra) debe resolver a "no válido" sin tumbar la función ni filtrar
- *  detalles técnicos al cliente — por eso todo el ruido queda en
- *  console.error para los logs de la función, y el caller solo recibe true/false. */
-async function verifyTurnstile(token: string, remoteIp: string): Promise<boolean> {
-  const secret = Deno.env.get('TURNSTILE_SECRET_KEY');
-  if (!secret) {
-    console.error('verifyTurnstile: falta TURNSTILE_SECRET_KEY en los secrets de la función.');
-    return false;
-  }
-
-  try {
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ secret, response: token, remoteip: remoteIp })
-    });
-
-    if (!response.ok) {
-      console.error('verifyTurnstile: Cloudflare respondió', response.status, await response.text());
-      return false;
-    }
-
-    const result = (await response.json()) as {
-      success: boolean;
-      hostname?: string;
-      'error-codes'?: string[];
-    };
-
-    if (!result.success) {
-      console.error('verifyTurnstile: token rechazado por Cloudflare', result['error-codes']);
-      return false;
-    }
-
-    // Cloudflare solo manda `hostname` cuando puede determinarlo — si viene,
-    // debe ser uno de los dominios en los que confiamos. Excepción: los
-    // secrets de prueba de Cloudflare siempre devuelven "example.com" sin
-    // relación con la página real, así que no aplican este check.
-    if (result.hostname && !CLOUDFLARE_TEST_SECRETS.has(secret) && !ALLOWED_HOSTNAMES.has(result.hostname)) {
-      console.error('verifyTurnstile: hostname inesperado en la respuesta', result.hostname);
-      return false;
-    }
-
-    return true;
-  } catch (err) {
-    console.error('verifyTurnstile: error inesperado verificando contra Cloudflare', err);
-    return false;
-  }
-}
-
 interface OperationalSettings {
   resendFromEmail: string | null;
   leadsAdminEmail: string | null;
@@ -386,10 +319,6 @@ Deno.serve(async (req) => {
     }
     console.log('Lead received');
 
-    if (!body.turnstileToken) {
-      return json({ error: 'Falta la verificación anti-spam.' }, 400);
-    }
-
     const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const ipHash = await hashIp(remoteIp);
 
@@ -408,14 +337,6 @@ Deno.serve(async (req) => {
     if ((count ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
       return json({ error: 'Demasiados intentos. Intenta de nuevo más tarde.' }, 429);
     }
-
-    // Única verificación que cuenta: server-side, contra Cloudflare. El
-    // lead no se inserta si esto no devuelve true, sin excepciones.
-    const captchaOk = await verifyTurnstile(body.turnstileToken, remoteIp);
-    if (!captchaOk) {
-      return json({ error: 'No se pudo verificar que eres una persona.' }, 400);
-    }
-    console.log('Turnstile validated');
 
     const destinationInterestText = body.destinationInterestText?.trim() || null;
     const details = body.details ?? {};

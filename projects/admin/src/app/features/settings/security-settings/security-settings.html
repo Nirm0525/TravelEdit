@@ -15,24 +15,6 @@
 
   <div class="security-settings__grid">
     <div class="security-settings__card">
-      <p class="content-section__title">Turnstile — protección anti-spam</p>
-      <div class="security-settings__row">
-        <span>Estado</span>
-        @if (turnstileSecretConfigured() === null) {
-          <app-status-badge label="Sin datos" variant="neutral" />
-        } @else if (turnstileSecretConfigured()) {
-          <app-status-badge label="Configurado" variant="success" />
-        } @else {
-          <app-status-badge label="No configurado" variant="warning" />
-        }
-      </div>
-      <p class="field__hint">
-        La secret key de Turnstile nunca se muestra aquí — permanece únicamente en Supabase Secrets. La site key pública
-        vive en el sitio público (bundle separado del admin).
-      </p>
-    </div>
-
-    <div class="security-settings__card">
       <p class="content-section__title">Resend — envío de correos</p>
       <div class="security-settings__row">
         <span>API key</span>

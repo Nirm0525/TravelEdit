@@ -21,16 +21,11 @@ export class SecuritySettings {
     { label: 'Seguridad' }
   ];
 
-  // El admin y el sitio público son bundles separados (ver comentario en
-  // environment.ts del admin) — la Turnstile site key (pública) vive solo en
-  // el environment del sitio público. Aquí solo se puede verificar de forma
-  // segura si el secret server-side está configurado.
   readonly supabaseUrl = environment.supabaseUrl;
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly resendConfigured = signal<boolean | null>(null);
-  readonly turnstileSecretConfigured = signal<boolean | null>(null);
   readonly checkedAt = signal<Date | null>(null);
 
   constructor() {
@@ -43,7 +38,6 @@ export class SecuritySettings {
     try {
       const status = await this.settings.getIntegrationStatus();
       this.resendConfigured.set(status.resendConfigured);
-      this.turnstileSecretConfigured.set(status.turnstileSecretConfigured);
       this.checkedAt.set(new Date());
     } catch (err) {
       console.error('No se pudo consultar el estado de seguridad.', err);

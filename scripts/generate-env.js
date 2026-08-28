@@ -3,7 +3,6 @@ const path = require('path');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
-const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || '';
 
 const publicEnvDir = path.join(__dirname, '..', 'src', 'environments');
 const adminEnvDir = path.join(__dirname, '..', 'projects', 'admin', 'src', 'environments');
@@ -27,8 +26,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const publicTemplate = (production) => `export const environment = {
   production: ${production},
   supabaseUrl: '${SUPABASE_URL}',
-  supabaseKey: '${SUPABASE_KEY}',
-  turnstileSiteKey: '${TURNSTILE_SITE_KEY}'
+  supabaseKey: '${SUPABASE_KEY}'
 };
 `;
 

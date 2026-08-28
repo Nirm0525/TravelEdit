@@ -8,7 +8,6 @@ export interface LeadSubmissionPayload {
   phone: string;
   destinationInterestText: string;
   details: LeadTripDetails;
-  turnstileToken: string;
 }
 
 export type LeadSubmissionResult = { ok: true } | { ok: false; error: string };

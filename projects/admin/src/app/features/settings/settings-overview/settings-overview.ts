@@ -37,7 +37,7 @@ const CATEGORIES: SettingsCategory[] = [
   {
     key: 'seguridad',
     name: 'Seguridad',
-    description: 'Estado de Turnstile, Resend y Supabase.',
+    description: 'Estado de Resend y Supabase.',
     editLink: '/configuracion/seguridad'
   },
   {

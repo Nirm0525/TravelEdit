@@ -89,8 +89,8 @@ export class SettingsService {
     return this.getSettings();
   }
 
-  /** Estado de RESEND_API_KEY / TURNSTILE_SECRET_KEY — nunca el valor, solo si están configurados.
-   *  Se resuelve en la Edge Function settings-status, el único lugar con acceso a esos secrets. */
+  /** Estado de RESEND_API_KEY — nunca el valor, solo si está configurado.
+   *  Se resuelve en la Edge Function settings-status, el único lugar con acceso a ese secret. */
   async getIntegrationStatus(): Promise<IntegrationStatus> {
     const {
       data: { session },
@@ -115,7 +115,7 @@ export class SettingsService {
       throw new Error('No se pudo conectar con el servidor. Intenta de nuevo.');
     }
 
-    return { resendConfigured: data.resendConfigured, turnstileSecretConfigured: data.turnstileSecretConfigured };
+    return { resendConfigured: data.resendConfigured };
   }
 
   private async extractServerMessage(error: unknown): Promise<string> {

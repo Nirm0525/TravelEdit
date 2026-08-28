@@ -1,0 +1,17 @@
+.proposal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.proposal-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-lg);
+}
+
+.proposal-form input[disabled] {
+  color: var(--text-secondary);
+  background: var(--canvas-100);
+  cursor: not-allowed;
+}

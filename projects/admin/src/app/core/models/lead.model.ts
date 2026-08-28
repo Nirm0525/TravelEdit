@@ -1,5 +1,5 @@
 import { Database } from './database.types';
-import { LeadEmailStatus, LeadOrigin, LeadStatus } from './lead-enums';
+import { LeadEmailStatus, LeadOrigin, LeadStatus, ProposalEmailStatus } from './lead-enums';
 import { LeadTripDetails, toLeadTripDetails } from './lead-trip-details';
 import { sanitizeEmailError } from '../utils/sanitize-email-error';
 
@@ -23,6 +23,12 @@ export interface Lead {
   emailStatus: LeadEmailStatus;
   emailSentAt: string | null;
   emailError: string | null;
+  proposalSubject: string | null;
+  proposalMessage: string | null;
+  proposalSentAt: string | null;
+  proposalSentBy: string | null;
+  proposalEmailStatus: ProposalEmailStatus | null;
+  proposalEmailError: string | null;
 }
 
 export interface LeadNote {
@@ -50,7 +56,13 @@ export function toLead(row: LeadRow): Lead {
     updatedAt: row.updated_at,
     emailStatus: row.email_status,
     emailSentAt: row.email_sent_at,
-    emailError: sanitizeEmailError(row.email_error)
+    emailError: sanitizeEmailError(row.email_error),
+    proposalSubject: row.proposal_subject,
+    proposalMessage: row.proposal_message,
+    proposalSentAt: row.proposal_sent_at,
+    proposalSentBy: row.proposal_sent_by,
+    proposalEmailStatus: row.proposal_email_status,
+    proposalEmailError: sanitizeEmailError(row.proposal_email_error)
   };
 }
 

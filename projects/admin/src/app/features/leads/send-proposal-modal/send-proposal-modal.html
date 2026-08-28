@@ -1,0 +1,38 @@
+<app-admin-modal [open]="open()" title="Enviar propuesta" (closed)="close()">
+  @if (lead(); as l) {
+    <form class="proposal-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="proposal-form__grid">
+        <label class="field">
+          <span>Cliente</span>
+          <input type="text" [value]="l.name" readonly disabled />
+        </label>
+
+        <label class="field">
+          <span>Correo</span>
+          <input type="email" [value]="l.email" readonly disabled />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Asunto</span>
+        <input type="text" formControlName="subject" placeholder="Tu propuesta de viaje a…" />
+      </label>
+
+      <label class="field">
+        <span>Mensaje</span>
+        <textarea rows="8" formControlName="message" placeholder="Escribe la propuesta para el cliente…"></textarea>
+      </label>
+
+      @if (error(); as message) {
+        <p class="field__hint field__hint--error">{{ message }}</p>
+      }
+    </form>
+  }
+
+  <div adminModalFooter>
+    <button type="button" class="btn btn--secondary" [disabled]="sending()" (click)="close()">Cancelar</button>
+    <button type="button" class="btn btn--primary" [class.is-loading]="sending()" [disabled]="sending()" (click)="submit()">
+      {{ sending() ? 'Enviando…' : 'Enviar propuesta' }}
+    </button>
+  </div>
+</app-admin-modal>

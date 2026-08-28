@@ -23,6 +23,8 @@
       }
     </label>
 
+    <a class="login__back" routerLink="/recuperar-contrasena">¿Olvidaste tu contraseña?</a>
+
     @if (errorMessage(); as message) {
       <p class="login__hint login__hint--form" role="alert">{{ message }}</p>
     }

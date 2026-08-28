@@ -205,8 +205,8 @@ function emailShellHtml(bodyRowsHtml: string, legalLine: string): string {
   <body style="margin:0; padding:0; background:#F6EFE6;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EFE6;">
       <tr>
-        <td align="center" style="padding:32px 16px;">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:100%; background:#F6EFE6;">
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; background:#F6EFE6;">
             ${emailHeaderHtml()}
             ${bodyRowsHtml}
             ${emailFooterHtml(legalLine)}

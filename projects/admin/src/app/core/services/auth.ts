@@ -52,6 +52,39 @@ export class AuthService {
     return { error: null };
   }
 
+  async resetPasswordForEmail(email: string): Promise<{ error: string | null }> {
+    // document.baseURI, no window.location.origin: en producción el admin
+    // vive en /admin/ del mismo dominio (build con --base-href=/admin/,
+    // ver comentario en environment.ts), y ese prefijo se pierde si se arma
+    // la URL a mano solo con el origin.
+    const redirectTo = new URL('restablecer-contrasena', document.baseURI).toString();
+    const { error } = await this.supabase.client.auth.resetPasswordForEmail(email, { redirectTo });
+
+    if (error) {
+      console.error('No se pudo enviar el correo de recuperación.', error.message);
+      return { error: 'No se pudo enviar el correo. Intenta de nuevo.' };
+    }
+
+    return { error: null };
+  }
+
+  async updatePassword(password: string): Promise<{ error: string | null }> {
+    const { error } = await this.supabase.client.auth.updateUser({ password });
+
+    if (error) {
+      const message = error.message.toLowerCase();
+      if (message.includes('password') && message.includes('character')) {
+        return { error: 'La contraseña debe tener al menos 6 caracteres.' };
+      }
+      if (message.includes('session') || message.includes('token')) {
+        return { error: 'Este link ya expiró o no es válido. Solicita uno nuevo.' };
+      }
+      return { error: 'No se pudo actualizar la contraseña. Intenta de nuevo.' };
+    }
+
+    return { error: null };
+  }
+
   async signOut(): Promise<void> {
     const { error } = await this.supabase.client.auth.signOut();
     if (error) {

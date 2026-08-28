@@ -1,6 +1,6 @@
 import { StaffRole } from './staff-role';
 import { DestinationStatus, Season, TripType } from './destination-enums';
-import { LeadEmailStatus, LeadOrigin, LeadStatus } from './lead-enums';
+import { LeadEmailStatus, LeadOrigin, LeadStatus, ProposalEmailStatus } from './lead-enums';
 
 export interface Database {
   public: {
@@ -141,6 +141,12 @@ export interface Database {
           email_status: LeadEmailStatus;
           email_sent_at: string | null;
           email_error: string | null;
+          proposal_subject: string | null;
+          proposal_message: string | null;
+          proposal_sent_at: string | null;
+          proposal_sent_by: string | null;
+          proposal_email_status: ProposalEmailStatus | null;
+          proposal_email_error: string | null;
         };
         Insert: {
           name: string;

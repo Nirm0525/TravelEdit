@@ -28,6 +28,24 @@ export class AuditLogService {
     return this.withActorNames(data, names);
   }
 
+  async listByEntity(entityType: string, entityId: string, limit = DEFAULT_LIMIT): Promise<AuditLogItem[]> {
+    const [{ data, error }, names] = await Promise.all([
+      this.supabase.client
+        .from('audit_log')
+        .select('*')
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+      this.profiles.nameMap()
+    ]);
+
+    if (error) {
+      throw error;
+    }
+    return this.withActorNames(data, names);
+  }
+
   async listByActor(actorId: string, limit = DEFAULT_LIMIT): Promise<AuditLogItem[]> {
     const [{ data, error }, names] = await Promise.all([
       this.supabase.client

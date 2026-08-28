@@ -5,41 +5,64 @@
     <p>{{ err }}</p>
   </div>
 } @else if (lead(); as l) {
+  <nav class="lead-detail__breadcrumb" aria-label="Ruta">
+    <a routerLink="/solicitudes">Solicitudes</a>
+    <span>/</span>
+    <span class="lead-detail__ticket">{{ ticketRef() }}</span>
+  </nav>
+
   <header class="lead-detail__header">
-    <div>
-      <p class="eyebrow">Solicitud</p>
-      <h1 class="page-title">{{ l.name }}</h1>
-      <p class="lead-detail__contact">
-        <a [href]="'mailto:' + l.email">{{ l.email }}</a>
-        @if (l.phone) {
-          · <a [href]="'tel:' + l.phone">{{ l.phone }}</a>
-        }
-      </p>
+    <div class="lead-detail__identity">
+      <div class="lead-detail__avatar" aria-hidden="true">{{ assignedInitials() }}</div>
+      <div>
+        <p class="eyebrow">{{ ticketRef() }} · {{ l.createdAt | date: 'd MMM y' }}</p>
+        <h1 class="page-title">{{ l.name }}</h1>
+        <p class="lead-detail__contact">
+          <a [href]="'mailto:' + l.email">{{ l.email }}</a>
+          @if (l.phone) {
+            · <a [href]="'tel:' + l.phone">{{ l.phone }}</a>
+          }
+        </p>
+      </div>
     </div>
 
-    <div class="lead-detail__assign">
+    <div class="lead-detail__actions">
       @if (assignedToName(); as name) {
-        <span>Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
+        <span class="lead-detail__assigned-to">Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
       } @else {
         <button type="button" class="btn btn--secondary" [disabled]="assigning()" (click)="assignToMe()">
-          {{ assigning() ? 'Asignando…' : 'Asignarme esta solicitud' }}
+          {{ assigning() ? 'Asignando…' : 'Asignarme' }}
         </button>
       }
-      @if (assignError(); as aErr) {
-        <p class="lead-detail__inline-error">{{ aErr }}</p>
-      }
+      <div class="lead-detail__proposal-action">
+        <button type="button" class="btn btn--primary" (click)="requestSendProposal()">
+          {{ l.proposalSentAt ? 'Reenviar propuesta' : 'Enviar propuesta' }}
+        </button>
+        @if (l.proposalSentAt) {
+          <p class="lead-detail__proposal-hint">Propuesta enviada el {{ l.proposalSentAt | date: 'd MMM y, HH:mm' }}</p>
+        }
+      </div>
     </div>
   </header>
+  @if (assignError(); as aErr) {
+    <p class="lead-detail__inline-error">{{ aErr }}</p>
+  }
+  @if (proposalSuccessMessage(); as successMsg) {
+    <p class="lead-detail__inline-success">{{ successMsg }}</p>
+  }
 
-  <div class="lead-detail__status-pipeline" role="group" aria-label="Estado de la solicitud">
-    @for (option of statusOptions; track option.value) {
+  <div class="lead-detail__stepper" role="group" aria-label="Estado de la solicitud">
+    @for (option of statusOptions; track option.value; let i = $index) {
       <button
         type="button"
+        class="lead-detail__step"
+        [class.is-done]="i &lt; currentStatusIndex()"
         [class.is-active]="l.status === option.value"
         [disabled]="statusUpdating()"
         (click)="setStatus(option.value)"
       >
-        {{ option.label }}
+        <span class="lead-detail__step-index">{{ i + 1 }}</span>
+        <span class="lead-detail__step-label">{{ option.label }}</span>
       </button>
     }
   </div>
@@ -47,10 +70,31 @@
     <p class="lead-detail__inline-error">{{ sErr }}</p>
   }
 
+  <div class="lead-detail__stats">
+    <div class="lead-detail__stat">
+      <p class="lead-detail__stat-label">Estado</p>
+      <p class="lead-detail__stat-value">{{ statusLabel[l.status] }}</p>
+    </div>
+    <div class="lead-detail__stat">
+      <p class="lead-detail__stat-label">Origen</p>
+      <p class="lead-detail__stat-value">{{ originLabel[l.origin] }}</p>
+    </div>
+    <div class="lead-detail__stat">
+      <p class="lead-detail__stat-label">Correo de confirmación</p>
+      <p class="lead-detail__stat-value">
+        <app-status-badge [label]="emailStatusLabel[l.emailStatus]" [variant]="emailStatusVariant[l.emailStatus]" />
+      </p>
+    </div>
+    <div class="lead-detail__stat">
+      <p class="lead-detail__stat-label">Notas internas</p>
+      <p class="lead-detail__stat-value">{{ notes().length }}</p>
+    </div>
+  </div>
+
   <div class="lead-detail__grid">
     <section class="lead-detail__section">
       <h2 class="section-title">Su viaje</h2>
-      <dl class="lead-detail__fields">
+      <dl class="lead-detail__fields lead-detail__fields--two-col">
         @if (l.destinationInterestText) {
           <div class="lead-detail__field">
             <dt>Destino de interés</dt>
@@ -74,74 +118,84 @@
       </dl>
     </section>
 
-    <section class="lead-detail__section">
-      <h2 class="section-title">Email</h2>
-      <div class="lead-detail__email-badge">
-        <app-status-badge [label]="emailStatusLabel[l.emailStatus]" [variant]="emailStatusVariant[l.emailStatus]" />
-      </div>
-      @if (l.emailStatus === 'not_configured') {
-        <p class="lead-detail__email-hint">
-          La solicitud fue recibida correctamente. Todavía no hay un servicio de email configurado para notificaciones automáticas.
-        </p>
-      } @else if (l.emailStatus === 'sent' && l.emailSentAt) {
-        <p class="lead-detail__email-hint">Enviado el {{ l.emailSentAt | date: 'd MMM y, HH:mm' }}.</p>
-      } @else if (l.emailStatus === 'failed' || l.emailStatus === 'partial') {
-        <p class="lead-detail__email-error">El correo no pudo enviarse.</p>
-        @if (l.emailError) {
-          <p class="lead-detail__email-error-detail">{{ l.emailError }}</p>
-        }
-      } @else if (l.emailStatus === 'pending') {
-        <p class="lead-detail__email-hint">El envío todavía está pendiente.</p>
-      }
-
-      <div class="lead-detail__email-retry">
-        <button type="button" class="btn btn--secondary" disabled title="Disponible cuando el reenvío de emails esté configurado en el backend.">
-          Reintentar envío
-        </button>
-        <p class="lead-detail__email-retry-hint">Disponible cuando se configure el envío de emails.</p>
-      </div>
-    </section>
-
-    <section class="lead-detail__section">
-      <h2 class="section-title">Notas internas</h2>
-
-      @if (notes().length === 0) {
-        <p class="lead-detail__empty-notes">Sin notas todavía.</p>
-      } @else {
-        <ul class="lead-detail__notes">
-          @for (note of notes(); track note.id) {
-            <li>
-              <p class="lead-detail__note-meta">{{ authorName(note.authorId) }} · {{ note.createdAt | date: 'd MMM y, HH:mm' }}</p>
-              <p class="lead-detail__note-body">{{ note.body }}</p>
-            </li>
+    <div class="lead-detail__side">
+      <section class="lead-detail__section">
+        <h2 class="section-title">Correo de confirmación</h2>
+        <div class="lead-detail__email-badge">
+          <app-status-badge [label]="emailStatusLabel[l.emailStatus]" [variant]="emailStatusVariant[l.emailStatus]" />
+        </div>
+        @if (l.emailStatus === 'not_configured') {
+          <p class="lead-detail__email-hint">
+            La solicitud fue recibida correctamente. Todavía no hay un servicio de email configurado para notificaciones automáticas.
+          </p>
+        } @else if (l.emailStatus === 'sent' && l.emailSentAt) {
+          <p class="lead-detail__email-hint">Enviado el {{ l.emailSentAt | date: 'd MMM y, HH:mm' }}.</p>
+        } @else if (l.emailStatus === 'failed' || l.emailStatus === 'partial') {
+          <p class="lead-detail__email-error">El correo no pudo enviarse.</p>
+          @if (l.emailError) {
+            <p class="lead-detail__email-error-detail">{{ l.emailError }}</p>
           }
-        </ul>
-      }
+        } @else if (l.emailStatus === 'pending') {
+          <p class="lead-detail__email-hint">El envío todavía está pendiente.</p>
+        }
 
-      <form class="lead-detail__note-form" (ngSubmit)="addNote()">
-        <label class="visually-hidden" for="new-note">Agregar nota</label>
-        <textarea
-          id="new-note"
-          rows="2"
-          [value]="newNote()"
-          (input)="onNoteInput($event)"
-          placeholder="Agregar una nota interna…"
-        ></textarea>
-        <button type="submit" class="btn btn--primary" [disabled]="!newNote().trim() || savingNote()">
-          {{ savingNote() ? 'Guardando…' : 'Agregar nota' }}
-        </button>
-      </form>
-    </section>
+        <div class="lead-detail__email-retry">
+          <button type="button" class="btn btn--secondary" disabled title="Disponible cuando el reenvío de emails esté configurado en el backend.">
+            Reintentar envío
+          </button>
+        </div>
+      </section>
+
+      <section class="lead-detail__section">
+        <h2 class="section-title">Notas internas</h2>
+
+        @if (notes().length === 0) {
+          <p class="lead-detail__empty-notes">Sin notas todavía.</p>
+        } @else {
+          <ul class="lead-detail__notes">
+            @for (note of notes(); track note.id) {
+              <li>
+                <p class="lead-detail__note-meta">{{ authorName(note.authorId) }} · {{ note.createdAt | date: 'd MMM y, HH:mm' }}</p>
+                <p class="lead-detail__note-body">{{ note.body }}</p>
+              </li>
+            }
+          </ul>
+        }
+
+        <form class="lead-detail__note-form" (ngSubmit)="addNote()">
+          <label class="visually-hidden" for="new-note">Agregar nota</label>
+          <textarea
+            id="new-note"
+            rows="2"
+            [value]="newNote()"
+            (input)="onNoteInput($event)"
+            placeholder="Agregar una nota interna…"
+          ></textarea>
+          <button type="submit" class="btn btn--primary" [disabled]="!newNote().trim() || savingNote()">
+            {{ savingNote() ? 'Guardando…' : 'Agregar nota' }}
+          </button>
+        </form>
+      </section>
+    </div>
   </div>
 
-  @if (isAdmin()) {
-    <section class="lead-detail__danger">
-      @if (deleteError(); as delErr) {
-        <p class="lead-detail__delete-error">{{ delErr }}</p>
+  <footer class="lead-detail__footer">
+    <p class="lead-detail__updated">
+      Última actualización {{ l.updatedAt | date: 'd MMM y, HH:mm' }}
+      @if (lastActivityActor(); as actor) {
+        · {{ actor }}
       }
-      <button type="button" class="btn lead-detail__delete-btn" (click)="requestDelete()">Eliminar solicitud</button>
-    </section>
+    </p>
 
+    @if (isAdmin()) {
+      <button type="button" class="lead-detail__delete-btn" (click)="requestDelete()">Eliminar solicitud</button>
+    }
+  </footer>
+  @if (deleteError(); as delErr) {
+    <p class="lead-detail__delete-error">{{ delErr }}</p>
+  }
+
+  @if (isAdmin()) {
     <app-confirm-dialog
       [open]="deleteConfirmOpen()"
       title="Eliminar solicitud"
@@ -152,6 +206,23 @@
       (cancelled)="cancelDelete()"
     />
   }
+
+  <app-confirm-dialog
+    [open]="resendConfirmOpen()"
+    title="Reenviar propuesta"
+    message="Esta solicitud ya tiene una propuesta enviada. ¿Deseas enviar una nueva propuesta?"
+    confirmLabel="Sí, continuar"
+    [danger]="false"
+    (confirmed)="confirmResend()"
+    (cancelled)="cancelResend()"
+  />
+
+  <app-send-proposal-modal
+    [open]="proposalModalOpen()"
+    [lead]="l"
+    (closed)="closeProposalModal()"
+    (sent)="onProposalSent($event)"
+  />
 } @else {
   <p>No se encontró la solicitud.</p>
 }

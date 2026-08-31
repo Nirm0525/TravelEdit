@@ -297,6 +297,33 @@ export class LeadsService {
     return { proposalSentAt: data.proposalSentAt, status: data.status };
   }
 
+  async resendConfirmationEmail(leadId: string): Promise<{ emailSentAt: string }> {
+    const {
+      data: { session },
+      error: sessionError
+    } = await this.supabase.client.auth.getSession();
+
+    if (sessionError || !session?.access_token) {
+      throw new Error('No hay una sesión autenticada. Vuelve a iniciar sesión.');
+    }
+
+    const { data, error } = await this.supabase.client.functions.invoke<
+      { ok?: boolean; emailSentAt?: string; error?: string }
+    >('resend-confirmation-email', {
+      body: { leadId },
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+
+    if (error) {
+      throw new Error(await this.extractServerMessage(error));
+    }
+    if (!data?.ok || !data.emailSentAt) {
+      throw new Error(data?.error ?? 'No se pudo reenviar el correo.');
+    }
+
+    return { emailSentAt: data.emailSentAt };
+  }
+
   private async extractServerMessage(error: unknown): Promise<string> {
     if (error instanceof FunctionsFetchError) {
       console.error('send-proposal: fetch falló (red caída, función no desplegada, o bloqueo CORS del navegador).', error);

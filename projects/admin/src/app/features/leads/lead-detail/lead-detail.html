@@ -142,9 +142,15 @@
         }
 
         <div class="lead-detail__email-retry">
-          <button type="button" class="btn btn--secondary" disabled title="Disponible cuando el reenvío de emails esté configurado en el backend.">
-            Reintentar envío
+          <button type="button" class="btn btn--secondary" [disabled]="resendingEmail()" (click)="resendConfirmationEmail()">
+            {{ resendingEmail() ? 'Reenviando…' : 'Reintentar envío' }}
           </button>
+          @if (resendEmailError(); as reErr) {
+            <p class="lead-detail__email-error">{{ reErr }}</p>
+          }
+          @if (resendEmailSuccess(); as reOk) {
+            <p class="lead-detail__inline-success">{{ reOk }}</p>
+          }
         </div>
       </section>
 
@@ -173,6 +179,9 @@
             (input)="onNoteInput($event)"
             placeholder="Agregar una nota interna…"
           ></textarea>
+          @if (noteError(); as nErr) {
+            <p class="lead-detail__inline-error">{{ nErr }}</p>
+          }
           <button type="submit" class="btn btn--primary" [disabled]="!newNote().trim() || savingNote()">
             {{ savingNote() ? 'Guardando…' : 'Agregar nota' }}
           </button>

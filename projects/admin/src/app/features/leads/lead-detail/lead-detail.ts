@@ -57,6 +57,7 @@ export class LeadDetail {
   readonly loadError = signal<string | null>(null);
   readonly newNote = signal('');
   readonly savingNote = signal(false);
+  readonly noteError = signal<string | null>(null);
   readonly deleteConfirmOpen = signal(false);
   readonly deleting = signal(false);
   readonly deleteError = signal<string | null>(null);
@@ -68,6 +69,10 @@ export class LeadDetail {
   readonly resendConfirmOpen = signal(false);
   readonly proposalSuccessMessage = signal<string | null>(null);
   private proposalSuccessTimeout?: ReturnType<typeof setTimeout>;
+  readonly resendingEmail = signal(false);
+  readonly resendEmailError = signal<string | null>(null);
+  readonly resendEmailSuccess = signal<string | null>(null);
+  private resendEmailSuccessTimeout?: ReturnType<typeof setTimeout>;
 
   // Referencia corta y estable derivada del UUID real — no es un número de
   // ticket secuencial (no existe ese sistema todavía), solo un identificador
@@ -223,10 +228,14 @@ export class LeadDetail {
     }
 
     this.savingNote.set(true);
+    this.noteError.set(null);
     try {
       const note = await this.leadsService.addNote(this.leadId, body);
       this.notes.update((notes) => [...notes, note]);
       this.newNote.set('');
+    } catch (error) {
+      console.error('No se pudo agregar la nota.', error);
+      this.noteError.set('No se pudo agregar la nota. Inténtalo nuevamente.');
     } finally {
       this.savingNote.set(false);
     }
@@ -255,14 +264,14 @@ export class LeadDetail {
 
   async onProposalSent(_result: SendProposalResult): Promise<void> {
     this.proposalModalOpen.set(false);
-    await this.refreshAfterProposal();
+    await this.refreshLeadAndActivity();
 
     clearTimeout(this.proposalSuccessTimeout);
     this.proposalSuccessMessage.set('Propuesta enviada correctamente.');
     this.proposalSuccessTimeout = setTimeout(() => this.proposalSuccessMessage.set(null), 5000);
   }
 
-  private async refreshAfterProposal(): Promise<void> {
+  private async refreshLeadAndActivity(): Promise<void> {
     try {
       const [lead, activity] = await Promise.all([
         this.leadsService.getById(this.leadId),
@@ -272,6 +281,27 @@ export class LeadDetail {
       this.lastActivityActor.set(activity[0]?.actorName ?? null);
     } catch (error) {
       console.error('No se pudo refrescar la solicitud tras enviar la propuesta.', error);
+    }
+  }
+
+  async resendConfirmationEmail(): Promise<void> {
+    if (this.resendingEmail()) {
+      return;
+    }
+    this.resendingEmail.set(true);
+    this.resendEmailError.set(null);
+    try {
+      await this.leadsService.resendConfirmationEmail(this.leadId);
+      await this.refreshLeadAndActivity();
+
+      clearTimeout(this.resendEmailSuccessTimeout);
+      this.resendEmailSuccess.set('Correo reenviado correctamente.');
+      this.resendEmailSuccessTimeout = setTimeout(() => this.resendEmailSuccess.set(null), 5000);
+    } catch (error) {
+      console.error('No se pudo reenviar el correo de confirmación.', error);
+      this.resendEmailError.set(error instanceof Error ? error.message : 'No se pudo reenviar el correo. Inténtalo nuevamente.');
+    } finally {
+      this.resendingEmail.set(false);
     }
   }
 

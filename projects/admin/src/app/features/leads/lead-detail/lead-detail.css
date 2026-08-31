@@ -255,7 +255,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: var(--track-eyebrow);
-  color: var(--text-secondary);
+  color: var(--brand-600);
   margin-bottom: var(--space-3xs);
 }
 

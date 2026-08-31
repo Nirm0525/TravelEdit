@@ -27,13 +27,15 @@
     </div>
 
     <div class="lead-detail__actions">
-      @if (assignedToName(); as name) {
-        <span class="lead-detail__assigned-to">Asignado a {{ isAssignedToMe() ? 'mí' : name }}</span>
-      } @else {
-        <button type="button" class="btn btn--secondary" [disabled]="assigning()" (click)="assignToMe()">
-          {{ assigning() ? 'Asignando…' : 'Asignarme' }}
-        </button>
-      }
+      <label class="lead-detail__assign">
+        <span class="visually-hidden">Asignar a</span>
+        <select [value]="l.assignedTo ?? ''" [disabled]="assigning()" (change)="onAssignChange($event)">
+          <option value="">Sin asignar</option>
+          @for (person of staffOptions(); track person.id) {
+            <option [value]="person.id">{{ isAssignedToMe() && person.id === l.assignedTo ? person.name + ' (yo)' : person.name }}</option>
+          }
+        </select>
+      </label>
       <div class="lead-detail__proposal-action">
         <button type="button" class="btn btn--primary" (click)="requestSendProposal()">
           {{ l.proposalSentAt ? 'Reenviar propuesta' : 'Enviar propuesta' }}

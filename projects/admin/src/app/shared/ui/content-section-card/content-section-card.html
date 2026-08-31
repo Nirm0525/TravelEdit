@@ -24,7 +24,7 @@
   <div class="content-section-card__actions">
     <a class="btn btn--primary" [routerLink]="editLink()">Editar</a>
     @if (resolvedPreviewHref(); as href) {
-      <a class="btn btn--secondary content-section-card__preview-btn" [href]="href" target="_blank" rel="noopener noreferrer">Vista previa</a>
+      <a class="btn btn--secondary content-section-card__preview-btn" [href]="href" (click)="requestPreview(href, $event)">Vista previa</a>
     }
   </div>
 </article>

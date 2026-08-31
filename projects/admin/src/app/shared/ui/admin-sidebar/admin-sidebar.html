@@ -6,7 +6,13 @@
   <div class="admin-sidebar__brand">
     <img src="logo.png" alt="The Travel Edit" class="admin-sidebar__logo" />
     @if (!collapsed()) {
-      <span class="admin-sidebar__brand-label">Admin Dashboard</span>
+      <span class="admin-sidebar__brand-label">
+        @if (profile(); as p) {
+          {{ roleLabel(p.role) }} Dashboard
+        } @else {
+          Dashboard
+        }
+      </span>
     }
   </div>
 

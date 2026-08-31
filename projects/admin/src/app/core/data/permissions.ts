@@ -17,7 +17,9 @@ export type PermissionKey =
 // coherente con que 'blog' no está en el arreglo de staff).
 export const ROLE_PERMISSIONS: Record<StaffRole, PermissionKey[]> = {
   admin: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes', 'usuarios', 'configuracion'],
-  editor: ['dashboard', 'contenido', 'blog', 'destinos'],
+  // 'solicitudes' agregado a editor — ver 0027_grant_editor_leads_access.sql:
+  // can_manage_leads() ahora también admite 'editor', no solo admin/staff.
+  editor: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes'],
   staff: ['dashboard', 'solicitudes']
 };
 

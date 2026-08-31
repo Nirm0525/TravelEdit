@@ -1,6 +1,8 @@
 <app-admin-page-header [breadcrumb]="breadcrumb" title="Página principal">
-  <a class="btn btn--primary" [href]="homePreviewHref" target="_blank" rel="noopener noreferrer">Vista previa</a>
+  <button type="button" class="btn btn--primary" (click)="openPreview(homePreviewHref)">Vista previa</button>
 </app-admin-page-header>
+
+<app-preview-modal [url]="previewUrl()" (closed)="closePreview()" />
 
 <p class="content-overview__intro">Administra el contenido que aparece en Travel Edit.</p>
 
@@ -20,6 +22,7 @@
       [previewHref]="section.previewHref"
       [loading]="loading()"
       [updatedAt]="updatedAtBySection()[section.sectionKey] ?? null"
+      (previewRequested)="openPreview($event)"
     />
   }
 
@@ -31,6 +34,7 @@
       [previewHref]="'/#custom-' + section.id"
       [loading]="loading()"
       [updatedAt]="updatedAtBySection()['custom_sections'] ?? null"
+      (previewRequested)="openPreview($event)"
     />
   }
 

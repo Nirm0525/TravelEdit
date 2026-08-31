@@ -146,6 +146,14 @@ export class LeadDetail {
     return this.staffNames().get(assignedTo) ?? 'Un miembro del equipo';
   }
 
+  /** Cualquiera del equipo (admin/editor/staff) puede recibir la asignación —
+   *  nameMap() ya trae a todo el staff, sin filtrar por rol. */
+  readonly staffOptions = computed(() =>
+    Array.from(this.staffNames().entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  );
+
   private travelersLabel(): string | null {
     const details = this.lead()?.details;
     if (!details) {
@@ -178,18 +186,23 @@ export class LeadDetail {
     }
   }
 
-  async assignToMe(): Promise<void> {
+  async onAssignChange(event: Event): Promise<void> {
+    const value = (event.target as HTMLSelectElement).value;
+    await this.assignTo(value || null);
+  }
+
+  private async assignTo(staffId: string | null): Promise<void> {
     const current = this.lead();
-    if (!current || this.assigning()) {
+    if (!current || this.assigning() || current.assignedTo === staffId) {
       return;
     }
     this.assigning.set(true);
     this.assignError.set(null);
     try {
-      this.lead.set(await this.leadsService.assignToMe(current.id));
+      this.lead.set(await this.leadsService.assignTo(current.id, staffId));
     } catch (error) {
       console.error('No se pudo asignar la solicitud.', error);
-      this.assignError.set('No pudimos asignarte esta solicitud. Inténtalo nuevamente.');
+      this.assignError.set('No pudimos asignar esta solicitud. Inténtalo nuevamente.');
     } finally {
       this.assigning.set(false);
     }

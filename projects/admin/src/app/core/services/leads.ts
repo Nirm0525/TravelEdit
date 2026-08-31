@@ -215,12 +215,10 @@ export class LeadsService {
     return toLead(data);
   }
 
-  async assignToMe(id: string): Promise<Lead> {
-    const staffId = this.auth.profile()?.id;
-    if (!staffId) {
-      throw new Error('Sin sesión.');
-    }
-
+  /** `staffId` en null desasigna la solicitud. Cualquier miembro del staff
+   *  puede asignarla a cualquier otro (no solo a sí mismo) — mismo permiso
+   *  que ya cubre leads_update (can_manage_leads()). */
+  async assignTo(id: string, staffId: string | null): Promise<Lead> {
     const { data, error } = await this.supabase.client
       .from('leads')
       .update({ assigned_to: staffId })

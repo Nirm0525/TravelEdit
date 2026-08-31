@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
@@ -21,4 +21,14 @@ export class ContentSectionCard {
     const href = this.previewHref();
     return href ? `${environment.publicSiteUrl}${href}` : null;
   });
+
+  /** El padre (ContentOverview) es quien posee el único <app-preview-modal>
+   *  compartido — mismo modal con pestañas Desktop/Tablet/Mobile que ya usan
+   *  los editores individuales vía ContentEditorLayout. */
+  readonly previewRequested = output<string>();
+
+  requestPreview(url: string, event: MouseEvent): void {
+    event.preventDefault();
+    this.previewRequested.emit(url);
+  }
 }

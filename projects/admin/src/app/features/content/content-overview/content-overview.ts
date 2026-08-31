@@ -4,6 +4,7 @@ import { SiteContentService } from '../../../core/services/site-content';
 import { CustomSection } from '../../../core/models/site-content.model';
 import { AdminPageHeader, BreadcrumbItem } from '../../../shared/ui/admin-page-header/admin-page-header';
 import { ContentSectionCard } from '../../../shared/ui/content-section-card/content-section-card';
+import { PreviewModal } from '../../../shared/ui/preview-modal/preview-modal';
 import { environment } from '../../../../environments/environment';
 
 interface SectionSummary {
@@ -75,7 +76,7 @@ const SECTIONS: SectionSummary[] = [
 
 @Component({
   selector: 'app-content-overview',
-  imports: [AdminPageHeader, ContentSectionCard],
+  imports: [AdminPageHeader, ContentSectionCard, PreviewModal],
   templateUrl: './content-overview.html',
   styleUrl: './content-overview.css'
 })
@@ -85,6 +86,20 @@ export class ContentOverview {
 
   readonly breadcrumb: BreadcrumbItem[] = [{ label: 'Panel', link: '/dashboard' }, { label: 'Página principal' }];
   readonly homePreviewHref = `${environment.publicSiteUrl}/`;
+
+  // Mismo modal con pestañas Desktop/Tablet/Mobile que ya usan los editores
+  // individuales (vía ContentEditorLayout) — un solo modal compartido para
+  // el botón de arriba y el de cada tarjeta, en vez de abrir una pestaña
+  // nueva por separado.
+  readonly previewUrl = signal<string | null>(null);
+
+  openPreview(url: string): void {
+    this.previewUrl.set(url);
+  }
+
+  closePreview(): void {
+    this.previewUrl.set(null);
+  }
 
   readonly sections = SECTIONS;
   readonly customSections = signal<CustomSection[]>([]);

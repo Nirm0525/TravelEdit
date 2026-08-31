@@ -75,6 +75,16 @@
   color: var(--text-secondary);
 }
 
+.lead-detail__assign select {
+  font: inherit;
+  font-size: var(--size-small);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-sm);
+  background: var(--surface-000);
+  color: var(--ink-900);
+}
+
 .lead-detail__inline-error {
   margin: var(--space-xs) 0 var(--space-md);
   color: var(--danger-600);

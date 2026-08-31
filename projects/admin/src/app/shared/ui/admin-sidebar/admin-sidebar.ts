@@ -94,7 +94,16 @@ export class AdminSidebar {
 
   async signOut(): Promise<void> {
     await this.auth.signOut();
-    await this.router.navigateByUrl('/login');
+    // navigateByUrl() puede quedar bloqueado por un canDeactivate (p. ej.
+    // unsavedChangesGuard en un editor con cambios sin guardar) — pero la
+    // sesión YA se cerró en ese punto, así que dejar a la persona en la
+    // misma pantalla sería un estado roto (viendo una página protegida sin
+    // sesión real). Cerrar sesión es una acción explícita: si el router la
+    // bloquea, se fuerza una navegación dura que ningún guard puede detener.
+    const navigated = await this.router.navigateByUrl('/login');
+    if (!navigated) {
+      window.location.href = new URL('login', document.baseURI).toString();
+    }
   }
 
   private readStoredCollapsed(): boolean {

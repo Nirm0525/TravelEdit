@@ -9,7 +9,12 @@
    desplaza horizontalmente en vez de romper el ancho de la página. */
 .experiences__tabs {
   display: flex;
-  justify-content: center;
+  /* flex-start (no center) en mobile/tablet: al centrar una fila más ancha
+     que la pantalla dentro de un contenedor con scroll horizontal, el primer
+     y el último tab quedan pegados y cortados justo en el borde del
+     viewport — arranca desde la izquierda, como cualquier tira de pestañas
+     scrolleable (el padding de .container ya le da aire al primer tab). */
+  justify-content: flex-start;
   gap: clamp(1.25rem, 5vw, 3.5rem);
   margin-top: var(--space-xl);
   padding-bottom: var(--space-md);
@@ -157,6 +162,7 @@
   }
 
   .experiences__tabs {
+    justify-content: center;
     overflow-x: visible;
   }
 

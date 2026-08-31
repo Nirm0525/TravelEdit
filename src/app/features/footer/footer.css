@@ -7,14 +7,16 @@
 .site-footer__top {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-lg);
-  padding-bottom: var(--space-xl);
+  gap: var(--space-md);
+  padding-bottom: var(--space-lg);
   border-bottom: 1px solid rgba(255, 253, 248, 0.15);
 }
 
 @media (min-width: 64rem) {
   .site-footer__top {
     grid-template-columns: 1.4fr 1fr 1fr 1fr 1.6fr;
+    gap: var(--space-lg);
+    padding-bottom: var(--space-xl);
   }
 }
 

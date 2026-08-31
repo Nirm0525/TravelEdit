@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, model, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, effect, inject, model, signal, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth';
 import { PermissionKey, canAccess } from '../../../core/data/permissions';
@@ -45,6 +45,14 @@ export class AdminSidebar {
   readonly mobileOpen = model(false);
   readonly collapsed = signal(this.readStoredCollapsed());
 
+  constructor() {
+    // El sidebar móvil es un overlay de pantalla completa — sin esto, la
+    // página de atrás sigue siendo scrolleable debajo del overlay.
+    effect(() => {
+      document.body.classList.toggle('mobile-sidebar-open', this.mobileOpen());
+    });
+  }
+
   toggleCollapsed(): void {
     const next = !this.collapsed();
     this.collapsed.set(next);
@@ -81,6 +89,7 @@ export class AdminSidebar {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.userMenuOpen.set(false);
+    this.mobileOpen.set(false);
   }
 
   async signOut(): Promise<void> {

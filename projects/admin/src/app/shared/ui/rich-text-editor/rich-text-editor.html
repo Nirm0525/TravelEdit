@@ -1,14 +1,5 @@
 <div class="rich-text-editor" [class.rich-text-editor--disabled]="disabled()" [class.rich-text-editor--fullscreen]="fullscreen()" #root>
   <div class="rich-text-editor__toolbar rich-text-editor__toolbar--main" role="toolbar" aria-label="Formato de texto">
-    <button type="button" (click)="undo()" aria-label="Deshacer" title="Deshacer">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1" stroke-linecap="round" stroke-linejoin="round" /></svg>
-    </button>
-    <button type="button" (click)="redo()" aria-label="Rehacer" title="Rehacer">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1" stroke-linecap="round" stroke-linejoin="round" /></svg>
-    </button>
-
-    <span class="rich-text-editor__divider"></span>
-
     <select class="rich-text-editor__select" aria-label="Estilo de bloque" [value]="active().headingLevel ?? 'p'" (change)="setBlockType($any($event.target).value)">
       <option value="p">Párrafo</option>
       <option value="1">Título 1</option>

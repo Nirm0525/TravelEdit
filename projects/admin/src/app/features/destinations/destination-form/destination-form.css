@@ -17,6 +17,16 @@
   gap: var(--space-lg);
   border-bottom: 1px solid var(--line-200);
   margin-bottom: var(--space-lg);
+  /* Las 4 pestañas no caben en un viewport angosto — en vez de envolverlas
+     (rompería la barra de navegación) o dejarlas desbordar la página, la fila
+     scrollea horizontalmente ella sola, mismo patrón que .experiences__tabs
+     del sitio público y .admin-table__scroll. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.destination-form__tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .destination-form__tabs a {
@@ -25,6 +35,8 @@
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .destination-form__tabs a:hover {

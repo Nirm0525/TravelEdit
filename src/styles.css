@@ -85,6 +85,12 @@ body {
   overflow-x: hidden;
 }
 
+/* El menú móvil (app-header) es un overlay de pantalla completa — sin esto,
+   la página de atrás sigue siendo scrolleable debajo del overlay. */
+body.mobile-menu-open {
+  overflow: hidden;
+}
+
 img {
   max-width: 100%;
   display: block;

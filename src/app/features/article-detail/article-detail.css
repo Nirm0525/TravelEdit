@@ -192,6 +192,7 @@
   font-weight: 300;
   line-height: 1.85;
   color: var(--color-ink);
+  overflow-wrap: break-word;
 }
 
 /* El cuerpo del artículo llega como HTML crudo vía [innerHTML], insertado en
@@ -315,11 +316,26 @@
   margin-top: 0.3rem;
 }
 
+/* display:block + overflow-x:auto en la propia tabla (no un wrapper aparte):
+   este HTML llega crudo vía [innerHTML], así que no hay forma de envolverla
+   en un contenedor propio — una tabla ancha (muchas columnas, celdas con
+   texto largo sin espacios) debe scrollear horizontalmente ella sola, nunca
+   forzar el ancho de toda la página. */
 .article-detail__prose ::ng-deep table {
+  display: block;
+  overflow-x: auto;
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin: var(--space-lg) 0;
   font-size: 0.9375rem;
+}
+
+.article-detail__prose ::ng-deep pre {
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .article-detail__prose ::ng-deep th,

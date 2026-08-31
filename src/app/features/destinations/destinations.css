@@ -1,7 +1,13 @@
 .destinations {
   background: var(--color-cream);
-  padding-block: var(--space-2xl) var(--space-xl);
+  padding-block: var(--space-lg) var(--space-md);
   overflow: hidden;
+}
+
+@media (min-width: 64rem) {
+  .destinations {
+    padding-block: var(--space-2xl) var(--space-xl);
+  }
 }
 
 .destinations__header {

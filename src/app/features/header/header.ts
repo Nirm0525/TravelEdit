@@ -25,10 +25,25 @@ export class Header {
 
   toggleMenu(): void {
     this.menuOpen.update((open) => !open);
+    this.syncBodyScrollLock();
   }
 
   closeMenu(): void {
     this.menuOpen.set(false);
+    this.syncBodyScrollLock();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.menuOpen()) {
+      this.closeMenu();
+    }
+  }
+
+  // El menú móvil es un overlay de pantalla completa — sin esto, la página de
+  // atrás sigue siendo scrolleable debajo (visible como salto/rebote en iOS).
+  private syncBodyScrollLock(): void {
+    document.body.classList.toggle('mobile-menu-open', this.menuOpen());
   }
 
   openTravelEditForm(): void {

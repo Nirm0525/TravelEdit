@@ -73,6 +73,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* El sidebar móvil (app-admin-sidebar) es un overlay de pantalla completa —
+   sin esto, la página de atrás sigue siendo scrolleable debajo del overlay. */
+body.mobile-sidebar-open {
+  overflow: hidden;
+}
+
 img {
   max-width: 100%;
   display: block;
@@ -298,7 +304,10 @@ table {
 .field textarea,
 .field select {
   font: inherit;
-  font-size: var(--size-body);
+  /* 1rem = 16px, no var(--size-body) (15px): por debajo de 16px, Safari en
+     iOS hace zoom automático al enfocar el campo — un salto de layout
+     molesto en cada input/textarea/select del panel. */
+  font-size: 1rem;
   padding: var(--space-sm);
   border: 1px solid var(--line-200);
   border-radius: var(--radius-sm);

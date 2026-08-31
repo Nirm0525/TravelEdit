@@ -21,6 +21,10 @@
   border: 1px solid var(--line-200);
   border-radius: var(--radius-md);
   overflow: hidden;
+  /* Sin esto, un touch-drag para reordenar compite con el scroll táctil
+     nativo de la página (el CDK de Angular lo recomienda explícitamente
+     para listas cdkDrag usadas en pantallas táctiles). */
+  touch-action: none;
 }
 
 .gallery__item img {

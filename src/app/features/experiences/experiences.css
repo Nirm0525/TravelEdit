@@ -1,6 +1,6 @@
 .experiences {
   background: var(--color-cream);
-  padding-block: var(--space-2xl);
+  padding-block: var(--space-lg);
   overflow: hidden;
 }
 
@@ -15,6 +15,7 @@
   padding-bottom: var(--space-md);
   border-bottom: 1px solid rgba(32, 24, 20, 0.12);
   overflow-x: auto;
+  -webkit-scrollbar-width: none;
   scrollbar-width: none;
 }
 
@@ -151,6 +152,10 @@
 }
 
 @media (min-width: 64rem) {
+  .experiences {
+    padding-block: var(--space-2xl);
+  }
+
   .experiences__tabs {
     overflow-x: visible;
   }

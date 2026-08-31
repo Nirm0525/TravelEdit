@@ -116,6 +116,13 @@ export class RichTextEditor implements ControlValueAccessor, AfterViewInit, OnDe
   private onTouched: () => void = () => {};
   private pendingValue = '';
 
+  // Guard defensivo: durante un cambio de contenido programático (carga
+  // inicial en ngAfterViewInit, o writeValue() desde Angular Forms) Tiptap no
+  // debería emitir 'update' — setContent(value, false) ya se lo pide — pero
+  // este flag evita que cualquier onUpdate que ocurra en esa ventana llegue a
+  // propagarse como si fuera edición real del usuario.
+  private isProgrammaticUpdate = false;
+
   /** Cuando se define, el botón de imagen sube el archivo con esta función en vez de pedir una URL. */
   readonly imageUpload = input<((file: File) => Promise<string>) | null>(null);
 
@@ -152,6 +159,7 @@ export class RichTextEditor implements ControlValueAccessor, AfterViewInit, OnDe
   });
 
   ngAfterViewInit(): void {
+    this.isProgrammaticUpdate = true;
     this.editor = new Editor({
       element: this.host().nativeElement,
       extensions: [
@@ -178,10 +186,16 @@ export class RichTextEditor implements ControlValueAccessor, AfterViewInit, OnDe
       ],
       content: this.pendingValue,
       editable: !this.disabled(),
-      onUpdate: ({ editor }) => this.onChange(editor.getHTML()),
+      onUpdate: ({ editor }) => {
+        if (this.isProgrammaticUpdate) {
+          return;
+        }
+        this.onChange(editor.getHTML());
+      },
       onBlur: () => this.onTouched(),
       onTransaction: ({ editor }) => this.syncActiveState(editor)
     });
+    this.isProgrammaticUpdate = false;
   }
 
   ngOnDestroy(): void {
@@ -191,7 +205,9 @@ export class RichTextEditor implements ControlValueAccessor, AfterViewInit, OnDe
   writeValue(value: string): void {
     this.pendingValue = value ?? '';
     if (this.editor) {
+      this.isProgrammaticUpdate = true;
       this.editor.commands.setContent(this.pendingValue, false);
+      this.isProgrammaticUpdate = false;
     }
   }
 
@@ -279,14 +295,6 @@ export class RichTextEditor implements ControlValueAccessor, AfterViewInit, OnDe
 
   insertHorizontalRule(): void {
     this.editor?.chain().focus().setHorizontalRule().run();
-  }
-
-  undo(): void {
-    this.editor?.chain().focus().undo().run();
-  }
-
-  redo(): void {
-    this.editor?.chain().focus().redo().run();
   }
 
   toggleColorMenu(): void {

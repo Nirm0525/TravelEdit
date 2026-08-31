@@ -1,7 +1,7 @@
 .travel-process {
   position: relative;
   color: var(--color-cream);
-  padding-block: var(--space-2xl);
+  padding-block: var(--space-lg);
   overflow: hidden;
 }
 
@@ -49,6 +49,10 @@
 }
 
 @media (min-width: 64rem) {
+  .travel-process {
+    padding-block: var(--space-2xl);
+  }
+
   .travel-process__steps {
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-md);

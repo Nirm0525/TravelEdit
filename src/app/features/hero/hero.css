@@ -53,6 +53,7 @@
   color: var(--color-cream);
   font-style: italic;
   margin-bottom: var(--space-sm);
+  overflow-wrap: break-word;
 }
 
 .hero__word-mask {

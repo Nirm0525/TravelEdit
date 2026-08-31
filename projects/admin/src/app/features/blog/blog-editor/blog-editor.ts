@@ -3,6 +3,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 import { ArticlesService } from '../../../core/services/articles';
 import { ArticleImagesService } from '../../../core/services/article-images';
+import { RichContentService } from '../../../core/services/rich-content';
 import { ProfilesService } from '../../../core/services/profiles';
 import { AuthService } from '../../../core/services/auth';
 import { Article, ArticleStatus } from '../../../core/models/article.model';
@@ -44,6 +45,7 @@ export class BlogEditor {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly articlesService = inject(ArticlesService);
   private readonly articleImages = inject(ArticleImagesService);
+  private readonly richContent = inject(RichContentService);
   private readonly profiles = inject(ProfilesService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
@@ -112,7 +114,7 @@ export class BlogEditor {
           this.loadError.set('No se encontró este artículo.');
           return;
         }
-        this.applyArticle(article);
+        this.applyArticle(article, true);
       } else {
         this.form.controls.authorId.setValue(this.auth.profile()?.id ?? null);
       }
@@ -124,7 +126,11 @@ export class BlogEditor {
     }
   }
 
-  private applyArticle(article: Article): void {
+  /** `article.body` se ignora a propósito cuando viene de create()/update(): esas llamadas ya no
+   *  tocan la columna body (ver ArticlesService), así que devuelven el valor previo/vacío, no el
+   *  contenido recién guardado vía save-rich-content. Pasar includeBody=true solo al cargar un
+   *  artículo existente desde cero (load()), donde article.body sí es el real. */
+  private applyArticle(article: Article, includeBody: boolean): void {
     this.status.set(article.status);
     this.coverStoragePath.set(article.coverStoragePath);
     this.coverAltTextValue.set(article.coverAltText ?? '');
@@ -137,7 +143,7 @@ export class BlogEditor {
       authorId: article.authorId,
       authorName: article.authorName ?? '',
       scheduledAt: toDatetimeLocal(article.scheduledAt),
-      body: article.body
+      ...(includeBody ? { body: article.body } : {})
     });
   }
 
@@ -224,7 +230,6 @@ export class BlogEditor {
         title: raw.title,
         slug: sanitizedSlug,
         excerpt: raw.excerpt,
-        body: raw.body,
         tags: this.parseTags(),
         coverStoragePath: this.coverStoragePath(),
         coverAltText: this.coverStoragePath() ? this.coverAltTextValue() || null : null,
@@ -233,15 +238,24 @@ export class BlogEditor {
         scheduledAt: fromDatetimeLocal(raw.scheduledAt)
       };
 
-      const id = this.articleId();
+      // El contenido (body) nunca va en el insert/update normal — esa columna solo se escribe
+      // saneada vía save-rich-content (service role), igual que destinations.long_description.
+      const wasNew = !this.articleId();
+      let id = this.articleId();
       if (id) {
         const updated = await this.articlesService.update(id, payload);
-        this.applyArticle(updated);
+        this.applyArticle(updated, false);
       } else {
         const created = await this.articlesService.create(payload);
+        id = created.id;
         this.articleId.set(created.id);
         this.status.set(created.status);
-        await this.router.navigate(['/blog', created.id], { replaceUrl: true });
+      }
+
+      await this.richContent.save('articles', id, raw.body);
+
+      if (wasNew) {
+        await this.router.navigate(['/blog', id], { replaceUrl: true });
       }
 
       this.saved.set(true);

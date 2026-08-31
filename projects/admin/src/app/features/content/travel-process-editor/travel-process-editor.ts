@@ -35,10 +35,17 @@ export class TravelProcessEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getTravelProcess();
-    this.form.patchValue(content);
-    this.steps.set(content.steps);
-    this.loading.set(false);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getTravelProcess();
+      this.form.patchValue(content);
+      this.steps.set(content.steps);
+    } catch (err) {
+      console.error('No se pudo cargar la sección "Travel Process".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateStep(index: number, patch: Partial<TravelProcessStep>): void {

@@ -4,6 +4,10 @@
   background: var(--color-cream);
 }
 
+.article-detail__loading {
+  min-height: 100vh;
+}
+
 .article-detail__header {
   position: absolute;
   top: 0;

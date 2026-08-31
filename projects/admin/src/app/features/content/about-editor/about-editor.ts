@@ -43,10 +43,17 @@ export class AboutEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getAbout();
-    this.form.patchValue(content);
-    this.words.set(content.words);
-    this.loading.set(false);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getAbout();
+      this.form.patchValue(content);
+      this.words.set(content.words);
+    } catch (err) {
+      console.error('No se pudo cargar la sección "About".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateWord(index: number, value: string): void {

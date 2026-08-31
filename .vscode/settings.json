@@ -1,0 +1,13 @@
+{
+  // Las Edge Functions de Supabase corren en Deno, no en Node — sin esto, el
+  // TypeScript normal (usado por el resto del repo, Angular) intenta revisar
+  // esos archivos y marca falsos positivos: "Cannot find name 'Deno'" y
+  // "Cannot find module 'npm:...'" (ambos válidos en Deno, no en Node).
+  // "deno.enable": false a nivel de workspace + "enablePaths" scoped evita
+  // que el LSP de Deno (si la extensión está instalada) intente adueñarse
+  // también de los proyectos Angular.
+  "deno.enable": false,
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.lint": true,
+  "deno.unstable": true
+}

@@ -4,6 +4,13 @@
 
 <p class="content-overview__intro">Administra el contenido que aparece en Travel Edit.</p>
 
+@if (error(); as message) {
+  <div class="content-overview__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+}
+
 <div class="content-overview__grid">
   @for (section of sections; track section.sectionKey) {
     <app-content-section-card

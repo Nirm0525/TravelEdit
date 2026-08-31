@@ -123,6 +123,19 @@ export class DestinationsService {
     return toDestination(data);
   }
 
+  /** Verdadero solo si NINGÚN otro destino (excluyendo el que se está editando) ya usa ese slug. */
+  async isSlugAvailable(slug: string, excludeId?: string): Promise<boolean> {
+    let query = this.supabase.client.from('destinations').select('id').eq('slug', slug);
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+    const { data, error } = await query.maybeSingle();
+    if (error) {
+      throw error;
+    }
+    return !data;
+  }
+
   /** Siempre crea en 'draft' — status no es elegible al crear, se publica después
    *  desde el editor una vez que el contenido esté listo. */
   async create(payload: CreateDestinationPayload): Promise<Destination> {

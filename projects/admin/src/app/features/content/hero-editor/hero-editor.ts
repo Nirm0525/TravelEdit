@@ -41,9 +41,16 @@ export class HeroEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const hero = await this.siteContent.getHero();
-    this.form.patchValue(hero);
-    this.loading.set(false);
+    this.error.set(null);
+    try {
+      const hero = await this.siteContent.getHero();
+      this.form.patchValue(hero);
+    } catch (err) {
+      console.error('No se pudo cargar la sección "Hero".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   async onFileSelected(event: Event): Promise<void> {

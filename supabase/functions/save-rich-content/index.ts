@@ -41,17 +41,44 @@ const COLUMN_BY_TABLE: Record<TableName, string> = {
   articles: 'body'
 };
 
+// Debe cubrir exactamente lo que el toolbar de RichTextEditor (Tiptap) puede
+// producir — ver projects/admin/src/app/shared/ui/rich-text-editor/rich-text-editor.ts.
+// Antes de este cambio, el allowlist solo tenía las marcas/nodos básicos de
+// StarterKit + link: cualquier fuente/color/alineación/tabla/imagen/highlight/
+// lista de tareas elegida en el editor se perdía silenciosamente al guardar
+// (sanitize-html las descarta si el tag o el atributo no está permitido).
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
-    'p', 'br', 'strong', 'em', 'u', 's',
-    'h2', 'h3', 'blockquote',
+    'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
+    'h1', 'h2', 'h3', 'h4', 'blockquote', 'hr',
     'ul', 'ol', 'li',
-    'a'
+    'a', 'img', 'mark', 'span', 'div', 'label', 'input',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td'
   ],
   allowedAttributes: {
-    a: ['href', 'rel', 'target']
+    a: ['href', 'rel', 'target'],
+    img: ['src', 'alt', 'title'],
+    ul: ['data-type'],
+    li: ['data-type', 'data-checked'],
+    input: [{ name: 'type', values: ['checkbox'] }, 'checked'],
+    '*': ['style']
   },
-  allowedSchemes: ['http', 'https', 'mailto']
+  // Restringe qué propiedades CSS (y qué valores) sobreviven dentro de un
+  // style="..." — nunca un passthrough libre. Cubre exactamente lo que
+  // fontFamily/fontSize/setColor/setHighlight/setTextAlign del editor generan.
+  allowedStyles: {
+    '*': {
+      color: [/^#[0-9a-fA-F]{3,8}$/, /^rgb\([\d\s,%.]+\)$/, /^color-mix\([^)]*\)$/],
+      'background-color': [/^#[0-9a-fA-F]{3,8}$/, /^rgb\([\d\s,%.]+\)$/, /^color-mix\([^)]*\)$/],
+      'font-family': [/^[a-zA-Z0-9\s,"'-]+$/],
+      'font-size': [/^[0-9.]+(px|rem|em)$/],
+      'text-align': [/^(left|center|right|justify)$/]
+    }
+  },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  allowedSchemesByTag: {
+    img: ['http', 'https']
+  }
 };
 
 interface RequestBody {

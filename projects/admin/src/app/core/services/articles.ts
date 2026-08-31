@@ -20,7 +20,6 @@ export interface ArticlePayload {
   title: string;
   slug: string;
   excerpt?: string;
-  body?: string;
   tags?: string[];
   coverStoragePath?: string | null;
   coverAltText?: string | null;
@@ -85,7 +84,11 @@ export class ArticlesService {
     return !data;
   }
 
-  /** Siempre crea en 'draft' — publicar es un paso explícito aparte, nunca implícito al guardar. */
+  /** Siempre crea en 'draft' — publicar es un paso explícito aparte, nunca implícito al guardar.
+   *  `body` NUNCA se manda aquí: esa columna solo se escribe vía save-rich-content (Edge Function
+   *  con service role), igual que destinations.long_description — ver RichContentService. Se crea
+   *  con body vacío y el llamador debe guardar el contenido real con RichContentService.save()
+   *  inmediatamente después, usando el id devuelto. */
   async create(payload: ArticlePayload): Promise<Article> {
     const { data, error } = await this.supabase.client
       .from('articles')
@@ -93,7 +96,7 @@ export class ArticlesService {
         title: payload.title,
         slug: payload.slug,
         excerpt: payload.excerpt ?? '',
-        body: payload.body ?? '',
+        body: '',
         tags: payload.tags ?? [],
         cover_storage_path: payload.coverStoragePath ?? null,
         cover_alt_text: payload.coverAltText ?? null,
@@ -111,6 +114,8 @@ export class ArticlesService {
     return toArticle(data);
   }
 
+  /** `body` no se toca aquí — ver nota de create(). El llamador guarda el contenido con
+   *  RichContentService.save('articles', id, html) por separado. */
   async update(id: string, payload: ArticlePayload): Promise<Article> {
     const { data, error } = await this.supabase.client
       .from('articles')
@@ -118,7 +123,6 @@ export class ArticlesService {
         title: payload.title,
         slug: payload.slug,
         excerpt: payload.excerpt ?? '',
-        body: payload.body ?? '',
         tags: payload.tags ?? [],
         cover_storage_path: payload.coverStoragePath ?? null,
         cover_alt_text: payload.coverAltText ?? null,

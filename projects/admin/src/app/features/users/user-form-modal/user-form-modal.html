@@ -35,6 +35,10 @@
       </label>
     </div>
 
+    @if (isSelf()) {
+      <p class="field__hint">No puedes cambiar tu propio rol ni tu propio estado.</p>
+    }
+
     @if (mode() === 'create') {
       <p class="field__hint">Se le enviará un correo de invitación para que cree su contraseña.</p>
     }

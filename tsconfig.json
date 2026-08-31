@@ -20,6 +20,12 @@
     "strictInputAccessModifiers": true
   },
   "files": [],
+  // Las Edge Functions (supabase/functions) corren en Deno, no en Node — sin
+  // este exclude, el tsserver de VS Code las toma como parte del proyecto
+  // "implícito" de este tsconfig (files:[] no basta por sí solo, ya que sin
+  // un "include" explícito TypeScript vuelve a su default de incluir **/*)
+  // y marca falsos positivos como "Cannot find name 'Deno'".
+  "exclude": ["supabase/functions"],
   "references": [
     {
       "path": "./tsconfig.app.json"

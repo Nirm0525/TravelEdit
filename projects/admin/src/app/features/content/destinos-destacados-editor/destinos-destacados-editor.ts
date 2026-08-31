@@ -50,16 +50,22 @@ export class DestinosDestacadosEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getDestinosDestacados();
-    this.form.patchValue(content);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getDestinosDestacados();
+      this.form.patchValue(content);
 
-    if (content.destinationIds.length > 0) {
-      const found = await this.destinationsService.listByIds(content.destinationIds);
-      const byId = new Map(found.map((d) => [d.id, d]));
-      this.selected.set(content.destinationIds.map((id) => byId.get(id)).filter((d): d is Destination => !!d));
+      if (content.destinationIds.length > 0) {
+        const found = await this.destinationsService.listByIds(content.destinationIds);
+        const byId = new Map(found.map((d) => [d.id, d]));
+        this.selected.set(content.destinationIds.map((id) => byId.get(id)).filter((d): d is Destination => !!d));
+      }
+    } catch (err) {
+      console.error('No se pudo cargar la sección "Destinos destacados".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
     }
-
-    this.loading.set(false);
   }
 
   isUnavailable(destination: Destination): boolean {

@@ -90,14 +90,16 @@ export class ContentOverview {
   readonly customSections = signal<CustomSection[]>([]);
   readonly loading = signal(true);
   readonly creating = signal(false);
+  readonly error = signal<string | null>(null);
   readonly updatedAtBySection = signal<Record<string, string>>({});
 
   constructor() {
     void this.load();
   }
 
-  private async load(): Promise<void> {
+  async load(): Promise<void> {
     this.loading.set(true);
+    this.error.set(null);
     try {
       const [meta, customContent] = await Promise.all([
         this.siteContent.listMeta(),
@@ -110,6 +112,9 @@ export class ContentOverview {
         }, {})
       );
       this.customSections.set(customContent.sections);
+    } catch (err) {
+      console.error('No se pudo cargar la página principal.', err);
+      this.error.set('No pudimos cargar las secciones. Inténtalo nuevamente.');
     } finally {
       this.loading.set(false);
     }

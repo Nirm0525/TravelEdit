@@ -43,10 +43,17 @@ export class CtaFinalEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getCtaFinal();
-    this.form.patchValue(content);
-    this.links.set(content.links);
-    this.loading.set(false);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getCtaFinal();
+      this.form.patchValue(content);
+      this.links.set(content.links);
+    } catch (err) {
+      console.error('No se pudo cargar la sección "CTA final".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateLink(index: number, patch: Partial<CtaFinalLink>): void {

@@ -1,7 +1,8 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
 import { AdminUsersService } from '../../../core/services/admin-users';
+import { AuthService } from '../../../core/services/auth';
 import { AdminUser, UpdateUserPayload } from '../../../core/models/user.model';
 import { STAFF_ROLE_LABEL, StaffRole } from '../../../core/models/staff-role';
 
@@ -16,6 +17,7 @@ export type UserFormMode = 'create' | 'edit';
 export class UserFormModal {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly usersService = inject(AdminUsersService);
+  private readonly auth = inject(AuthService);
 
   readonly open = input(false);
   readonly mode = input.required<UserFormMode>();
@@ -37,6 +39,12 @@ export class UserFormModal {
     status: this.fb.control<'active' | 'inactive'>('active', Validators.required)
   });
 
+  // No puedes cambiar tu propio rol ni tu propio estado (admin-users/index.ts
+  // rechaza esa combinación con 400) — deshabilitar estos dos campos en tu
+  // propia fila evita mandar una edición garantizada a fallar, y que de paso
+  // se pierda un cambio de nombre válido en el mismo submit.
+  readonly isSelf = computed(() => this.mode() === 'edit' && this.user()?.id === this.auth.profile()?.id);
+
   constructor() {
     effect(() => {
       if (!this.open()) {
@@ -53,6 +61,14 @@ export class UserFormModal {
         });
       } else {
         this.form.reset({ fullName: '', email: '', role: 'editor', status: 'active' });
+      }
+
+      if (this.isSelf()) {
+        this.form.controls.role.disable();
+        this.form.controls.status.disable();
+      } else {
+        this.form.controls.role.enable();
+        this.form.controls.status.enable();
       }
     });
   }

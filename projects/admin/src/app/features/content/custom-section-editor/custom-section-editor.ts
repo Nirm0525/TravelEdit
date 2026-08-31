@@ -43,17 +43,23 @@ export class CustomSectionEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getCustomSections();
-    const section = content.sections.find((s) => s.id === this.sectionId);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getCustomSections();
+      const section = content.sections.find((s) => s.id === this.sectionId);
 
-    if (!section) {
-      this.notFound.set(true);
+      if (!section) {
+        this.notFound.set(true);
+        return;
+      }
+
+      this.form.patchValue(section);
+    } catch (err) {
+      console.error('No se pudo cargar la sección personalizada.', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
       this.loading.set(false);
-      return;
     }
-
-    this.form.patchValue(section);
-    this.loading.set(false);
   }
 
   async onFileSelected(event: Event): Promise<void> {

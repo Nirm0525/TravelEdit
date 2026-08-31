@@ -57,6 +57,8 @@
         </a>
       </div>
     </article>
+  } @else if (loading()) {
+    <div class="article-detail__loading" aria-live="polite"></div>
   } @else {
     <div class="article-detail__not-found">
       <p class="eyebrow">The Edit</p>

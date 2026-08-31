@@ -20,6 +20,11 @@ export class ArticleDetail {
   readonly slug = input.required<string>();
 
   private readonly liveArticle = signal<Article | null>(null);
+  // Evita el "flash" de la vista "no encontrado" para un slug real: sin esto,
+  // mientras getBySlug() todavía está en vuelo, article() ya devuelve null
+  // (no hay match en el fallback ARTICLES hardcodeado) y el template muestra
+  // el 404 un instante antes de reemplazarlo por el artículo real.
+  readonly loading = signal(true);
 
   readonly article = computed<Article | null>(() => {
     const slug = this.slug();
@@ -93,9 +98,14 @@ export class ArticleDetail {
   }
 
   private async load(slug: string): Promise<void> {
-    const live = await this.publicArticles.getBySlug(slug);
-    if (live) {
-      this.liveArticle.set(live);
+    this.loading.set(true);
+    try {
+      const live = await this.publicArticles.getBySlug(slug);
+      if (live) {
+        this.liveArticle.set(live);
+      }
+    } finally {
+      this.loading.set(false);
     }
 
     const current = this.article();

@@ -119,6 +119,13 @@ export class General implements HasUnsavedChanges {
     this.saveError.set(null);
     try {
       const { longDescription, ...rest } = this.form.getRawValue();
+
+      const available = await this.destinationsService.isSlugAvailable(rest.slug, this.destinationId);
+      if (!available) {
+        this.saveError.set('Ese slug ya está en uso por otro destino.');
+        return;
+      }
+
       await this.destinationsService.update(this.destinationId, rest);
       await this.richContent.save('destinations', this.destinationId, longDescription);
       this.savedAt.set(new Date());

@@ -38,12 +38,19 @@ export class FooterEditor {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const content = await this.siteContent.getFooter();
-    this.form.patchValue(content);
-    this.explore.set(content.explore);
-    this.company.set(content.company);
-    this.social.set(content.social);
-    this.loading.set(false);
+    this.error.set(null);
+    try {
+      const content = await this.siteContent.getFooter();
+      this.form.patchValue(content);
+      this.explore.set(content.explore);
+      this.company.set(content.company);
+      this.social.set(content.social);
+    } catch (err) {
+      console.error('No se pudo cargar la sección "Footer".', err);
+      this.error.set('No se pudo cargar el contenido. Inténtalo nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   updateLink(list: 'explore' | 'company', index: number, patch: Partial<FooterLink>): void {

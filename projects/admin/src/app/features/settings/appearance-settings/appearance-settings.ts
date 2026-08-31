@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SettingsService } from '../../../core/services/settings';
+import { SiteContentImagesService } from '../../../core/services/site-content-images';
 import { ContentEditorLayout } from '../../../shared/ui/content-editor-layout/content-editor-layout';
 
 @Component({
@@ -11,6 +12,7 @@ import { ContentEditorLayout } from '../../../shared/ui/content-editor-layout/co
 })
 export class AppearanceSettings {
   private readonly settings = inject(SettingsService);
+  private readonly images = inject(SiteContentImagesService);
   private readonly fb = inject(FormBuilder);
 
   readonly breadcrumb = [{ label: 'Panel', link: '/dashboard' }, { label: 'Configuración', link: '/configuracion' }, { label: 'Apariencia' }];
@@ -19,6 +21,8 @@ export class AppearanceSettings {
   readonly saving = signal(false);
   readonly savedAt = signal<Date | null>(null);
   readonly error = signal<string | null>(null);
+  readonly uploadingLogo = signal(false);
+  readonly logoUploadError = signal<string | null>(null);
 
   readonly form = this.fb.group({
     site_name: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
@@ -42,6 +46,28 @@ export class AppearanceSettings {
       this.error.set('No se pudo cargar la configuración.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async onLogoFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    this.uploadingLogo.set(true);
+    this.logoUploadError.set(null);
+    try {
+      const url = await this.images.uploadLogoImage(file);
+      this.form.controls.appearance_logo_url.setValue(url);
+      this.form.controls.appearance_logo_url.markAsDirty();
+    } catch (err) {
+      console.error('No se pudo subir el logo.', err);
+      this.logoUploadError.set('No se pudo subir la imagen. Inténtalo nuevamente.');
+    } finally {
+      this.uploadingLogo.set(false);
     }
   }
 

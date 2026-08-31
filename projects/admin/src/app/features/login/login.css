@@ -122,7 +122,6 @@
 
 .login__back:hover {
   color: var(--ink-900);
-  text-decoration: underline;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -60,6 +60,10 @@ export class SiteContentImagesService {
     return this.upload('personalizadas', file);
   }
 
+  async uploadLogoImage(file: File): Promise<string> {
+    return this.upload('branding', file);
+  }
+
   private async upload(folder: string, file: File): Promise<string> {
     const compressed = await compressImage(file);
     const storagePath = `${folder}/${crypto.randomUUID()}.webp`;

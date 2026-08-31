@@ -16,15 +16,26 @@
         requiere una integración adicional.
       </p>
 
+      <p class="content-section__title">Logo</p>
+      <div class="content-image-field">
+        @if (form.controls.appearance_logo_url.value) {
+          <img [src]="form.controls.appearance_logo_url.value" alt="Logo actual" />
+        }
+
+        <label class="content-image-field__upload">
+          <span>{{ uploadingLogo() ? 'Subiendo…' : 'Cambiar logo' }}</span>
+          <input type="file" accept="image/*" [disabled]="uploadingLogo()" (change)="onLogoFileSelected($event)" />
+        </label>
+
+        @if (logoUploadError()) {
+          <p class="field__hint field__hint--error">{{ logoUploadError() }}</p>
+        }
+      </div>
+
       <div class="content-grid">
         <label class="field">
           <span>Nombre visible del sitio</span>
           <input type="text" formControlName="site_name" />
-        </label>
-
-        <label class="field">
-          <span>Logo (ruta o URL)</span>
-          <input type="text" formControlName="appearance_logo_url" />
         </label>
 
         <label class="field">

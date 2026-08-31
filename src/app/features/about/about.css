@@ -12,6 +12,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* La foto es un retrato vertical con la cara en el tercio superior — en
+     mobile/tablet, aspect-ratio:4/3 recorta un cuadro bajo y ancho que,
+     centrado (default), corta la cara. Ancla el recorte arriba para que la
+     cara siempre quede visible sin importar qué tan bajo sea el cuadro. */
+  object-position: center top;
 }
 
 .about__content {

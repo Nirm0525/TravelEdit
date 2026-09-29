@@ -110,6 +110,13 @@
   color: var(--text-secondary);
 }
 
+/* Cada estado (crear/continuar/ver/aceptada) ya trae su propio ícono al
+   final del texto — se apaga el ✦ decorativo genérico de .btn::after (ver
+   admin styles.css) para no duplicarlo. */
+.lead-detail__proposal-cta::after {
+  content: none;
+}
+
 .lead-detail__stepper {
   display: flex;
   flex-wrap: wrap;

@@ -37,9 +37,31 @@
         </select>
       </label>
       <div class="lead-detail__proposal-action">
-        <button type="button" class="btn btn--primary" (click)="requestSendProposal()">
-          {{ l.proposalSentAt ? 'Reenviar propuesta' : 'Enviar propuesta' }}
+        <button
+          type="button"
+          class="btn btn--primary lead-detail__proposal-cta"
+          [disabled]="proposalActionBusy()"
+          (click)="onProposalCta()"
+        >
+          @if (linkedProposal(); as p) {
+            @switch (p.status) {
+              @case ('draft') {
+                Continuar propuesta <span aria-hidden="true">→</span>
+              }
+              @case ('accepted') {
+                Propuesta aceptada <span aria-hidden="true">✓</span>
+              }
+              @default {
+                Ver propuesta <span aria-hidden="true">→</span>
+              }
+            }
+          } @else {
+            <span aria-hidden="true">+</span> {{ proposalActionBusy() ? 'Creando…' : 'Crear propuesta' }}
+          }
         </button>
+        @if (proposalActionError(); as pErr) {
+          <p class="lead-detail__inline-error">{{ pErr }}</p>
+        }
         @if (l.proposalSentAt) {
           <p class="lead-detail__proposal-hint">Propuesta enviada el {{ l.proposalSentAt | date: 'd MMM y, HH:mm' }}</p>
         }
@@ -48,9 +70,6 @@
   </header>
   @if (assignError(); as aErr) {
     <p class="lead-detail__inline-error">{{ aErr }}</p>
-  }
-  @if (proposalSuccessMessage(); as successMsg) {
-    <p class="lead-detail__inline-success">{{ successMsg }}</p>
   }
 
   <div class="lead-detail__stepper" role="group" aria-label="Estado de la solicitud">
@@ -218,22 +237,6 @@
     />
   }
 
-  <app-confirm-dialog
-    [open]="resendConfirmOpen()"
-    title="Reenviar propuesta"
-    message="Esta solicitud ya tiene una propuesta enviada. ¿Deseas enviar una nueva propuesta?"
-    confirmLabel="Sí, continuar"
-    [danger]="false"
-    (confirmed)="confirmResend()"
-    (cancelled)="cancelResend()"
-  />
-
-  <app-send-proposal-modal
-    [open]="proposalModalOpen()"
-    [lead]="l"
-    (closed)="closeProposalModal()"
-    (sent)="onProposalSent($event)"
-  />
 } @else {
   <p>No se encontró la solicitud.</p>
 }

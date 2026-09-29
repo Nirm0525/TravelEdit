@@ -10,5 +10,9 @@ export const routes: Routes = [
     path: 'the-edit/:slug',
     loadComponent: () => import('./features/article-detail/article-detail').then((m) => m.ArticleDetail)
   },
+  {
+    path: 'private/:token',
+    loadComponent: () => import('./features/private-proposal/private-proposal').then((m) => m.PrivateProposal)
+  },
   { path: '**', redirectTo: '' }
 ];

@@ -29,9 +29,14 @@
           <button type="button" class="btn btn--secondary proposal-builder__preview-toggle" (click)="togglePreviewDrawer()">
             Vista previa <span aria-hidden="true">👁</span>
           </button>
-          <button type="button" class="btn btn--primary proposal-builder__save-indicator" title="Los cambios se guardan automáticamente al salir de cada campo">
-            Guardar cambios
-          </button>
+          <span
+            class="proposal-builder__save-indicator"
+            role="status"
+            title="Los cambios se guardan automáticamente al salir de cada campo"
+          >
+            <span aria-hidden="true" class="proposal-builder__save-indicator-dot"></span>
+            Guardado automático
+          </span>
 
           <div class="proposal-builder__menu" #menu>
             <button type="button" class="proposal-builder__menu-trigger" aria-label="Más acciones" (click)="toggleMenu()">⋮</button>
@@ -174,7 +179,7 @@
           }
         </div>
 
-        <aside class="proposal-builder__preview-col" [class.is-open]="previewDrawerOpen()">
+        <aside #previewCol class="proposal-builder__preview-col" [class.is-open]="previewDrawerOpen()" [class.is-flash]="previewFlash()">
           <div class="proposal-builder__preview-toolbar">
             <span class="proposal-builder__preview-label">Vista previa para el cliente</span>
             <div class="proposal-builder__device-toggle" role="group" aria-label="Ancho de vista previa">

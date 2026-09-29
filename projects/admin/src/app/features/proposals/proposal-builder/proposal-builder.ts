@@ -77,6 +77,13 @@ export class ProposalBuilder {
 
   readonly previewDevice = signal<PreviewDevice>('desktop');
   readonly previewDrawerOpen = signal(false);
+  /** Breve resaltado del borde de la columna de preview — sin esto, el botón
+   *  "Vista previa" del header no producía ningún cambio visible en pantallas
+   *  anchas (la columna ya está siempre visible ahí, solo se activa el
+   *  drawer angosto que en desktop no pinta nada): un click sin feedback se
+   *  lee como "el botón no funciona" aunque el estado sí cambiaba. */
+  readonly previewFlash = signal(false);
+  private readonly previewColRef = viewChild<ElementRef<HTMLElement>>('previewCol');
   /** Cada guardado real (de cualquier paso, incluido el Assistant) incrementa
    *  esto — la columna de preview lo usa para recargar sin compartir estado
    *  con el paso activo. */
@@ -186,8 +193,15 @@ export class ProposalBuilder {
     window.open(url, '_blank', 'noopener');
   }
 
+  /** Un solo botón que siempre hace algo visible: en pantallas angostas abre
+   *  el drawer (como antes); en pantallas anchas, donde la columna ya está
+   *  visible, hace scroll hasta ella y la resalta un instante — nunca un
+   *  click "silencioso". */
   togglePreviewDrawer(): void {
     this.previewDrawerOpen.update((open) => !open);
+    this.previewColRef()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    this.previewFlash.set(true);
+    setTimeout(() => this.previewFlash.set(false), 900);
   }
 
   toggleMenu(): void {

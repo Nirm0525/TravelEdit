@@ -74,8 +74,29 @@
   gap: var(--space-sm);
 }
 
+/* Ya no es un <button> con estilo .btn --primary: se veía idéntico a
+   "Publicar propuesta"/"Enviar al cliente" (píldora sólida) pero no hacía
+   nada al hacer click — confundía porque parecía una acción real. Ahora es
+   un indicador pasivo (texto + punto), mismo tono de marca sin invitar a
+   tocarlo. */
 .proposal-builder__save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.5rem var(--space-md);
+  font-size: var(--size-eyebrow);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--success-600);
   cursor: default;
+}
+
+.proposal-builder__save-indicator-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--success-600);
 }
 
 /* Ya trae su propio ícono de ojo al final del texto — se apaga el ✦
@@ -238,6 +259,12 @@
   border-radius: var(--radius-md);
   background: var(--canvas-100);
   overflow: hidden;
+  transition: box-shadow 0.2s var(--ease-standard), border-color 0.2s var(--ease-standard);
+}
+
+.proposal-builder__preview-col.is-flash {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-600) 25%, transparent);
 }
 
 .proposal-builder__preview-toolbar {

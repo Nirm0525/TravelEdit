@@ -220,6 +220,208 @@ interface RequestBody {
   message?: string;
 }
 
+// ------------------------------------------------------------------
+// Modo "proposal" — nuevo flujo del Smart Proposal Builder: "Enviar al
+// cliente" desde una propuesta ya publicada. A diferencia del modo legacy
+// de arriba (asunto/mensaje libres escritos por el asesor), este SOLO
+// recibe `proposalId` — el destinatario (nombre/email vía el lead
+// vinculado), el status y la URL privada se resuelven todos server-side con
+// la service role, nunca desde lo que mande Angular. El código de acceso
+// NUNCA viaja en este correo (ver K en la especificación): el enlace y el
+// código son dos canales separados a propósito.
+// ------------------------------------------------------------------
+interface ProposalRequestBody {
+  mode: 'proposal';
+  proposalId?: string;
+}
+
+function isProposalBody(value: unknown): value is ProposalRequestBody {
+  return !!value && typeof value === 'object' && (value as Record<string, unknown>).mode === 'proposal';
+}
+
+function buildProposalInviteEmail(clientName: string, privateUrl: string, accessRequired: boolean): EmailContent {
+  const safeName = escapeHtml(clientName.split(' ')[0] || clientName);
+  const safeUrl = escapeHtml(privateUrl);
+  const accessNote = accessRequired
+    ? 'Por seguridad, necesitarás un código de acceso para abrirla — te lo compartiremos por otro canal.'
+    : '';
+
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 32px 36px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">TU PROPUESTA DE VIAJE</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; line-height:1.25; color:#F6EFE6;">Hola ${safeName},<br />tu propuesta está lista.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 32px 8px;">
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:1.7; color:#16110F;">Hemos preparado tu propuesta de viaje personalizada.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:24px 32px 8px;">
+        <a href="${safeUrl}" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:2px; padding:14px 28px;">VER MI PROPUESTA</a>
+      </td>
+    </tr>
+
+    ${
+      accessNote
+        ? `<tr>
+      <td style="padding:20px 32px 32px;">
+        <div style="border-top:1px solid #C79A5B; margin:0 0 20px;"></div>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; color:#6D2A34;">${accessNote}</p>
+      </td>
+    </tr>`
+        : ''
+    }`;
+
+  const html = emailShellHtml(bodyRows, 'Recibes este correo porque solicitaste un viaje a medida con The Travel Edit.');
+  const text = [
+    `Hola ${clientName}, tu propuesta de viaje está lista.`,
+    '',
+    'Ver mi propuesta:',
+    privateUrl,
+    ...(accessNote ? ['', accessNote] : []),
+    '',
+    'The Travel Edit'
+  ].join('\n');
+
+  return { subject: 'Tu propuesta de viaje está lista', html, text };
+}
+
+async function handleProposalMode(
+  body: ProposalRequestBody,
+  callerClient: ReturnType<typeof createClient>,
+  serviceClient: ReturnType<typeof createClient>,
+  callerId: string,
+  json: (body: unknown, status: number) => Response
+): Promise<Response> {
+  const { data: canManage, error: canManageError } = await callerClient.rpc('can_manage_proposals');
+  if (canManageError || canManage !== true) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes permiso para enviar propuestas.' }, 403);
+  }
+
+  const proposalId = typeof body.proposalId === 'string' ? body.proposalId.trim() : '';
+  if (!proposalId) {
+    return json({ code: 'BAD_REQUEST', error: 'Falta la propuesta a enviar.' }, 400);
+  }
+
+  const { data: proposal, error: proposalError } = await serviceClient
+    .from('proposals')
+    .select('id, status, public_token, lead_id, client_name, access_required')
+    .eq('id', proposalId)
+    .maybeSingle();
+
+  if (proposalError) {
+    console.error('send-proposal (proposal): error leyendo la propuesta', proposalError);
+    return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la propuesta.' }, 500);
+  }
+  if (!proposal) {
+    return json({ code: 'NOT_FOUND', error: 'La propuesta no existe.' }, 404);
+  }
+
+  // Defensa en profundidad: la UI ya oculta el botón fuera de
+  // published/viewed, pero el status real siempre se revalida acá — nunca
+  // se confía únicamente en lo que Angular decidió mostrar.
+  if (proposal.status !== 'published' && proposal.status !== 'viewed') {
+    return json({ code: 'INVALID_STATUS', error: 'Solo se puede enviar una propuesta publicada.' }, 400);
+  }
+
+  if (!proposal.lead_id) {
+    // Comportamiento documentado para esta fase (ver sección I de la spec):
+    // sin lead vinculado no hay de dónde resolver un destinatario de forma
+    // segura server-side, y no se acepta un email arbitrario del body.
+    // Una entrada manual queda para una fase posterior, auditada aparte.
+    return json({ code: 'NO_LEAD_LINKED', error: 'Esta propuesta no está vinculada a una solicitud con correo de cliente.' }, 400);
+  }
+
+  const { data: lead, error: leadError } = await serviceClient
+    .from('leads')
+    .select('id, name, email, status')
+    .eq('id', proposal.lead_id)
+    .maybeSingle();
+
+  if (leadError) {
+    console.error('send-proposal (proposal): error leyendo el lead vinculado', leadError);
+    return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la solicitud vinculada.' }, 500);
+  }
+  if (!lead || !lead.email) {
+    return json({ code: 'BAD_REQUEST', error: 'La solicitud vinculada no tiene un correo válido.' }, 400);
+  }
+
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) {
+    console.error('send-proposal (proposal): RESEND_API_KEY no configurado.');
+    return json({ code: 'EMAIL_NOT_CONFIGURED', error: 'El envío de correos no está configurado todavía.' }, 502);
+  }
+
+  const privateUrl = `${SITE}/private/${proposal.public_token}`;
+  const fromEmail = await fetchResendFromEmail(serviceClient);
+  const email = buildProposalInviteEmail(proposal.client_name ?? lead.name, privateUrl, proposal.access_required === true);
+  const result = await sendViaResend(resendApiKey, fromEmail, {
+    to: [lead.email],
+    subject: email.subject,
+    html: email.html,
+    text: email.text
+  });
+
+  if (!result.sent) {
+    await serviceClient
+      .from('leads')
+      .update({ proposal_email_status: 'failed', proposal_email_error: result.error ?? 'Resend rechazó el envío.' })
+      .eq('id', lead.id);
+
+    return json({ code: 'EMAIL_SEND_FAILED', error: 'No se pudo enviar la propuesta. Intenta de nuevo.' }, 502);
+  }
+
+  const sentAt = new Date().toISOString();
+  // Mismo criterio que el modo legacy: solo avanza el lead si estaba en un
+  // punto temprano del pipeline; nunca retrocede uno ya más adelante ni uno
+  // cerrado. El envío exitoso es la ÚNICA acción de esta fase que mueve el
+  // estado del lead — crear el draft, publicar o copiar el link no lo tocan.
+  const nextStatus = lead.status === 'nueva' || lead.status === 'contactada' ? 'propuesta_enviada' : lead.status;
+
+  const { error: updateError } = await serviceClient
+    .from('leads')
+    .update({
+      proposal_sent_at: sentAt,
+      proposal_sent_by: callerId,
+      proposal_email_status: 'sent',
+      proposal_email_error: null,
+      status: nextStatus
+    })
+    .eq('id', lead.id);
+
+  if (updateError) {
+    console.error('send-proposal (proposal): el correo se envió pero no se pudo actualizar el lead', updateError);
+    return json({ code: 'INTERNAL_ERROR', error: 'La propuesta se envió, pero no se pudo registrar. Refresca la página.' }, 500);
+  }
+
+  const { error: auditError } = await serviceClient.from('audit_log').insert([
+    {
+      entity_type: 'lead',
+      entity_id: lead.id,
+      actor_id: callerId,
+      action: 'proposal_sent',
+      summary: 'Propuesta enviada por correo al cliente'
+    },
+    {
+      entity_type: 'proposal',
+      entity_id: proposalId,
+      actor_id: callerId,
+      action: 'proposal_sent_to_client',
+      summary: `Propuesta enviada a ${lead.email}`
+    }
+  ]);
+  if (auditError) {
+    console.error('send-proposal (proposal): no se pudo registrar en audit_log', auditError);
+  }
+
+  return json({ ok: true, sentTo: lead.email, sentAt }, 200);
+}
+
 Deno.serve(async (req) => {
   const cors = corsHeadersFor(req);
 
@@ -259,6 +461,13 @@ Deno.serve(async (req) => {
     return json({ code: 'UNAUTHORIZED_INVALID_TOKEN', error: 'Sesión inválida.' }, 401);
   }
 
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey);
+  const rawBody = await req.json().catch(() => null);
+
+  if (isProposalBody(rawBody)) {
+    return handleProposalMode(rawBody, callerClient, serviceClient, userData.user.id, json);
+  }
+
   // Mecanismo de permisos existente: can_manage_leads() = rol admin o staff
   // (0007_roles_permissions.sql). 'editor' queda afuera, igual que en las
   // policies de leads_update/leads_select.
@@ -267,7 +476,7 @@ Deno.serve(async (req) => {
     return json({ code: 'FORBIDDEN', error: 'No tienes permiso para enviar propuestas.' }, 403);
   }
 
-  const body = (await req.json().catch(() => null)) as RequestBody | null;
+  const body = rawBody as RequestBody | null;
   const leadId = typeof body?.leadId === 'string' ? body.leadId.trim() : '';
   const subject = typeof body?.subject === 'string' ? body.subject.trim() : '';
   const message = typeof body?.message === 'string' ? body.message.trim() : '';
@@ -281,8 +490,6 @@ Deno.serve(async (req) => {
   if (!message) {
     return json({ code: 'BAD_REQUEST', error: 'El mensaje es obligatorio.' }, 400);
   }
-
-  const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
   // El correo del destinatario SIEMPRE se lee de la base, nunca del body de
   // la request — así el frontend no puede mandar un destinatario arbitrario

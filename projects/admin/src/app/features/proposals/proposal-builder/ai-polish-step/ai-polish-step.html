@@ -1,0 +1,89 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="step-error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <div class="ai-polish">
+    <div class="ai-polish__intro">
+      <span class="ai-polish__icon" aria-hidden="true">✦</span>
+      <div class="ai-polish__intro-text">
+        <h2 class="section-title">The Edit Assistant</h2>
+        <p class="ai-polish__subtitle">Con tecnología de OpenAI</p>
+      </div>
+    </div>
+
+    @if (applyError(); as message) {
+      <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+    }
+
+    <div class="ai-polish__chat">
+      @for (message of messages(); track $index; let mi = $index) {
+        <div class="ai-polish__turn" [class.is-user]="message.role === 'user'">
+          <span class="ai-polish__turn-author">{{ message.role === 'user' ? 'Tú' : 'Assistant' }}</span>
+          <p class="ai-polish__turn-text">{{ message.content }}</p>
+
+          @if (message.isTermsTarget) {
+            <p class="ai-polish__terms-warning">
+              ⚠️ Estás por editar los términos y condiciones. Revisa el resultado con cuidado antes de aplicarlo.
+            </p>
+          }
+
+          @if (message.suggestions; as suggestions) {
+            <div class="ai-polish__suggestions">
+              @for (suggestion of suggestions; track $index; let si = $index) {
+                <div class="ai-polish__suggestion-card">
+                  <p class="ai-polish__suggestion-text">{{ suggestion.text }}</p>
+                  <button
+                    type="button"
+                    class="btn btn--secondary ai-polish__suggestion-btn"
+                    [disabled]="applyingKey() === (mi + ':' + si) || message.appliedIndex !== null"
+                    (click)="useSuggestion(mi, si)"
+                  >
+                    @if (message.appliedIndex === si) {
+                      ✓ Aplicado
+                    } @else if (applyingKey() === (mi + ':' + si)) {
+                      Aplicando…
+                    } @else if (suggestions.length > 1) {
+                      Usar opción {{ si + 1 }}
+                    } @else {
+                      Aplicar a {{ suggestion.targetLabel }}
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (sending()) {
+        <div class="ai-polish__turn">
+          <span class="ai-polish__turn-author">Assistant</span>
+          <p class="ai-polish__turn-text ai-polish__turn-text--typing">
+            <span class="ai-polish__spinner" aria-hidden="true"></span> Pensando…
+          </p>
+        </div>
+      }
+
+      <div #scrollAnchor></div>
+    </div>
+
+    <form class="ai-polish__composer" (submit)="$event.preventDefault(); sendMessage()">
+      <textarea
+        class="ai-polish__composer-input"
+        rows="1"
+        placeholder="Escribe qué quieres mejorar…"
+        [value]="draftMessage()"
+        (input)="onDraftInput($event)"
+        (keydown)="onDraftKeydown($event)"
+        aria-label="Mensaje para The Edit Assistant"
+      ></textarea>
+      <button type="submit" class="ai-polish__composer-send" [disabled]="sending() || !draftMessage().trim()" aria-label="Enviar mensaje">
+        ➤
+      </button>
+    </form>
+  </div>
+}

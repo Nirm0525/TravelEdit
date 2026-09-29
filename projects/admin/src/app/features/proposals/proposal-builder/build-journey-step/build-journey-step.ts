@@ -15,7 +15,7 @@ import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 
 type DayField = 'title' | 'location' | 'description';
-type ServiceField = 'title' | 'description' | 'notes';
+type ServiceField = 'title' | 'description' | 'notes' | 'time';
 
 @Component({
   selector: 'app-build-journey-step',

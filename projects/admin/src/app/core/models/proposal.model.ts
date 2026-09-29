@@ -21,6 +21,9 @@ export interface ProposalServiceItem {
   title: string;
   description: string;
   notes: string;
+  /** Hora opcional en texto libre (ej. "07:45") — se usa en la tabla Overview
+   *  del itinerario público. Vacío = no se muestra hora, no se inventa una. */
+  time: string;
 }
 
 export interface ProposalDay {
@@ -65,11 +68,29 @@ export interface ProposalTerms {
   body: string;
 }
 
+// Estaba en el brief original (cover/introduction/overview/days/services/
+// pricing/travelTips/terms, ver comentario en 0029_proposals.sql) pero nunca
+// se implementó — se cayó en algún punto del scoping del MVP. Texto plano,
+// no rich text (mismo criterio que ProposalDay.description): son tips
+// cortos y puntuales, no necesitan formato.
+export interface ProposalTravelTip {
+  id: string;
+  title: string;
+  body: string;
+}
+
+export interface ProposalTravelTipGroup {
+  id: string;
+  destination: string;
+  tips: ProposalTravelTip[];
+}
+
 export interface ProposalContent {
   cover: ProposalCover;
   intro: ProposalIntro;
   days: ProposalDay[];
   pricing: ProposalPricing;
+  travelTips: ProposalTravelTipGroup[];
   terms: ProposalTerms;
 }
 
@@ -111,8 +132,17 @@ export function createEmptyProposalContent(): ProposalContent {
     intro: { headline: '', body: '' },
     days: [],
     pricing: { lines: [], feesLines: [] },
+    travelTips: [],
     terms: { title: 'Términos y condiciones', body: '' }
   };
+}
+
+export function createTravelTipGroup(): ProposalTravelTipGroup {
+  return { id: crypto.randomUUID(), destination: '', tips: [] };
+}
+
+export function createTravelTip(): ProposalTravelTip {
+  return { id: crypto.randomUUID(), title: '', body: '' };
 }
 
 export function createProposalDay(dayNumber: number): ProposalDay {
@@ -133,7 +163,8 @@ export function createProposalService(type: ProposalServiceType): ProposalServic
     type,
     title: '',
     description: '',
-    notes: ''
+    notes: '',
+    time: ''
   };
 }
 
@@ -162,6 +193,11 @@ export function toProposalContent(value: unknown): ProposalContent {
       lines: Array.isArray(raw.pricing?.lines) ? raw.pricing.lines : [],
       feesLines: Array.isArray(raw.pricing?.feesLines) ? raw.pricing.feesLines : []
     },
+    // Array.isArray(...) ? ... : [] — cualquier propuesta creada antes de
+    // este campo existir tiene contenido guardado sin `travelTips`; sin este
+    // fallback, abrirla rompería el builder en vez de mostrar la sección
+    // vacía como corresponde.
+    travelTips: Array.isArray(raw.travelTips) ? raw.travelTips : [],
     terms: { ...empty.terms, ...raw.terms }
   };
 }

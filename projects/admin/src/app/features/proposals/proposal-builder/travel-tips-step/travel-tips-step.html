@@ -1,0 +1,80 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="step-error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <div class="tips">
+    <div class="tips__toolbar">
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addGroup()">+ Agregar destino</button>
+      <span class="tips__status" role="status" aria-live="polite">{{ saving() ? 'Guardando…' : '' }}</span>
+    </div>
+
+    @if (saveError(); as message) {
+      <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+    }
+
+    @if (groups().length === 0) {
+      <p class="tips__empty">Todavía no hay consejos de viaje. Agrega un destino para empezar.</p>
+    } @else {
+      <div class="tips__groups">
+        @for (group of groups(); track group.id) {
+          <article class="tip-group">
+            <header class="tip-group__header">
+              <input
+                type="text"
+                class="tip-group__destination-input"
+                [value]="group.destination"
+                (blur)="onGroupDestinationBlur(group, $event)"
+                aria-label="Destino"
+                placeholder="Destino — ej. España"
+              />
+              <button type="button" class="tip-group__remove" (click)="requestRemoveGroup(group)">Eliminar destino</button>
+            </header>
+
+            <div class="tip-group__body">
+              @if (group.tips.length > 0) {
+                <div class="tip-group__tip-list">
+                  @for (tip of group.tips; track tip.id) {
+                    <div class="tip-card">
+                      <div class="tip-card__row">
+                        <input
+                          type="text"
+                          class="tip-card__title-input"
+                          [value]="tip.title"
+                          (blur)="onTipFieldBlur(group, tip, 'title', $event)"
+                          placeholder="Título del tip"
+                          aria-label="Título del tip"
+                        />
+                        <button type="button" class="tip-card__remove" (click)="removeTip(group, tip)" aria-label="Eliminar tip">✕</button>
+                      </div>
+                      <textarea
+                        rows="2"
+                        [value]="tip.body"
+                        (blur)="onTipFieldBlur(group, tip, 'body', $event)"
+                        placeholder="Detalle del tip"
+                        aria-label="Detalle del tip"
+                      ></textarea>
+                    </div>
+                  }
+                </div>
+              }
+
+              <button type="button" class="tip-group__add-tip" (click)="addTip(group)">+ Agregar tip</button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!groupPendingDelete()"
+  title="Eliminar destino"
+  [message]="'¿Eliminar los consejos de ' + (groupPendingDelete()?.destination || 'este destino') + '? Esta acción no se puede deshacer.'"
+  (confirmed)="confirmRemoveGroup()"
+  (cancelled)="cancelRemoveGroup()"
+/>

@@ -29,15 +29,16 @@
 
     @if (p.content.intro.headline || p.content.intro.body) {
       <section class="preview__section preview__intro">
+        <div class="preview__band"><h2>Resumen</h2></div>
         @if (p.content.intro.headline) {
-          <h2>{{ p.content.intro.headline }}</h2>
+          <h3>{{ p.content.intro.headline }}</h3>
         }
         <div class="preview__rich" [innerHTML]="p.content.intro.body"></div>
       </section>
     }
 
     <section class="preview__section">
-      <p class="preview__eyebrow">Itinerario</p>
+      <div class="preview__band"><h2>Itinerario</h2></div>
       @if (p.content.days.length === 0) {
         <p class="preview__empty">Todavía no hay días cargados.</p>
       }
@@ -73,8 +74,30 @@
       }
     </section>
 
+    @if (p.content.travelTips.length > 0) {
+      <section class="preview__section preview__tips">
+        <div class="preview__band"><h2>Consejos de viaje</h2></div>
+        @for (group of p.content.travelTips; track group.id) {
+          <div class="preview__tip-group">
+            <h3>{{ group.destination || 'Sin destino' }}</h3>
+            @if (group.tips.length === 0) {
+              <p class="preview__empty">Todavía no hay tips para este destino.</p>
+            }
+            @for (tip of group.tips; track tip.id) {
+              <div class="preview__tip">
+                <strong>{{ tip.title || 'Sin título' }}</strong>
+                @if (tip.body) {
+                  <p>{{ tip.body }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
     <section class="preview__section preview__pricing">
-      <p class="preview__eyebrow">Inversión</p>
+      <div class="preview__band"><h2>Inversión</h2></div>
       <table class="preview__pricing-table">
         @for (line of p.content.pricing.lines; track line.id) {
           <tr>
@@ -97,7 +120,7 @@
 
     @if (p.content.terms.body) {
       <section class="preview__section">
-        <p class="preview__eyebrow">{{ p.content.terms.title || 'Términos y condiciones' }}</p>
+        <div class="preview__band"><h2>{{ p.content.terms.title || 'Términos y condiciones' }}</h2></div>
         <div class="preview__rich preview__terms" [innerHTML]="p.content.terms.body"></div>
       </section>
     }

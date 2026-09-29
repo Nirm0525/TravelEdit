@@ -55,78 +55,60 @@
   color: var(--color-stone);
 }
 
-/* --- Gate --- */
+/* --- Gate: pantalla de acceso, split-screen editorial ---
+   Izquierda: panel burgundy con el formulario de código. Derecha: hero de la
+   propuesta. Antes del código solo se usan campos que get_proposal_gate() ya
+   expone de forma segura (clientName, coverTitle, coverImagePath) — nunca
+   destino/fechas/viajeros/pricing, que solo llegan con get_proposal_content()
+   tras una sesión válida (ver PublicProposalService). */
 
 .private-proposal__gate {
-  position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
-  background: var(--color-ink);
-  overflow: hidden;
+  transition: opacity 0.28s var(--ease-editorial), transform 0.28s var(--ease-editorial);
 }
 
-.private-proposal__gate-image {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
+.private-proposal__gate.is-exiting {
+  opacity: 0;
+  transform: translateY(-0.5rem);
 }
 
-.private-proposal__gate-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(22, 17, 15, 0.75) 0%, rgba(22, 17, 15, 0.5) 45%, rgba(22, 17, 15, 0.85) 100%),
-    linear-gradient(0deg, color-mix(in srgb, var(--color-burgundy) 35%, transparent), color-mix(in srgb, var(--color-burgundy) 35%, transparent));
+.private-proposal__gate-panel {
+  flex: 0 0 30%;
+  min-width: 22rem;
+  display: flex;
+  background: var(--color-wine);
+  color: var(--color-cream);
 }
 
-.private-proposal__gate-card {
-  position: relative;
-  z-index: 1;
+.private-proposal__gate-panel-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-xl);
   width: 100%;
-  max-width: 26rem;
   padding: var(--space-xl) var(--space-lg);
-  background: color-mix(in srgb, var(--color-cream) 97%, transparent);
-  border-radius: 0.25rem;
-  box-shadow: 0 2rem 4rem rgba(22, 17, 15, 0.35);
-  text-align: center;
-  animation: private-proposal-rise 0.6s var(--ease-editorial) both;
 }
 
-@keyframes private-proposal-rise {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.private-proposal__gate-panel .private-proposal__wordmark {
+  color: var(--color-cream);
 }
 
-.private-proposal__gate-card .private-proposal__wordmark {
-  color: var(--color-burgundy);
+.private-proposal__gate-tagline {
+  margin-top: var(--space-2xs);
+  font-size: 0.68rem;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-warm-beige);
 }
 
-.private-proposal__gate-lead {
-  margin-top: var(--space-sm);
-  font-size: var(--size-label);
-  color: var(--color-stone);
-}
-
-.private-proposal__gate-title {
+.private-proposal__gate-headline {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: var(--size-h2);
-  margin: var(--space-2xs) 0 var(--space-sm);
-}
-
-.private-proposal__gate-copy {
-  color: var(--color-stone);
-  margin-bottom: var(--space-md);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem);
+  line-height: 1.2;
+  max-width: 20rem;
 }
 
 .private-proposal__gate-form {
@@ -139,55 +121,67 @@
 .private-proposal__field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .private-proposal__field span {
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  color: var(--color-stone);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-warm-beige);
 }
 
 .private-proposal__field input {
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--color-warm-beige);
+  padding: 1rem 1.1rem;
+  border: 1px solid transparent;
   border-radius: 0.35rem;
   font: inherit;
   font-size: 1.05rem;
   letter-spacing: 0.04em;
-  background: var(--color-white);
+  background: var(--color-cream);
   color: var(--color-ink);
 }
 
+.private-proposal__field input::placeholder {
+  color: var(--color-stone);
+}
+
 .private-proposal__field input:focus-visible {
-  outline: 2px solid var(--color-burgundy);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+
+.private-proposal__field input[aria-invalid='true'] {
+  border-color: #d98282;
 }
 
 .private-proposal__gate-error {
-  color: #a13333;
-  font-size: 0.9rem;
+  color: #f2b8b8;
+  font-size: 0.85rem;
 }
 
 .private-proposal__gate-submit {
   margin-top: var(--space-2xs);
+  width: 100%;
   padding: 1rem 1.5rem;
-  min-height: 3rem;
-  background: var(--color-burgundy);
-  color: var(--color-white);
-  border-radius: 0.35rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  min-height: 3.25rem;
+  background: var(--color-warm-beige);
+  color: var(--color-ink);
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
 .private-proposal__gate-submit:hover:not(:disabled) {
-  background: var(--color-wine);
+  background: var(--color-gold);
   cursor: pointer;
 }
 
 .private-proposal__gate-submit:focus-visible {
-  outline: 2px solid var(--color-burgundy);
+  outline: 2px solid var(--color-cream);
   outline-offset: 3px;
 }
 
@@ -197,8 +191,111 @@
 }
 
 .private-proposal__gate-footnote {
-  margin-top: var(--space-md);
   font-size: 0.78rem;
+  color: color-mix(in srgb, var(--color-cream) 65%, transparent);
+}
+
+/* --- Gate: hero derecho --- */
+
+.private-proposal__gate-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.private-proposal__gate-hero-photo {
+  position: relative;
+  flex: 1;
+  min-height: 30rem;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background-color: var(--color-ink);
+  color: var(--color-white);
+}
+
+.private-proposal__gate-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.private-proposal__gate-hero-fallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--color-wine), var(--color-ink) 65%);
+}
+
+.private-proposal__gate-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0.1) 0%, rgba(22, 17, 15, 0.25) 45%, rgba(22, 17, 15, 0.82) 100%);
+}
+
+.private-proposal__gate-hero-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-xl);
+  padding: var(--space-2xl) var(--space-xl);
+}
+
+.private-proposal__gate-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+.private-proposal__gate-proposal-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--size-display);
+  margin-top: var(--space-2xs);
+}
+
+.private-proposal__gate-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  text-align: right;
+}
+
+.private-proposal__gate-fact dt {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--color-warm-beige);
+}
+
+.private-proposal__gate-fact dd {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-cream) 35%, transparent);
+  padding-top: 0.25rem;
+}
+
+.private-proposal__gate-hero-footer {
+  padding: var(--space-lg);
+  text-align: center;
+  background: var(--color-cream);
+}
+
+.private-proposal__gate-hero-footer-tag {
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   color: var(--color-stone);
 }
 
@@ -356,6 +453,11 @@
   cursor: pointer;
 }
 
+.proposal__nav-list button.is-active {
+  color: var(--color-burgundy);
+  border-bottom-color: var(--color-burgundy);
+}
+
 /* --- Sections --- */
 
 .proposal__section {
@@ -363,6 +465,41 @@
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-md);
   scroll-margin-top: 4.5rem;
+}
+
+/* Banda de título por sección — bordea de punta a punta aunque el resto del
+   contenido esté acotado a var(--measure), con el truco clásico de
+   left:50%/margin-left:-50vw (robusto sin importar el padding/max-width del
+   padre, a diferencia de calc(50% - 50vw) que depende de esa geometría). */
+.proposal__band {
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  margin-top: calc(var(--space-2xl) * -1);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg) var(--space-md);
+  background: color-mix(in srgb, var(--color-warm-beige) 35%, var(--color-cream));
+}
+
+.proposal__band h2 {
+  max-width: var(--measure);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.15rem);
+  color: var(--color-ink);
+}
+
+.proposal__band h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-ink) 22%, transparent);
 }
 
 .proposal__section-title {
@@ -386,23 +523,35 @@
 .proposal__summary {
   margin-top: var(--space-lg);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-md);
-  padding: var(--space-md) 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-lg);
+  padding: var(--space-lg) 0 0;
   border-top: 1px solid var(--color-warm-beige);
 }
 
+.proposal__summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.proposal__summary-item svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  color: var(--color-burgundy);
+  margin-bottom: 0.2rem;
+}
+
 .proposal__summary-label {
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
   color: var(--color-stone);
-  margin-bottom: 0.3rem;
 }
 
 .proposal__summary-value {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   color: var(--color-ink);
 }
 
@@ -486,12 +635,296 @@
   margin-bottom: 0.2rem;
 }
 
+.proposal__service-time {
+  color: var(--color-stone);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-left: 0.15rem;
+}
+
+/* --- Itinerary summary table --- */
+
+.proposal__itinerary-summary {
+  margin-bottom: var(--space-xl);
+}
+
+.proposal__itinerary-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.proposal__itinerary-summary-tag {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+
+.proposal__itinerary-toggle,
+.proposal__pricing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--color-burgundy);
+  border-radius: 999px;
+  color: var(--color-burgundy);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.proposal__itinerary-toggle svg,
+.proposal__pricing-toggle svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.proposal__itinerary-toggle:hover,
+.proposal__pricing-toggle:hover {
+  background: var(--color-burgundy);
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.proposal__itinerary-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-warm-beige);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.proposal__itinerary-table thead th {
+  padding: var(--space-sm) var(--space-md);
+  background: color-mix(in srgb, var(--color-warm-beige) 30%, var(--color-cream));
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+
+.proposal__itinerary-table tbody tr {
+  border-top: 1px solid var(--color-warm-beige);
+}
+
+.proposal__itinerary-table td {
+  padding: var(--space-sm) var(--space-md);
+  vertical-align: middle;
+}
+
+.proposal__itinerary-table-thumb {
+  width: 4.5rem;
+  padding-right: 0 !important;
+}
+
+.proposal__itinerary-table-thumb img,
+.proposal__itinerary-table-thumb-placeholder {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.35rem;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--color-warm-beige) 40%, var(--color-cream));
+}
+
+.proposal__itinerary-table-destination {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.proposal__itinerary-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.proposal__itinerary-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.proposal__itinerary-highlight-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-burgundy);
+  flex-shrink: 0;
+}
+
+.proposal__itinerary-highlight-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 48rem) {
+  .proposal__itinerary-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* --- Travel tips --- */
+
+.proposal__tips-tag {
+  margin-top: var(--space-2xs);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+
+.proposal__tip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  margin-top: var(--space-lg);
+}
+
+.proposal__tip-group-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--size-lead);
+  color: var(--color-burgundy);
+  margin-bottom: var(--space-sm);
+}
+
+.proposal__tip-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-md);
+}
+
+.proposal__tip {
+  border: 1px solid var(--color-warm-beige);
+  border-radius: 0.35rem;
+  padding: var(--space-md);
+  background: var(--color-white);
+}
+
+.proposal__tip-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.proposal__tip-summary::-webkit-details-marker {
+  display: none;
+}
+
+.proposal__tip-icon {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-burgundy);
+}
+
+.proposal__tip-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.proposal__tip-summary-text {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--color-ink);
+}
+
+.proposal__tip-chevron {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-stone);
+  transition: transform 0.2s ease;
+}
+
+.proposal__tip-chevron svg {
+  width: 100%;
+  height: 100%;
+}
+
+.proposal__tip[open] .proposal__tip-chevron {
+  transform: rotate(90deg);
+}
+
+.proposal__tip-body {
+  margin-top: var(--space-sm);
+  line-height: 1.7;
+  color: var(--color-stone);
+  font-size: 0.9rem;
+}
+
 /* --- Pricing --- */
+
+.proposal__pricing-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xl);
+  justify-content: space-between;
+}
+
+.proposal__pricing-copy {
+  flex: 1;
+  min-width: 16rem;
+  line-height: 1.7;
+  color: var(--color-stone);
+}
+
+.proposal__pricing-card {
+  flex: 0 0 auto;
+  min-width: 16rem;
+  padding: var(--space-lg);
+  background: color-mix(in srgb, var(--color-warm-beige) 30%, var(--color-cream));
+  border-radius: 0.35rem;
+  text-align: center;
+}
+
+.proposal__pricing-card-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+
+.proposal__pricing-card-total {
+  font-family: var(--font-display);
+  font-size: var(--size-lead);
+  color: var(--color-burgundy);
+  margin: 0.15rem 0;
+}
+
+.proposal__pricing-card-meta {
+  font-size: 0.85rem;
+  color: var(--color-stone);
+}
+
+.proposal__pricing-toggle {
+  margin-top: var(--space-md);
+}
 
 .proposal__pricing-list {
   display: flex;
   flex-direction: column;
-  margin-top: var(--space-md);
+  margin-top: var(--space-lg);
 }
 
 .proposal__pricing-row {
@@ -607,6 +1040,13 @@
   .proposal__nav-list.is-open {
     display: flex;
   }
+
+  /* Tablet: el panel de acceso pasa de ~30% a ~40% en vez de saltar
+     directo al layout apilado de mobile (sección 17 de la spec). */
+  .private-proposal__gate-panel {
+    flex-basis: 40%;
+    min-width: 18rem;
+  }
 }
 
 @media (max-width: 48rem) {
@@ -631,8 +1071,50 @@
     padding: var(--space-xl) var(--space-md);
   }
 
-  .private-proposal__gate-card {
+  /* Mobile: imagen arriba, panel de acceso abajo (sección 16 de la spec) —
+     se reordena solo con CSS, el DOM mantiene panel-antes-que-hero para que
+     el layout de escritorio (panel izquierda, hero derecha) siga siendo el
+     orden natural de lectura/foco. */
+  .private-proposal__gate {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .private-proposal__gate-hero {
+    order: -1;
+  }
+
+  .private-proposal__gate-panel {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .private-proposal__gate-panel-inner {
     padding: var(--space-lg) var(--space-md);
+  }
+
+  .private-proposal__gate-headline {
+    max-width: none;
+  }
+
+  .private-proposal__gate-hero-photo {
+    min-height: 20rem;
+  }
+
+  .private-proposal__gate-hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .private-proposal__gate-facts {
+    text-align: left;
+  }
+
+  .private-proposal__gate-fact dd {
+    border-top: none;
+    padding-top: 0;
   }
 }
 
@@ -645,8 +1127,11 @@
     transform: none;
   }
 
-  .private-proposal__gate-card {
-    animation: none;
+  /* Defensa en profundidad: attemptVerify() ya evita fijar gateExiting con
+     reduced-motion activo, pero si por lo que sea igual se aplicara, que no
+     anime. */
+  .private-proposal__gate {
+    transition: none;
   }
 }
 
@@ -706,5 +1191,16 @@
   .proposal__section {
     max-width: none;
     padding: var(--space-md) 0;
+  }
+
+  /* Mejor esfuerzo: no todos los motores de impresión respetan esto, pero en
+     los que sí (Chromium reciente) evita que los consejos de viaje se
+     impriman colapsados y sin contenido visible. */
+  .proposal__tip-chevron {
+    display: none;
+  }
+
+  .proposal__tip-body {
+    display: block !important;
   }
 }

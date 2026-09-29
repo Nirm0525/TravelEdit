@@ -2,12 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { Proposal, ProposalContent, toProposal } from '../models/proposal.model';
-import { ProposalStatus } from '../models/proposal-enums';
+import { PROPOSAL_STATUS_LABEL, ProposalStatus } from '../models/proposal-enums';
 
 export interface ProposalListPage {
   items: Proposal[];
   total: number;
 }
+
+const ALL_STATUSES: ProposalStatus[] = ['draft', 'published', 'viewed', 'accepted', 'expired'];
 
 export interface ProposalListParams {
   page: number;
@@ -69,7 +71,17 @@ export class ProposalsService {
     }
     if (params.search) {
       const term = `%${params.search}%`;
-      query = query.or(`client_name.ilike.${term},destination_text.ilike.${term}`);
+      const orParts = [`client_name.ilike.${term}`, `destination_text.ilike.${term}`];
+      // "Buscar por cliente, destino o estado" — el estado se compara contra
+      // su etiqueta en español (lo único que el staff realmente escribe),
+      // nunca contra el valor crudo del enum en inglés.
+      const searchLower = params.search.toLowerCase();
+      for (const status of ALL_STATUSES) {
+        if (PROPOSAL_STATUS_LABEL[status].toLowerCase().includes(searchLower)) {
+          orParts.push(`status.eq.${status}`);
+        }
+      }
+      query = query.or(orParts.join(','));
     }
 
     const { data, count, error } = await query;
@@ -81,6 +93,26 @@ export class ProposalsService {
       items: (data ?? []).map(toProposal),
       total: count ?? 0
     };
+  }
+
+  /** Conteos globales por estado para los chips de filtro de la lista — no
+   *  dependen de la búsqueda/paginación actual, así que se piden aparte con
+   *  `head: true` (solo count, sin traer filas) en vez de derivarse de la
+   *  página cargada. */
+  async countsByStatus(): Promise<Record<ProposalStatus, number>> {
+    const counts = await Promise.all(
+      ALL_STATUSES.map(async (status) => {
+        const { count, error } = await this.supabase.client
+          .from('proposals')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', status);
+        if (error) {
+          throw error;
+        }
+        return [status, count ?? 0] as const;
+      })
+    );
+    return Object.fromEntries(counts) as Record<ProposalStatus, number>;
   }
 
   async getById(id: string): Promise<Proposal | null> {

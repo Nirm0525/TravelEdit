@@ -65,7 +65,35 @@
   border-top: 1px solid var(--line-200);
 }
 
-.preview__intro h2 {
+/* Banda de título por sección — bleed hasta el borde de .preview (que ya
+   tiene overflow:hidden + border-radius, así que la banda queda recortada
+   prolijo en las esquinas redondeadas sin necesitar el truco 100vw del
+   sitio público). Mismo lenguaje visual que .proposal__band ahí. */
+.preview__band {
+  margin: calc(var(--space-xl) * -1) calc(var(--space-lg) * -1) var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--canvas-100);
+}
+
+.preview__band h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--size-section-title);
+  color: var(--ink-900);
+}
+
+.preview__band h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-200);
+}
+
+.preview__intro h3 {
   font-family: var(--font-display);
   font-style: italic;
   font-size: var(--size-section-title);
@@ -147,6 +175,34 @@
   letter-spacing: 0.06em;
   color: var(--brand-600);
   margin-bottom: 0.15rem;
+}
+
+.preview__tip-group {
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--line-200);
+}
+
+.preview__tip-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.preview__tip-group h3 {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--brand-600);
+  font-size: var(--size-body);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__tip {
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--line-200);
+}
+
+.preview__tip:first-of-type {
+  border-top: none;
+  padding-top: 0;
 }
 
 .preview__pricing-table {

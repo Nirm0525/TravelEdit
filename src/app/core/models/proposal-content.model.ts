@@ -23,6 +23,7 @@ export interface ProposalServiceItem {
   title: string;
   description: string;
   notes: string;
+  time: string;
 }
 
 export interface ProposalDay {
@@ -54,11 +55,24 @@ export interface ProposalTerms {
   body: string;
 }
 
+export interface ProposalTravelTip {
+  id: string;
+  title: string;
+  body: string;
+}
+
+export interface ProposalTravelTipGroup {
+  id: string;
+  destination: string;
+  tips: ProposalTravelTip[];
+}
+
 export interface ProposalContent {
   cover: ProposalCover;
   intro: ProposalIntro;
   days: ProposalDay[];
   pricing: ProposalPricing;
+  travelTips: ProposalTravelTipGroup[];
   terms: ProposalTerms;
 }
 
@@ -68,6 +82,7 @@ function emptyContent(): ProposalContent {
     intro: { headline: '', body: '' },
     days: [],
     pricing: { lines: [], feesLines: [] },
+    travelTips: [],
     terms: { title: '', body: '' }
   };
 }
@@ -86,6 +101,7 @@ export function toProposalContent(value: unknown): ProposalContent {
       lines: Array.isArray(raw.pricing?.lines) ? raw.pricing.lines : [],
       feesLines: Array.isArray(raw.pricing?.feesLines) ? raw.pricing.feesLines : []
     },
+    travelTips: Array.isArray(raw.travelTips) ? raw.travelTips : [],
     terms: { ...empty.terms, ...raw.terms }
   };
 }

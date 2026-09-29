@@ -19,51 +19,96 @@
     }
 
     @case ('gate') {
-      <div class="private-proposal__gate">
+      <div class="private-proposal__gate" [class.is-exiting]="gateExiting()">
         @if (gate(); as g) {
-          @if (g.coverImagePath) {
-            <div class="private-proposal__gate-image" [style.background-image]="'url(' + g.coverImagePath + ')'" aria-hidden="true"></div>
-          }
-          <div class="private-proposal__gate-overlay" aria-hidden="true"></div>
+          <aside class="private-proposal__gate-panel">
+            <div class="private-proposal__gate-panel-inner">
+              <div>
+                <p class="private-proposal__wordmark">Travel Edit</p>
+                <p class="private-proposal__gate-tagline">Experiencias de viaje curadas</p>
+              </div>
 
-          <div class="private-proposal__gate-card">
-            <p class="private-proposal__wordmark private-proposal__wordmark--on-dark">Travel Edit</p>
-            <p class="private-proposal__gate-lead">Tu propuesta de viaje está lista</p>
-            <h1 class="private-proposal__gate-title">Hola, {{ g.clientName }}</h1>
-            <p class="private-proposal__gate-copy">Ingresa el código de acceso que te compartió tu asesora para ver tu propuesta.</p>
+              <h1 class="private-proposal__gate-headline">Ingresa para ver tu propuesta de viaje</h1>
 
-            <form class="private-proposal__gate-form" (submit)="$event.preventDefault(); submitCode()">
-              <label class="private-proposal__field">
-                <span>Código de acceso</span>
-                <input
-                  type="text"
-                  inputmode="text"
-                  autocomplete="off"
-                  autocapitalize="characters"
-                  [value]="codeInput()"
-                  (input)="onCodeInput($event)"
-                  [disabled]="verifying()"
-                  aria-describedby="gate-error"
-                />
-              </label>
+              <form class="private-proposal__gate-form" (submit)="$event.preventDefault(); submitCode()">
+                <label class="private-proposal__field" for="gate-access-code">
+                  <span>Código de acceso</span>
+                  <input
+                    #gateCodeInput
+                    id="gate-access-code"
+                    type="text"
+                    inputmode="text"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    placeholder="Ingresa tu código de acceso"
+                    [value]="codeInput()"
+                    (input)="onCodeInput($event)"
+                    [disabled]="verifying()"
+                    aria-describedby="gate-error"
+                    [attr.aria-invalid]="accessError() ? 'true' : null"
+                  />
+                </label>
 
-              @if (accessError(); as err) {
-                <p id="gate-error" class="private-proposal__gate-error" role="alert">
-                  @switch (err) {
-                    @case ('invalid_code') { Código incorrecto. Intenta de nuevo. }
-                    @case ('locked') { Demasiados intentos. Espera unos minutos y vuelve a intentar. }
-                    @default { No pudimos verificar el acceso. Intenta de nuevo. }
-                  }
-                </p>
+                @if (accessError(); as err) {
+                  <p id="gate-error" class="private-proposal__gate-error" role="alert" aria-live="assertive">
+                    @switch (err) {
+                      @case ('invalid_code') { Código incorrecto. Inténtalo nuevamente. }
+                      @case ('locked') { El acceso está temporalmente bloqueado. Intenta más tarde. }
+                      @case ('not_found') { Esta propuesta no está disponible. }
+                      @case ('access_not_configured') { Esta propuesta no está disponible. }
+                      @default { No pudimos validar el acceso en este momento. }
+                    }
+                  </p>
+                }
+
+                <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
+                  {{ verifying() ? 'Verificando…' : 'Ver mi propuesta' }}
+                </button>
+              </form>
+
+              <p class="private-proposal__gate-footnote">Esta propuesta es privada y personal.</p>
+            </div>
+          </aside>
+
+          <section class="private-proposal__gate-hero">
+            <div class="private-proposal__gate-hero-photo">
+              @if (g.coverImagePath) {
+                <img [src]="g.coverImagePath" alt="" class="private-proposal__gate-hero-image" loading="eager" />
+              } @else {
+                <div class="private-proposal__gate-hero-fallback" aria-hidden="true"></div>
               }
+              <div class="private-proposal__gate-hero-overlay" aria-hidden="true"></div>
 
-              <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
-                {{ verifying() ? 'Verificando…' : 'Ver mi propuesta' }}
-              </button>
-            </form>
+              <div class="private-proposal__gate-hero-content">
+                <p class="private-proposal__gate-eyebrow">Una experiencia diseñada para ti</p>
+                <h2 class="private-proposal__gate-proposal-title">Propuesta</h2>
 
-            <p class="private-proposal__gate-footnote">Esta propuesta es privada.</p>
-          </div>
+                <dl class="private-proposal__gate-facts">
+                  @if (g.clientName) {
+                    <div class="private-proposal__gate-fact">
+                      <dt>Para</dt>
+                      <dd>{{ g.clientName }}</dd>
+                    </div>
+                  }
+                  @if (g.coverTitle) {
+                    <div class="private-proposal__gate-fact">
+                      <dt>Viaje</dt>
+                      <dd>{{ g.coverTitle }}</dd>
+                    </div>
+                  }
+                  <div class="private-proposal__gate-fact">
+                    <dt>De</dt>
+                    <dd>Travel Edit</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            <div class="private-proposal__gate-hero-footer">
+              <p class="private-proposal__wordmark">Travel Edit</p>
+              <p class="private-proposal__gate-hero-footer-tag">Experiencias de viaje curadas</p>
+            </div>
+          </section>
         }
       </div>
     }
@@ -118,7 +163,14 @@
                 <ul id="proposal-nav-list" class="proposal__nav-list" [class.is-open]="navOpen()">
                   @for (section of navSections(); track section.id) {
                     <li>
-                      <button type="button" (click)="scrollToSection(section.id)">{{ section.label }}</button>
+                      <button
+                        type="button"
+                        [class.is-active]="activeSectionId() === section.id"
+                        [attr.aria-current]="activeSectionId() === section.id ? 'true' : null"
+                        (click)="scrollToSection(section.id)"
+                      >
+                        {{ section.label }}
+                      </button>
                     </li>
                   }
                 </ul>
@@ -128,8 +180,9 @@
 
           @if (d.content.intro.headline || d.content.intro.body || hasTripSummary()) {
             <section id="resumen" class="proposal__section proposal__intro" appRevealOnScroll>
+              <div class="proposal__band"><h2>Resumen</h2></div>
               @if (d.content.intro.headline) {
-                <h2 class="proposal__section-title">{{ d.content.intro.headline }}</h2>
+                <h3 class="proposal__section-title">{{ d.content.intro.headline }}</h3>
               }
               @if (safeIntroBody(); as body) {
                 <div class="proposal__rich" [innerHTML]="body"></div>
@@ -137,30 +190,47 @@
 
               @if (hasTripSummary()) {
                 <div class="proposal__summary">
-                  @if (destinationBadge(); as badge) {
+                  @if (durationDaysLabel(); as days) {
                     <div class="proposal__summary-item">
-                      <p class="proposal__summary-label">Destino</p>
-                      <p class="proposal__summary-value">{{ d.destinationText }}</p>
-                    </div>
-                  }
-                  @if (datesLabel(); as dates) {
-                    <div class="proposal__summary-item">
-                      <p class="proposal__summary-label">Fechas</p>
-                      <p class="proposal__summary-value">{{ dates }}</p>
-                    </div>
-                  }
-                  @if (durationLabel(); as duration) {
-                    <div class="proposal__summary-item">
-                      <p class="proposal__summary-label">Duración</p>
-                      <p class="proposal__summary-value">{{ duration }}</p>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <p class="proposal__summary-value">{{ days }}</p>
+                      @if (durationNightsLabel(); as nights) {
+                        <p class="proposal__summary-label">{{ nights }}</p>
+                      }
                     </div>
                   }
                   @if (travelersLabel(); as travelers) {
                     <div class="proposal__summary-item">
-                      <p class="proposal__summary-label">Viajeros</p>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3" />
+                        <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
+                        <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
+                      </svg>
                       <p class="proposal__summary-value">{{ travelers }}</p>
                     </div>
                   }
+                  @if (seasonLabel(); as season) {
+                    <div class="proposal__summary-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4.5" />
+                        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round" />
+                      </svg>
+                      <p class="proposal__summary-value">{{ season }}</p>
+                      @if (monthYearLabel(); as monthYear) {
+                        <p class="proposal__summary-label">{{ monthYear }}</p>
+                      }
+                    </div>
+                  }
+                  <div class="proposal__summary-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <path d="M12 3l2.2 6.8H21l-5.6 4.1 2.2 6.8L12 16.6l-5.6 4.1 2.2-6.8L3 9.8h6.8z" stroke-linejoin="round" />
+                    </svg>
+                    <p class="proposal__summary-value">Viaje a medida</p>
+                    <p class="proposal__summary-label">Experiencias únicas</p>
+                  </div>
                 </div>
               }
             </section>
@@ -168,38 +238,170 @@
 
           @if (d.content.days.length > 0) {
             <section id="itinerario" class="proposal__section proposal__itinerary">
-              <p class="eyebrow">Itinerario</p>
-              <div class="proposal__days">
-                @for (day of d.content.days; track day.id; let i = $index) {
-                  <div class="proposal__day" [class.proposal__day--reverse]="i % 2 === 1" appRevealOnScroll>
-                    <div class="proposal__day-media">
-                      @if (day.imagePath) {
-                        <img [src]="day.imagePath" alt="" class="proposal__day-image" loading="lazy" />
-                      } @else {
-                        <div class="proposal__day-media-placeholder" aria-hidden="true"></div>
+              <div class="proposal__band"><h2>Itinerario</h2></div>
+
+              @if (itineraryOverview().length > 0) {
+                <div class="proposal__itinerary-summary" appRevealOnScroll>
+                  <div class="proposal__itinerary-summary-header">
+                    <p class="proposal__itinerary-summary-tag">Un recorrido diseñado para inspirar</p>
+                    <button type="button" class="proposal__itinerary-toggle" (click)="toggleItineraryExpanded()">
+                      {{ itineraryExpanded() ? 'Ocultar itinerario completo' : 'Ver itinerario completo' }}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <table class="proposal__itinerary-table">
+                    <thead>
+                      <tr>
+                        <th scope="col" colspan="2">Destino</th>
+                        <th scope="col">Fechas</th>
+                        <th scope="col">Noches</th>
+                        <th scope="col">Experiencias destacadas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (segment of itineraryOverview(); track $index) {
+                        <tr>
+                          <td class="proposal__itinerary-table-thumb">
+                            @if (segment.thumbnailUrl) {
+                              <img [src]="segment.thumbnailUrl" alt="" loading="lazy" />
+                            } @else {
+                              <div class="proposal__itinerary-table-thumb-placeholder" aria-hidden="true"></div>
+                            }
+                          </td>
+                          <td class="proposal__itinerary-table-destination">
+                            {{ segment.location || segment.days[0].dayLabel }}
+                          </td>
+                          <td>{{ segment.dateRangeLabel }}</td>
+                          <td>{{ segment.nights }}</td>
+                          <td>
+                            @if (segment.highlights.length > 0) {
+                              <div class="proposal__itinerary-highlights">
+                                @for (highlight of segment.highlights; track $index) {
+                                  <span class="proposal__itinerary-highlight">
+                                    <span class="proposal__itinerary-highlight-icon" aria-hidden="true">
+                                      @switch (highlight.type) {
+                                        @case ('flight') {
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                                          </svg>
+                                        }
+                                        @case ('transfer') {
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M5 16h14M6 16l1.5-4.5A2 2 0 0 1 9.4 10h5.2a2 2 0 0 1 1.9 1.5L18 16" stroke-linecap="round" stroke-linejoin="round" />
+                                            <circle cx="8" cy="17.3" r="1.4" />
+                                            <circle cx="16" cy="17.3" r="1.4" />
+                                          </svg>
+                                        }
+                                        @case ('hotel') {
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M3 19v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" />
+                                            <path d="M3 19h18M3 13V6" stroke-linecap="round" />
+                                          </svg>
+                                        }
+                                        @case ('activity') {
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" stroke-linejoin="round" />
+                                          </svg>
+                                        }
+                                        @default {
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z" stroke-linejoin="round" />
+                                            <circle cx="12" cy="9" r="2.2" />
+                                          </svg>
+                                        }
+                                      }
+                                    </span>
+                                    {{ highlight.label }}
+                                  </span>
+                                }
+                              </div>
+                            }
+                          </td>
+                        </tr>
                       }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              @if (itineraryExpanded()) {
+                <div class="proposal__days">
+                  @for (day of d.content.days; track day.id; let i = $index) {
+                    <div class="proposal__day" [class.proposal__day--reverse]="i % 2 === 1" appRevealOnScroll>
+                      <div class="proposal__day-media">
+                        @if (day.imagePath) {
+                          <img [src]="day.imagePath" alt="" class="proposal__day-image" loading="lazy" />
+                        } @else {
+                          <div class="proposal__day-media-placeholder" aria-hidden="true"></div>
+                        }
+                      </div>
+                      <div class="proposal__day-body">
+                        <p class="proposal__day-number">Día {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</p>
+                        <h3 class="proposal__day-title">{{ day.title }}</h3>
+                        @if (day.location) {
+                          <p class="proposal__day-location">{{ day.location }}</p>
+                        }
+                        @if (day.description) {
+                          <p class="proposal__day-description">{{ day.description }}</p>
+                        }
+                        @if (day.services.length > 0) {
+                          <ul class="proposal__services">
+                            @for (service of day.services; track service.id) {
+                              <li>
+                                <span class="proposal__service-type">
+                                  {{ serviceTypeLabel[service.type] }}
+                                  @if (service.time) {
+                                    <span class="proposal__service-time">· {{ service.time }}</span>
+                                  }
+                                </span>
+                                <strong>{{ service.title }}</strong>
+                                @if (service.description) {
+                                  <p>{{ service.description }}</p>
+                                }
+                              </li>
+                            }
+                          </ul>
+                        }
+                      </div>
                     </div>
-                    <div class="proposal__day-body">
-                      <p class="proposal__day-number">Día {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</p>
-                      <h3 class="proposal__day-title">{{ day.title }}</h3>
-                      @if (day.location) {
-                        <p class="proposal__day-location">{{ day.location }}</p>
-                      }
-                      @if (day.description) {
-                        <p class="proposal__day-description">{{ day.description }}</p>
-                      }
-                      @if (day.services.length > 0) {
-                        <ul class="proposal__services">
-                          @for (service of day.services; track service.id) {
-                            <li>
-                              <span class="proposal__service-type">{{ serviceTypeLabel[service.type] }}</span>
-                              <strong>{{ service.title }}</strong>
-                              @if (service.description) {
-                                <p>{{ service.description }}</p>
-                              }
-                            </li>
-                          }
-                        </ul>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (hasTravelTips()) {
+            <section id="consejos" class="proposal__section proposal__tips" appRevealOnScroll>
+              <div class="proposal__band"><h2>Consejos de viaje</h2></div>
+              <p class="proposal__tips-tag">Todo lo que necesitas para un viaje perfecto</p>
+              <div class="proposal__tip-groups">
+                @for (group of d.content.travelTips; track group.id) {
+                  <div class="proposal__tip-group">
+                    @if (d.content.travelTips.length > 1) {
+                      <h3 class="proposal__tip-group-title">{{ group.destination }}</h3>
+                    }
+                    <div class="proposal__tip-card-grid">
+                      @for (tip of group.tips; track tip.id) {
+                        <details class="proposal__tip">
+                          <summary class="proposal__tip-summary">
+                            <span class="proposal__tip-icon" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5.5M12 8v.01" stroke-linecap="round" />
+                              </svg>
+                            </span>
+                            <span class="proposal__tip-summary-text">{{ tip.title }}</span>
+                            <span class="proposal__tip-chevron" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                              </svg>
+                            </span>
+                          </summary>
+                          <p class="proposal__tip-body">{{ tip.body }}</p>
+                        </details>
                       }
                     </div>
                   </div>
@@ -210,31 +412,58 @@
 
           @if (d.content.pricing.lines.length > 0 || d.content.pricing.feesLines.length > 0) {
             <section id="inversion" class="proposal__section proposal__pricing" appRevealOnScroll>
-              <p class="eyebrow">Inversión</p>
-              <div class="proposal__pricing-list">
-                @for (line of d.content.pricing.lines; track line.id) {
-                  <div class="proposal__pricing-row">
-                    <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
-                    <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
-                  </div>
-                }
-                @for (line of d.content.pricing.feesLines; track line.id) {
-                  <div class="proposal__pricing-row">
-                    <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
-                    <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
-                  </div>
-                }
+              <div class="proposal__band"><h2>Inversión</h2></div>
+
+              <div class="proposal__pricing-summary">
+                <p class="proposal__pricing-copy">
+                  Esta propuesta incluye los servicios y experiencias detallados en el itinerario, cuidadosamente
+                  seleccionados y con el respaldo de tu asesora durante todo el viaje.
+                </p>
+
+                <div class="proposal__pricing-card">
+                  <p class="proposal__pricing-card-label">Inversión total</p>
+                  <p class="proposal__pricing-card-total">{{ d.pricingTotal | currency: d.currency }}</p>
+                  @if (travelersLabel(); as travelers) {
+                    <p class="proposal__pricing-card-meta">Para {{ travelers }}</p>
+                  }
+                  @if (durationLabel(); as duration) {
+                    <p class="proposal__pricing-card-meta">{{ duration }}</p>
+                  }
+                  <button type="button" class="proposal__pricing-toggle" (click)="togglePricingExpanded()">
+                    {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div class="proposal__pricing-total">
-                <span>Total</span>
-                <span class="proposal__pricing-total-amount">{{ d.pricingTotal | currency: d.currency }}</span>
-              </div>
+
+              @if (pricingExpanded()) {
+                <div class="proposal__pricing-list">
+                  @for (line of d.content.pricing.lines; track line.id) {
+                    <div class="proposal__pricing-row">
+                      <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
+                      <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
+                    </div>
+                  }
+                  @for (line of d.content.pricing.feesLines; track line.id) {
+                    <div class="proposal__pricing-row">
+                      <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
+                      <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
+                    </div>
+                  }
+                  <div class="proposal__pricing-total">
+                    <span>Total</span>
+                    <span class="proposal__pricing-total-amount">{{ d.pricingTotal | currency: d.currency }}</span>
+                  </div>
+                </div>
+              }
             </section>
           }
 
           @if (safeTermsBody(); as body) {
             <section id="terminos" class="proposal__section proposal__terms" appRevealOnScroll>
-              <p class="eyebrow">{{ d.content.terms.title || 'Términos y condiciones' }}</p>
+              <div class="proposal__band"><h2>{{ d.content.terms.title || 'Términos y condiciones' }}</h2></div>
               <div class="proposal__rich proposal__rich--small" [innerHTML]="body"></div>
             </section>
           }
@@ -256,8 +485,8 @@
                 }
               </div>
             } @else {
-              <p class="eyebrow">¿Listos para comenzar?</p>
-              <h2 class="proposal__section-title">Esta propuesta fue diseñada especialmente para tu viaje.</h2>
+              <div class="proposal__band"><h2>¿Listos para comenzar?</h2></div>
+              <h3 class="proposal__section-title">Esta propuesta fue diseñada especialmente para tu viaje.</h3>
 
               <form class="proposal__accept-form" (submit)="$event.preventDefault(); accept()">
                 <label class="private-proposal__field">

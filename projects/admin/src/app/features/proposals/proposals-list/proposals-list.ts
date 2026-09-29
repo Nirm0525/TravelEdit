@@ -1,39 +1,28 @@
-import { Component, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ProposalsService } from '../../../core/services/proposals';
+import { ProposalImagesService } from '../../../core/services/proposal-images';
 import { Proposal } from '../../../core/models/proposal.model';
 import { ProposalStatus } from '../../../core/models/proposal-enums';
 import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
 import { PROPOSAL_STATUS_OPTIONS } from '../../../core/data/proposal-options';
-import { AdminPageHeader, BreadcrumbItem } from '../../../shared/ui/admin-page-header/admin-page-header';
-import { AdminTable } from '../../../shared/ui/admin-table/admin-table';
-import { StatusBadge, StatusBadgeVariant } from '../../../shared/ui/status-badge/status-badge';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 
-const STATUS_VARIANT: Record<ProposalStatus, StatusBadgeVariant> = {
-  draft: 'neutral',
-  published: 'warning',
-  viewed: 'warning',
-  accepted: 'success',
-  expired: 'danger'
-};
-
 @Component({
   selector: 'app-proposals-list',
-  imports: [RouterLink, DatePipe, CurrencyPipe, AdminPageHeader, AdminTable, StatusBadge, ConfirmDialog],
+  imports: [RouterLink, DatePipe, ConfirmDialog],
   templateUrl: './proposals-list.html',
   styleUrl: './proposals-list.css'
 })
 export class ProposalsList {
   private readonly proposalsService = inject(ProposalsService);
+  private readonly proposalImages = inject(ProposalImagesService);
 
-  readonly breadcrumb: BreadcrumbItem[] = [{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas' }];
   readonly statusLabel = PROPOSAL_STATUS_LABEL;
-  readonly statusVariant = STATUS_VARIANT;
   readonly statusOptions = PROPOSAL_STATUS_OPTIONS;
 
   readonly items = signal<Proposal[]>([]);
@@ -44,16 +33,27 @@ export class ProposalsList {
   readonly statusFilter = signal<ProposalStatus | ''>('');
   readonly search = signal('');
 
+  readonly counts = signal<Record<ProposalStatus, number>>({
+    draft: 0,
+    published: 0,
+    viewed: 0,
+    accepted: 0,
+    expired: 0
+  });
+  readonly totalCount = computed(() => Object.values(this.counts()).reduce((sum, n) => sum + n, 0));
+
   readonly actionError = signal<string | null>(null);
   readonly togglingId = signal<string | null>(null);
   readonly proposalPendingDelete = signal<Proposal | null>(null);
   readonly deletingId = signal<string | null>(null);
+  readonly openMenuId = signal<string | null>(null);
 
   readonly pageSize = PAGE_SIZE;
   private searchDebounce?: ReturnType<typeof setTimeout>;
 
   constructor() {
     void this.load();
+    void this.loadCounts();
   }
 
   async load(): Promise<void> {
@@ -74,6 +74,22 @@ export class ProposalsList {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Conteos por estado para los chips — independientes de la búsqueda y la
+   *  paginación actuales, se recargan solo cuando una acción puede haber
+   *  cambiado la distribución (publicar/despublicar/eliminar), no en cada
+   *  tecla de búsqueda. */
+  private async loadCounts(): Promise<void> {
+    try {
+      this.counts.set(await this.proposalsService.countsByStatus());
+    } catch (error) {
+      console.error('No se pudieron cargar los conteos de propuestas.', error);
+    }
+  }
+
+  thumbnailUrl(item: Proposal): string | null {
+    return this.proposalImages.publicUrl(item.coverImagePath);
   }
 
   async setStatusFilter(status: ProposalStatus | ''): Promise<void> {
@@ -111,15 +127,31 @@ export class ProposalsList {
     return Math.max(1, Math.ceil(this.total() / this.pageSize));
   }
 
+  toggleMenu(id: string): void {
+    this.openMenuId.set(this.openMenuId() === id ? null : id);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.openMenuId()) {
+      return;
+    }
+    if (!(event.target as HTMLElement).closest('.proposals-list__menu')) {
+      this.openMenuId.set(null);
+    }
+  }
+
   async publish(item: Proposal): Promise<void> {
     if (this.togglingId()) {
       return;
     }
+    this.openMenuId.set(null);
     this.togglingId.set(item.id);
     this.actionError.set(null);
     try {
       await this.proposalsService.publish(item.id);
       await this.load();
+      await this.loadCounts();
     } catch (error) {
       console.error('No se pudo publicar la propuesta.', error);
       // El backend es la autoridad sobre "está lista para publicar" —
@@ -135,11 +167,13 @@ export class ProposalsList {
     if (this.togglingId()) {
       return;
     }
+    this.openMenuId.set(null);
     this.togglingId.set(item.id);
     this.actionError.set(null);
     try {
       await this.proposalsService.unpublish(item.id);
       await this.load();
+      await this.loadCounts();
     } catch (error) {
       console.error('No se pudo despublicar la propuesta.', error);
       this.actionError.set('No se pudo despublicar la propuesta. Inténtalo nuevamente.');
@@ -149,6 +183,7 @@ export class ProposalsList {
   }
 
   requestDelete(item: Proposal): void {
+    this.openMenuId.set(null);
     this.actionError.set(null);
     this.proposalPendingDelete.set(item);
   }
@@ -168,6 +203,7 @@ export class ProposalsList {
     try {
       await this.proposalsService.remove(item.id);
       await this.load();
+      await this.loadCounts();
     } catch (error) {
       console.error('No se pudo eliminar la propuesta.', error);
       this.actionError.set('No se pudo eliminar la propuesta. Inténtalo nuevamente.');

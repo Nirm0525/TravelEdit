@@ -8,6 +8,7 @@ import { environment } from '../../../../environments/environment';
 import { ClientTripStep } from './client-trip-step/client-trip-step';
 import { BuildJourneyStep } from './build-journey-step/build-journey-step';
 import { PricingStep } from './pricing-step/pricing-step';
+import { TravelTipsStep } from './travel-tips-step/travel-tips-step';
 import { AiPolishStep } from './ai-polish-step/ai-polish-step';
 import { PreviewStep } from './preview-step/preview-step';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
@@ -26,7 +27,7 @@ import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog'
  *  "Términos" porque ClientTripStep comparte esas tres secciones — con un
  *  solo currentStep gobernando tanto el contenido como el resaltado de la
  *  pestaña, eso ya no puede pasar. */
-type BuilderStep = 'client-trip' | 'cover' | 'journey' | 'pricing' | 'terms' | 'assistant' | 'preview';
+type BuilderStep = 'client-trip' | 'cover' | 'journey' | 'pricing' | 'travel-tips' | 'terms' | 'assistant' | 'preview';
 type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
 
 interface TabDef {
@@ -39,13 +40,14 @@ const TABS: TabDef[] = [
   { key: 'cover', label: 'Portada' },
   { key: 'journey', label: 'Itinerario' },
   { key: 'pricing', label: 'Precios' },
+  { key: 'travel-tips', label: 'Travel Tips' },
   { key: 'terms', label: 'Términos' },
   { key: 'assistant', label: 'The Edit Assistant' }
 ];
 
 @Component({
   selector: 'app-proposal-builder',
-  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, AiPolishStep, PreviewStep, ConfirmDialog],
+  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, ConfirmDialog],
   templateUrl: './proposal-builder.html',
   styleUrl: './proposal-builder.css'
 })
@@ -116,7 +118,7 @@ export class ProposalBuilder {
 
   private readStepFromUrl(): BuilderStep {
     const value = this.route.snapshot.queryParamMap.get('step');
-    const valid: BuilderStep[] = ['client-trip', 'cover', 'journey', 'pricing', 'terms', 'assistant', 'preview'];
+    const valid: BuilderStep[] = ['client-trip', 'cover', 'journey', 'pricing', 'travel-tips', 'terms', 'assistant', 'preview'];
     return (valid as string[]).includes(value ?? '') ? (value as BuilderStep) : 'client-trip';
   }
 

@@ -72,6 +72,14 @@
                       <div class="service-card__row">
                         <span cdkDragHandle class="service-card__handle" aria-label="Reordenar servicio" tabindex="0">⠿</span>
                         <span class="service-card__type">{{ serviceTypeLabel[service.type] }}</span>
+                        <input
+                          type="text"
+                          class="service-card__time"
+                          [value]="service.time"
+                          (blur)="onServiceFieldBlur(day, service, 'time', $event)"
+                          placeholder="Hora (ej. 07:45)"
+                          aria-label="Hora del servicio"
+                        />
                         <button type="button" class="service-card__remove" (click)="removeService(day, service)" aria-label="Eliminar servicio">✕</button>
                       </div>
                       <input

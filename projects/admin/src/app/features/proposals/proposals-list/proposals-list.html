@@ -1,121 +1,188 @@
-<app-admin-page-header [breadcrumb]="breadcrumb" title="Propuestas">
-  <a class="btn btn--primary" routerLink="/proposals/new">+ Nueva propuesta</a>
-</app-admin-page-header>
+<div class="proposals-list">
+  <header class="proposals-list__header">
+    <div>
+      <p class="proposals-list__breadcrumb">
+        <a routerLink="/dashboard">Panel</a>
+        <span aria-hidden="true"> / </span>
+        <span>Propuestas</span>
+      </p>
+      <h1 class="page-title proposals-list__title">Propuestas</h1>
+      <p class="proposals-list__subtitle">Crea y gestiona propuestas personalizadas para tus clientes.</p>
+    </div>
 
-<div class="proposals-list__toolbar">
-  <input
-    type="search"
-    class="proposals-list__search"
-    placeholder="Buscar por cliente o destino…"
-    aria-label="Buscar por cliente o destino"
-    [value]="search()"
-    (input)="onSearchInput($event)"
-  />
+    <a class="proposals-list__new-btn" routerLink="/proposals/new">
+      <span aria-hidden="true">+</span> Nueva propuesta <span aria-hidden="true">+</span>
+    </a>
+  </header>
 
-  @if (hasActiveFilters()) {
-    <button type="button" class="btn btn--secondary" (click)="clearFilters()">Limpiar filtros</button>
-  }
-</div>
+  <div class="proposals-list__toolbar">
+    <label class="proposals-list__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M20 20l-4.3-4.3" stroke-linecap="round" />
+      </svg>
+      <input
+        type="search"
+        placeholder="Buscar por cliente, destino o estado…"
+        aria-label="Buscar por cliente, destino o estado"
+        [value]="search()"
+        (input)="onSearchInput($event)"
+      />
+    </label>
 
-<div class="proposals-list__filters" role="group" aria-label="Filtrar por estado">
-  <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">Todas</button>
-  @for (option of statusOptions; track option.value) {
-    <button type="button" [class.is-active]="statusFilter() === option.value" (click)="setStatusFilter(option.value)">
-      {{ option.label }}
+    <button
+      type="button"
+      class="proposals-list__clear"
+      [disabled]="!hasActiveFilters()"
+      title="Limpiar filtros"
+      aria-label="Limpiar filtros"
+      (click)="clearFilters()"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M4 5h16M7 5v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5M10 5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
     </button>
+  </div>
+
+  <div class="proposals-list__filters" role="group" aria-label="Filtrar por estado">
+    <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">
+      Todas <span class="proposals-list__count">{{ totalCount() }}</span>
+    </button>
+    @for (option of statusOptions; track option.value) {
+      <button type="button" [class.is-active]="statusFilter() === option.value" (click)="setStatusFilter(option.value)">
+        {{ option.label }} <span class="proposals-list__count">{{ counts()[option.value] }}</span>
+      </button>
+    }
+  </div>
+
+  @if (actionError(); as message) {
+    <div class="proposals-list__error">
+      <p>{{ message }}</p>
+    </div>
   }
-</div>
 
-@if (actionError(); as message) {
-  <div class="proposals-list__error">
-    <p>{{ message }}</p>
-  </div>
-}
+  @if (loadError(); as message) {
+    <div class="proposals-list__error">
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+    </div>
+  } @else if (loading()) {
+    <div class="proposals-list__skeleton" aria-hidden="true">
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="proposals-list__skeleton-row"></div>
+      }
+    </div>
+  } @else if (items().length === 0) {
+    <div class="proposals-list__empty">
+      @if (hasActiveFilters()) {
+        <p>No hay propuestas que coincidan con estos filtros.</p>
+      } @else {
+        <p>Todavía no hay propuestas.</p>
+      }
+    </div>
+  } @else {
+    <div class="proposals-list__rows">
+      @for (item of items(); track item.id) {
+        <div class="proposals-list__row">
+          <a class="proposals-list__row-link" [routerLink]="['/proposals', item.id, 'edit']">
+            <div class="proposals-list__thumb">
+              @if (thumbnailUrl(item); as url) {
+                <img [src]="url" alt="" loading="lazy" />
+              } @else {
+                <div class="proposals-list__thumb-placeholder" aria-hidden="true"></div>
+              }
+            </div>
 
-@if (loadError(); as message) {
-  <div class="proposals-list__error">
-    <p>{{ message }}</p>
-    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
-  </div>
-} @else {
-  <app-admin-table
-    [loading]="loading()"
-    [empty]="!loading() && items().length === 0"
-    [emptyMessage]="hasActiveFilters() ? 'No hay propuestas que coincidan con estos filtros.' : 'Todavía no hay propuestas.'"
-  >
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Cliente</th>
-          <th scope="col">Destino</th>
-          <th scope="col">Estado</th>
-          <th scope="col">Total</th>
-          <th scope="col">Actualizada</th>
-          <th scope="col">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id) {
-          <tr>
-            <td data-label="Cliente">
-              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
-              @if (item.travelersCount) {
-                <span class="proposals-list__meta">{{ item.travelersCount }} viajeros</span>
-              }
-            </td>
-            <td data-label="Destino">
-              {{ item.destinationText || '—' }}
-              @if (item.startDate) {
-                <span class="proposals-list__meta">
-                  {{ item.startDate | date: 'd MMM y' }}@if (item.endDate) { – {{ item.endDate | date: 'd MMM y' }} }
-                </span>
-              }
-            </td>
-            <td data-label="Estado">
-              <app-status-badge [label]="statusLabel[item.status]" [variant]="statusVariant[item.status]" />
-              @if (item.acceptedAt) {
-                <span class="proposals-list__meta">Aceptada {{ item.acceptedAt | date: 'd MMM y' }}</span>
-              } @else if (item.viewedAt) {
-                <span class="proposals-list__meta">Vista {{ item.viewedAt | date: 'd MMM y' }}</span>
-              } @else if (item.publishedAt) {
-                <span class="proposals-list__meta">Publicada {{ item.publishedAt | date: 'd MMM y' }}</span>
-              }
-            </td>
-            <td data-label="Total">{{ item.pricingTotal | currency: item.currency }}</td>
-            <td data-label="Actualizada">{{ item.updatedAt | date: 'd MMM y' }}</td>
-            <td data-label="Acciones">
-              <div class="proposals-list__actions">
-                <a [routerLink]="['/proposals', item.id, 'edit']">Editar</a>
-                <a [routerLink]="['/proposals', item.id, 'edit']" [queryParams]="{ step: 'preview' }">Preview</a>
+            <div class="proposals-list__info">
+              <p class="proposals-list__trip-title">{{ item.title || 'Sin título todavía' }}</p>
+              <p class="proposals-list__client">{{ item.clientName }}</p>
+              <div class="proposals-list__meta">
+                @if (item.destinationText) {
+                  <span class="proposals-list__meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z" stroke-linejoin="round" />
+                      <circle cx="12" cy="9" r="2.2" />
+                    </svg>
+                    {{ item.destinationText }}
+                  </span>
+                }
+                @if (item.startDate) {
+                  <span class="proposals-list__meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <rect x="3.5" y="5" width="17" height="15" rx="2" />
+                      <path d="M3.5 9.5h17M8 3v3.5M16 3v3.5" stroke-linecap="round" />
+                    </svg>
+                    {{ item.startDate | date: 'd MMM y' }}
+                  </span>
+                }
+                @if (item.travelersCount) {
+                  <span class="proposals-list__meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
+                      <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
+                    </svg>
+                    {{ item.travelersCount }} viajero{{ item.travelersCount === 1 ? '' : 's' }}
+                  </span>
+                }
+              </div>
+            </div>
+          </a>
+
+          <div class="proposals-list__status-badge" [attr.data-status]="item.status">{{ statusLabel[item.status] }}</div>
+
+          <div class="proposals-list__menu">
+            <button
+              type="button"
+              class="proposals-list__menu-trigger"
+              aria-label="Más acciones"
+              [attr.aria-expanded]="openMenuId() === item.id"
+              (click)="toggleMenu(item.id)"
+            >
+              ⋮
+            </button>
+            @if (openMenuId() === item.id) {
+              <div class="proposals-list__menu-panel" role="menu">
+                <a role="menuitem" [routerLink]="['/proposals', item.id, 'edit']" (click)="openMenuId.set(null)">Editar</a>
+                <a role="menuitem" [routerLink]="['/proposals', item.id, 'edit']" [queryParams]="{ step: 'preview' }" (click)="openMenuId.set(null)">
+                  Vista previa
+                </a>
                 @if (item.status === 'draft') {
-                  <button type="button" [disabled]="togglingId() === item.id" (click)="publish(item)">
+                  <button type="button" role="menuitem" [disabled]="togglingId() === item.id" (click)="publish(item)">
                     {{ togglingId() === item.id ? 'Publicando…' : 'Publicar' }}
                   </button>
                 }
                 @if (item.status === 'published' || item.status === 'viewed' || item.status === 'accepted') {
-                  <button type="button" [disabled]="togglingId() === item.id" (click)="unpublish(item)">
+                  <button type="button" role="menuitem" [disabled]="togglingId() === item.id" (click)="unpublish(item)">
                     {{ togglingId() === item.id ? 'Despublicando…' : 'Despublicar' }}
                   </button>
                 }
-                <button type="button" class="proposals-list__delete" [disabled]="deletingId() === item.id" (click)="requestDelete(item)">
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="proposals-list__menu-item--danger"
+                  [disabled]="deletingId() === item.id"
+                  (click)="requestDelete(item)"
+                >
                   {{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}
                 </button>
               </div>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </app-admin-table>
-}
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
 
-@if (!loading() && !loadError() && items().length > 0) {
-  <div class="proposals-list__pagination">
-    <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
-    <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} propuestas</span>
-    <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
-  </div>
-}
+  @if (!loading() && !loadError() && items().length > 0 && totalPages() > 1) {
+    <div class="proposals-list__pagination">
+      <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
+      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} propuestas</span>
+      <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
+    </div>
+  }
+</div>
 
 <app-confirm-dialog
   [open]="!!proposalPendingDelete()"

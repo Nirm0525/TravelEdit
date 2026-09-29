@@ -1,0 +1,32 @@
+<app-admin-page-header [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/proposals' }, { label: 'Nueva propuesta' }]" title="Nueva propuesta" />
+
+<form class="proposal-create" [formGroup]="form" (ngSubmit)="save()">
+  <label class="field">
+    <span>Nombre del cliente</span>
+    <input type="text" formControlName="clientName" autocomplete="off" />
+    @if (form.controls.clientName.touched && form.controls.clientName.invalid) {
+      <span class="field__hint field__hint--error">El nombre del cliente es obligatorio.</span>
+    }
+  </label>
+
+  <label class="field">
+    <span>Destino (opcional)</span>
+    <input type="text" formControlName="destinationText" placeholder="Ej. Kioto, Japón" autocomplete="off" />
+  </label>
+
+  <p class="field__hint">
+    La propuesta se crea como borrador — el resto del contenido (portada, itinerario, precios) se completa en el
+    siguiente paso.
+  </p>
+
+  @if (error()) {
+    <p class="field__hint field__hint--error">{{ error() }}</p>
+  }
+
+  <div class="proposal-create__footer">
+    <a class="btn btn--secondary" routerLink="/proposals">Cancelar</a>
+    <button type="submit" class="btn btn--primary" [disabled]="saving()">
+      {{ saving() ? 'Creando…' : 'Crear propuesta' }}
+    </button>
+  </div>
+</form>

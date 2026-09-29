@@ -1,0 +1,126 @@
+<app-admin-page-header [breadcrumb]="breadcrumb" title="Propuestas">
+  <a class="btn btn--primary" routerLink="/proposals/new">+ Nueva propuesta</a>
+</app-admin-page-header>
+
+<div class="proposals-list__toolbar">
+  <input
+    type="search"
+    class="proposals-list__search"
+    placeholder="Buscar por cliente o destino…"
+    aria-label="Buscar por cliente o destino"
+    [value]="search()"
+    (input)="onSearchInput($event)"
+  />
+
+  @if (hasActiveFilters()) {
+    <button type="button" class="btn btn--secondary" (click)="clearFilters()">Limpiar filtros</button>
+  }
+</div>
+
+<div class="proposals-list__filters" role="group" aria-label="Filtrar por estado">
+  <button type="button" [class.is-active]="statusFilter() === ''" (click)="setStatusFilter('')">Todas</button>
+  @for (option of statusOptions; track option.value) {
+    <button type="button" [class.is-active]="statusFilter() === option.value" (click)="setStatusFilter(option.value)">
+      {{ option.label }}
+    </button>
+  }
+</div>
+
+@if (actionError(); as message) {
+  <div class="proposals-list__error">
+    <p>{{ message }}</p>
+  </div>
+}
+
+@if (loadError(); as message) {
+  <div class="proposals-list__error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <app-admin-table
+    [loading]="loading()"
+    [empty]="!loading() && items().length === 0"
+    [emptyMessage]="hasActiveFilters() ? 'No hay propuestas que coincidan con estos filtros.' : 'Todavía no hay propuestas.'"
+  >
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Cliente</th>
+          <th scope="col">Destino</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Total</th>
+          <th scope="col">Actualizada</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td data-label="Cliente">
+              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
+              @if (item.travelersCount) {
+                <span class="proposals-list__meta">{{ item.travelersCount }} viajeros</span>
+              }
+            </td>
+            <td data-label="Destino">
+              {{ item.destinationText || '—' }}
+              @if (item.startDate) {
+                <span class="proposals-list__meta">
+                  {{ item.startDate | date: 'd MMM y' }}@if (item.endDate) { – {{ item.endDate | date: 'd MMM y' }} }
+                </span>
+              }
+            </td>
+            <td data-label="Estado">
+              <app-status-badge [label]="statusLabel[item.status]" [variant]="statusVariant[item.status]" />
+              @if (item.acceptedAt) {
+                <span class="proposals-list__meta">Aceptada {{ item.acceptedAt | date: 'd MMM y' }}</span>
+              } @else if (item.viewedAt) {
+                <span class="proposals-list__meta">Vista {{ item.viewedAt | date: 'd MMM y' }}</span>
+              } @else if (item.publishedAt) {
+                <span class="proposals-list__meta">Publicada {{ item.publishedAt | date: 'd MMM y' }}</span>
+              }
+            </td>
+            <td data-label="Total">{{ item.pricingTotal | currency: item.currency }}</td>
+            <td data-label="Actualizada">{{ item.updatedAt | date: 'd MMM y' }}</td>
+            <td data-label="Acciones">
+              <div class="proposals-list__actions">
+                <a [routerLink]="['/proposals', item.id, 'edit']">Editar</a>
+                <a [routerLink]="['/proposals', item.id, 'edit']" [queryParams]="{ step: 'preview' }">Preview</a>
+                @if (item.status === 'draft') {
+                  <button type="button" [disabled]="togglingId() === item.id" (click)="publish(item)">
+                    {{ togglingId() === item.id ? 'Publicando…' : 'Publicar' }}
+                  </button>
+                }
+                @if (item.status === 'published' || item.status === 'viewed' || item.status === 'accepted') {
+                  <button type="button" [disabled]="togglingId() === item.id" (click)="unpublish(item)">
+                    {{ togglingId() === item.id ? 'Despublicando…' : 'Despublicar' }}
+                  </button>
+                }
+                <button type="button" class="proposals-list__delete" [disabled]="deletingId() === item.id" (click)="requestDelete(item)">
+                  {{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </app-admin-table>
+}
+
+@if (!loading() && !loadError() && items().length > 0) {
+  <div class="proposals-list__pagination">
+    <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
+    <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} propuestas</span>
+    <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!proposalPendingDelete()"
+  title="Eliminar propuesta"
+  [message]="'¿Eliminar la propuesta de ' + (proposalPendingDelete()?.clientName ?? '') + '? Esta acción no se puede deshacer.'"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>

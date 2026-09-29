@@ -7,7 +7,7 @@ import { STAFF_ROLE_LABEL, StaffRole } from '../../../core/models/staff-role';
 interface NavItem {
   label: string;
   path: string;
-  icon: 'dashboard' | 'home' | 'book' | 'compass' | 'inbox' | 'users' | 'settings';
+  icon: 'dashboard' | 'home' | 'book' | 'compass' | 'inbox' | 'document' | 'users' | 'settings';
   permission: PermissionKey;
 }
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Blog', path: '/blog', icon: 'book', permission: 'blog' },
   { label: 'Destinos', path: '/destinos', icon: 'compass', permission: 'destinos' },
   { label: 'Solicitudes', path: '/solicitudes', icon: 'inbox', permission: 'solicitudes' },
+  { label: 'Propuestas', path: '/proposals', icon: 'document', permission: 'proposals' },
   { label: 'Usuarios', path: '/usuarios', icon: 'users', permission: 'usuarios' },
   { label: 'Configuración', path: '/configuracion', icon: 'settings', permission: 'configuracion' }
 ];

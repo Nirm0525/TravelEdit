@@ -6,6 +6,7 @@ export type PermissionKey =
   | 'blog'
   | 'destinos'
   | 'solicitudes'
+  | 'proposals'
   | 'usuarios'
   | 'configuracion';
 
@@ -16,11 +17,14 @@ export type PermissionKey =
 // 0021_articles.sql (articles_insert/articles_update usan can_manage_content(),
 // coherente con que 'blog' no está en el arreglo de staff).
 export const ROLE_PERMISSIONS: Record<StaffRole, PermissionKey[]> = {
-  admin: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes', 'usuarios', 'configuracion'],
+  admin: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes', 'proposals', 'usuarios', 'configuracion'],
   // 'solicitudes' agregado a editor — ver 0027_grant_editor_leads_access.sql:
   // can_manage_leads() ahora también admite 'editor', no solo admin/staff.
-  editor: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes'],
-  staff: ['dashboard', 'solicitudes']
+  // 'proposals' sigue el mismo criterio: can_manage_proposals() (0029) admite
+  // admin/editor/staff por igual, ya que una propuesta la arma directamente
+  // la asesora asignada al lead.
+  editor: ['dashboard', 'contenido', 'blog', 'destinos', 'solicitudes', 'proposals'],
+  staff: ['dashboard', 'solicitudes', 'proposals']
 };
 
 export function canAccess(role: StaffRole | undefined, key: PermissionKey): boolean {

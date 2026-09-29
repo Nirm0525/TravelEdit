@@ -1,0 +1,122 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="step-error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <div class="journey">
+    <div class="journey__toolbar">
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addDay()">+ Agregar día</button>
+      <span class="journey__status" role="status" aria-live="polite">{{ saving() ? 'Guardando…' : '' }}</span>
+    </div>
+
+    @if (saveError(); as message) {
+      <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+    }
+
+    @if (days().length === 0) {
+      <p class="journey__empty">Todavía no hay días en el itinerario. Agrega el primero para empezar a construir el viaje.</p>
+    } @else {
+      <div cdkDropList class="journey__days" (cdkDropListDropped)="dropDay($event)">
+        @for (day of days(); track day.id) {
+          <article cdkDrag class="day-card">
+            <header class="day-card__header">
+              <span cdkDragHandle class="day-card__handle" aria-label="Reordenar día" tabindex="0">⠿</span>
+              <span class="day-card__number">DAY {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</span>
+              <input
+                type="text"
+                class="day-card__title-input"
+                [value]="day.title"
+                (blur)="onDayFieldBlur(day, 'title', $event)"
+                [attr.aria-label]="'Título del día ' + day.dayNumber"
+                placeholder="Título del día — ej. Llegada a Kioto"
+              />
+              <button type="button" class="day-card__remove" (click)="requestRemoveDay(day)">Eliminar día</button>
+            </header>
+
+            <div class="day-card__body">
+              <label class="field">
+                <span>Ubicación</span>
+                <input type="text" [value]="day.location" (blur)="onDayFieldBlur(day, 'location', $event)" placeholder="Ej. Kioto, Japón" />
+              </label>
+
+              <label class="field">
+                <span class="day-card__field-label">
+                  Descripción
+                  <button type="button" class="day-card__ai-trigger" (click)="openAssistant.emit('day_description:' + day.id)" title="Mejorar con The Edit Assistant">✨</button>
+                </span>
+                <textarea rows="3" [value]="day.description" (blur)="onDayFieldBlur(day, 'description', $event)"></textarea>
+              </label>
+
+              <div class="day-card__image">
+                @if (dayImageUrls()[day.id]; as url) {
+                  <img [src]="url" alt="" class="day-card__image-preview" />
+                }
+                <app-image-uploader
+                  [multiple]="false"
+                  [requireAltText]="false"
+                  [disabled]="uploadingDayId() === day.id"
+                  confirmLabel="Subir imagen del día"
+                  (filesReady)="onDayImageSelected(day, $event)"
+                />
+              </div>
+            </div>
+
+            <div class="day-card__services">
+              @if (day.services.length > 0) {
+                <div cdkDropList class="day-card__service-list" (cdkDropListDropped)="dropService(day, $event)">
+                  @for (service of day.services; track service.id) {
+                    <div cdkDrag class="service-card">
+                      <div class="service-card__row">
+                        <span cdkDragHandle class="service-card__handle" aria-label="Reordenar servicio" tabindex="0">⠿</span>
+                        <span class="service-card__type">{{ serviceTypeLabel[service.type] }}</span>
+                        <button type="button" class="service-card__remove" (click)="removeService(day, service)" aria-label="Eliminar servicio">✕</button>
+                      </div>
+                      <input
+                        type="text"
+                        [value]="service.title"
+                        (blur)="onServiceFieldBlur(day, service, 'title', $event)"
+                        placeholder="Título del servicio"
+                        [attr.aria-label]="'Título del servicio'"
+                      />
+                      <textarea
+                        rows="2"
+                        [value]="service.description"
+                        (blur)="onServiceFieldBlur(day, service, 'description', $event)"
+                        placeholder="Descripción"
+                        aria-label="Descripción del servicio"
+                      ></textarea>
+                      <input
+                        type="text"
+                        [value]="service.notes"
+                        (blur)="onServiceFieldBlur(day, service, 'notes', $event)"
+                        placeholder="Notas (horarios, proveedor, etc.)"
+                        aria-label="Notas del servicio"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="day-card__add-service" role="group" [attr.aria-label]="'Agregar servicio al día ' + day.dayNumber">
+                @for (option of serviceTypeOptions; track option.value) {
+                  <button type="button" (click)="addService(day, option.value)">+ {{ option.label }}</button>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
+}
+
+<app-confirm-dialog
+  [open]="!!dayPendingDelete()"
+  title="Eliminar día"
+  [message]="'¿Eliminar el día ' + (dayPendingDelete()?.dayNumber ?? '') + ' del itinerario? Esta acción no se puede deshacer.'"
+  (confirmed)="confirmRemoveDay()"
+  (cancelled)="cancelRemoveDay()"
+/>

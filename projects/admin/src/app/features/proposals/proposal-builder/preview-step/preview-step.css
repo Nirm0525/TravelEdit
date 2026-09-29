@@ -1,0 +1,203 @@
+.preview-step__note {
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  margin-bottom: var(--space-md);
+}
+
+.preview {
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-000);
+}
+
+.preview__eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--size-eyebrow);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-600);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__cover {
+  position: relative;
+  min-height: 20rem;
+  background-color: var(--ink-900);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  color: var(--surface-000);
+}
+
+.preview__cover-overlay {
+  width: 100%;
+  padding: var(--space-xl) var(--space-lg);
+  background: linear-gradient(to top, rgba(22, 17, 15, 0.85), transparent);
+}
+
+.preview__cover .preview__eyebrow {
+  color: var(--surface-000);
+  opacity: 0.8;
+}
+
+.preview__cover-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  margin: var(--space-2xs) 0;
+}
+
+.preview__cover-subtitle {
+  font-size: var(--size-body);
+  opacity: 0.9;
+}
+
+.preview__cover-meta {
+  margin-top: var(--space-sm);
+  font-size: var(--size-small);
+  opacity: 0.85;
+}
+
+.preview__section {
+  padding: var(--space-xl) var(--space-lg);
+  border-top: 1px solid var(--line-200);
+}
+
+.preview__intro h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--size-section-title);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__rich {
+  color: var(--ink-900);
+  line-height: 1.6;
+}
+
+.preview__empty {
+  color: var(--text-secondary);
+}
+
+.preview__day {
+  padding: var(--space-lg) 0;
+  border-top: 1px solid var(--line-200);
+}
+
+.preview__day:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.preview__day-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__day-number {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--brand-600);
+}
+
+.preview__day-header h3 {
+  font-size: var(--size-body);
+}
+
+.preview__day-location {
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+}
+
+.preview__day-image {
+  width: 100%;
+  max-width: 24rem;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__day-description {
+  color: var(--ink-900);
+  margin-bottom: var(--space-sm);
+}
+
+.preview__services {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.preview__services li {
+  padding: var(--space-sm);
+  background: var(--canvas-100);
+  border-radius: var(--radius-sm);
+}
+
+.preview__service-type {
+  display: block;
+  font-size: var(--size-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--brand-600);
+  margin-bottom: 0.15rem;
+}
+
+.preview__pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.preview__pricing-table td {
+  padding: var(--space-2xs) 0;
+}
+
+.preview__pricing-table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview__pricing-total td {
+  border-top: 1px solid var(--line-200);
+  padding-top: var(--space-sm);
+  font-weight: 700;
+  font-size: var(--size-body);
+}
+
+.preview__terms {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.preview__cta {
+  text-align: center;
+}
+
+.preview__cta-hint {
+  margin-top: var(--space-sm);
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+}
+
+.preview__accepted {
+  color: var(--success-600);
+  font-weight: 700;
+}
+
+.step-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: color-mix(in srgb, var(--danger-600) 6%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--danger-600) 30%, var(--line-200));
+  border-radius: var(--radius-md);
+  color: var(--danger-600);
+}

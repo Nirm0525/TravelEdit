@@ -103,6 +103,30 @@ export const routes: Routes = [
         loadComponent: () => import('./features/leads/lead-detail/lead-detail').then((m) => m.LeadDetail)
       },
       {
+        path: 'proposals',
+        data: { title: 'Propuestas' },
+        canActivate: [permissionGuard('proposals')],
+        loadComponent: () =>
+          import('./features/proposals/proposals-list/proposals-list').then((m) => m.ProposalsList)
+      },
+      {
+        path: 'proposals/new',
+        data: { title: 'Nueva propuesta' },
+        canActivate: [permissionGuard('proposals')],
+        loadComponent: () =>
+          import('./features/proposals/proposal-create/proposal-create').then((m) => m.ProposalCreate)
+      },
+      {
+        // Sin unsavedChangesGuard: cada paso autoguarda por campo/acción,
+        // mismo criterio que itinerario/galería de Destinos (no el de
+        // General, que sí usa guard porque ahí se guarda con botón explícito).
+        path: 'proposals/:id/edit',
+        data: { title: 'Editar propuesta' },
+        canActivate: [permissionGuard('proposals')],
+        loadComponent: () =>
+          import('./features/proposals/proposal-builder/proposal-builder').then((m) => m.ProposalBuilder)
+      },
+      {
         path: 'contenido',
         data: { title: 'Página principal' },
         canActivate: [permissionGuard('contenido')],

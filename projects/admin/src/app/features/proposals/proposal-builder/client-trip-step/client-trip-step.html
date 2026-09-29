@@ -1,0 +1,210 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="step-error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <form class="client-trip-step" [formGroup]="form">
+    @if (activeSection() === 'client-trip') {
+      <section class="client-trip-step__section">
+        <h2 class="section-title">Cliente y viaje</h2>
+        <div class="client-trip-step__grid">
+          <label class="field">
+            <span>Nombre del cliente</span>
+            <input type="text" formControlName="clientName" (blur)="saveField('clientName')" />
+          </label>
+
+          <label class="field">
+            <span>Destino</span>
+            <input type="text" formControlName="destinationText" (blur)="saveField('destinationText')" />
+          </label>
+
+          <label class="field">
+            <span>Fecha de inicio</span>
+            <input type="date" formControlName="startDate" (change)="saveField('startDate')" />
+          </label>
+
+          <label class="field">
+            <span>Fecha de fin</span>
+            <input type="date" formControlName="endDate" (change)="saveField('endDate')" />
+          </label>
+
+          <label class="field">
+            <span>Número de viajeros</span>
+            <input type="number" min="1" formControlName="travelersCount" (blur)="saveField('travelersCount')" />
+          </label>
+
+          <label class="field">
+            <span>Moneda</span>
+            <select formControlName="currency" (change)="onCurrencyChange($event)">
+              @for (option of currencyOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Expiración (opcional)</span>
+            <input type="datetime-local" formControlName="expiresAt" (change)="saveField('expiresAt')" />
+            <span class="field__hint">Después de esta fecha, el enlace privado deja de funcionar aunque el código sea correcto.</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="client-trip-step__section">
+        <h2 class="section-title">Acceso privado</h2>
+        <label class="client-trip-step__toggle">
+          <input type="checkbox" formControlName="accessRequired" (change)="onAccessRequiredChange($event)" />
+          <span>Requiere código de acceso (recomendado para clientes VIP)</span>
+        </label>
+
+        @if (form.controls.accessRequired.value) {
+          <div class="client-trip-step__access-code">
+            @if (generatedCode(); as code) {
+              <div class="client-trip-step__code-reveal">
+                <span class="client-trip-step__code-label">Código de acceso</span>
+                <span class="client-trip-step__code-value">{{ code }}</span>
+                <div class="client-trip-step__code-actions">
+                  <button type="button" class="btn btn--secondary" (click)="copyGeneratedCode()">
+                    {{ codeCopied() ? 'Copiado ✓' : 'Copiar' }}
+                  </button>
+                  <button type="button" class="btn btn--secondary" [disabled]="generatingCode()" (click)="generateCode()">
+                    {{ generatingCode() ? 'Generando…' : 'Regenerar' }}
+                  </button>
+                </div>
+                <p class="client-trip-step__code-warning">
+                  Guarda este código ahora. Por seguridad, no podremos volver a mostrarlo después.
+                </p>
+              </div>
+            } @else if (hasAccessCode()) {
+              <div class="client-trip-step__code-configured">
+                <span class="client-trip-step__code-configured-label">✓ Código de acceso configurado</span>
+                <button type="button" class="btn btn--secondary" [disabled]="generatingCode()" (click)="generateCode()">
+                  {{ generatingCode() ? 'Generando…' : 'Generar nuevo código' }}
+                </button>
+              </div>
+            } @else {
+              <button type="button" class="btn btn--primary" [disabled]="generatingCode()" (click)="generateCode()">
+                {{ generatingCode() ? 'Generando…' : 'Generar código de acceso' }}
+              </button>
+            }
+            @if (generateCodeError(); as message) {
+              <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+            }
+          </div>
+          @if (!generatedCode()) {
+            <p class="field__hint">
+              El código nunca se muestra de nuevo una vez generado — cópialo y compártelo con el cliente por un canal
+              distinto al del enlace (ej. WhatsApp).
+            </p>
+          }
+        }
+      </section>
+    }
+
+    @if (activeSection() === 'cover') {
+      <section class="client-trip-step__section">
+        <div class="client-trip-step__card-intro">
+          <h2 class="section-title">Portada de la propuesta</h2>
+          <p class="client-trip-step__card-hint">Esta será la primera impresión que verá tu cliente.</p>
+        </div>
+
+        <div class="client-trip-step__cover-image">
+          @if (coverImageUrl(); as url) {
+            <img [src]="url" alt="" class="client-trip-step__cover-preview" />
+          } @else {
+            <div class="client-trip-step__cover-preview client-trip-step__cover-preview--empty" aria-hidden="true">Sin imagen todavía</div>
+          }
+          <div class="client-trip-step__cover-image-actions">
+            <app-image-uploader
+              [multiple]="false"
+              [requireAltText]="false"
+              [disabled]="uploadingCover()"
+              [confirmLabel]="coverImageUrl() ? 'Cambiar imagen' : 'Subir portada'"
+              (filesReady)="onCoverImageSelected($event)"
+            />
+            @if (coverImageUrl()) {
+              <button type="button" class="client-trip-step__remove-image" [disabled]="uploadingCover()" (click)="removeCoverImage()">
+                Eliminar
+              </button>
+            }
+          </div>
+          @if (uploadError(); as message) {
+            <p class="field__hint field__hint--error">{{ message }}</p>
+          }
+        </div>
+
+        <label class="field">
+          <span class="client-trip-step__field-label">
+            Título principal
+            <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('cover_title')" title="Mejorar con The Edit Assistant">✨</button>
+          </span>
+          <input type="text" formControlName="coverTitle" (blur)="saveCover()" />
+          <span class="client-trip-step__char-count">{{ form.controls.coverTitle.value.length }}/80</span>
+        </label>
+
+        <label class="field">
+          <span>Subtítulo</span>
+          <input type="text" formControlName="coverSubtitle" (blur)="saveCover()" />
+          <span class="client-trip-step__char-count">{{ form.controls.coverSubtitle.value.length }}/120</span>
+        </label>
+
+        <div class="client-trip-step__section-header">
+          <span class="client-trip-step__field-label">
+            Texto introductorio
+            <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('intro')" title="Mejorar con The Edit Assistant">✨ Mejorar</button>
+          </span>
+          <button type="button" class="btn btn--secondary" [disabled]="savingField() === 'intro'" (click)="saveIntro()">
+            {{ savingField() === 'intro' ? 'Guardando…' : 'Guardar introducción' }}
+          </button>
+        </div>
+        <label class="field">
+          <span>Titular</span>
+          <input type="text" formControlName="introHeadline" placeholder="Ej. Un viaje pensado para ustedes" />
+        </label>
+        <label class="field client-trip-step__rich-field">
+          <span>Texto de bienvenida</span>
+          <app-rich-text-editor formControlName="introBody" [imageUpload]="bodyImageUpload" />
+        </label>
+      </section>
+    }
+
+    @if (activeSection() === 'terms') {
+      <section class="client-trip-step__section">
+        <div class="client-trip-step__section-header">
+          <span class="client-trip-step__field-label">
+            <h2 class="section-title" style="display:inline">Términos y condiciones</h2>
+            <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('terms')" title="Mejorar con The Edit Assistant">✨ Mejorar con The Edit Assistant</button>
+          </span>
+          <button type="button" class="btn btn--secondary" [disabled]="savingField() === 'terms'" (click)="saveTerms()">
+            {{ savingField() === 'terms' ? 'Guardando…' : 'Guardar términos' }}
+          </button>
+        </div>
+        <p class="client-trip-step__terms-notice">
+          La IA puede mejorar la redacción, pero no debe cambiar condiciones comerciales.
+        </p>
+        <label class="field">
+          <span>Título</span>
+          <input type="text" formControlName="termsTitle" />
+        </label>
+        <label class="field client-trip-step__rich-field">
+          <span>Contenido</span>
+          <app-rich-text-editor formControlName="termsBody" />
+        </label>
+      </section>
+    }
+
+    <div class="client-trip-step__status" role="status" aria-live="polite">
+      @if (savingField()) {
+        <span>Guardando…</span>
+      } @else if (savedFlash()) {
+        <span>Guardado ✓</span>
+      }
+      @if (saveError(); as message) {
+        <span class="field__hint--error">{{ message }}</span>
+      }
+    </div>
+  </form>
+}

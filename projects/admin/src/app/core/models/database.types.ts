@@ -1,6 +1,7 @@
 import { StaffRole } from './staff-role';
 import { DestinationStatus, Season, TripType } from './destination-enums';
 import { LeadEmailStatus, LeadOrigin, LeadStatus, ProposalEmailStatus } from './lead-enums';
+import { ProposalStatus } from './proposal-enums';
 
 export interface Database {
   public: {
@@ -280,12 +281,91 @@ export interface Database {
         };
         Relationships: [];
       };
+      proposals: {
+        Row: {
+          id: string;
+          public_token: string;
+          lead_id: string | null;
+          status: ProposalStatus;
+          client_name: string;
+          destination_text: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          travelers_count: number | null;
+          advisor_id: string | null;
+          currency: string;
+          access_required: boolean;
+          content: Record<string, unknown>;
+          title: string | null;
+          cover_image_path: string | null;
+          pricing_subtotal: number;
+          pricing_fees: number;
+          pricing_total: number;
+          terms_accepted: boolean;
+          accepted_at: string | null;
+          accepted_by_name: string | null;
+          published_at: string | null;
+          viewed_at: string | null;
+          expires_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          lead_id?: string | null;
+          client_name: string;
+          destination_text?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          travelers_count?: number | null;
+          advisor_id?: string | null;
+          currency?: string;
+          access_required?: boolean;
+          content?: Record<string, unknown>;
+          expires_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          lead_id?: string | null;
+          client_name?: string;
+          destination_text?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          travelers_count?: number | null;
+          advisor_id?: string | null;
+          currency?: string;
+          access_required?: boolean;
+          content?: Record<string, unknown>;
+          expires_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       reorder_itinerary_days: {
         Args: { p_destination_id: string; p_ordered_ids: string[] };
         Returns: undefined;
+      };
+      publish_proposal: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      unpublish_proposal: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      set_proposal_access_code: {
+        Args: { p_id: string; p_code: string };
+        Returns: undefined;
+      };
+      generate_proposal_access_code: {
+        Args: { p_id: string };
+        Returns: string;
+      };
+      proposal_has_access_code: {
+        Args: { p_id: string };
+        Returns: boolean;
       };
     };
   };

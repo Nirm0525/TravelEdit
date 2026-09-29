@@ -79,6 +79,34 @@ body.mobile-sidebar-open {
   overflow: hidden;
 }
 
+/* Scrollbar de marca — Firefox (propiedad estándar) + Chrome/Edge/Safari
+   (pseudo-elementos, sin estándar equivalente todavía). Aplica a toda la
+   app: el body y cualquier contenedor con overflow (ej. la columna de
+   vista previa de proposal-builder). */
+* {
+  scrollbar-color: var(--brand-600) var(--canvas-100);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 0.6rem;
+  height: 0.6rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--canvas-100);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--brand-600);
+  border-radius: 999px;
+  border: 2px solid var(--canvas-100);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--brand-600) 85%, black);
+}
+
 img {
   max-width: 100%;
   display: block;

@@ -1,0 +1,169 @@
+@if (loading()) {
+  <p>Cargando…</p>
+} @else if (loadError(); as message) {
+  <div class="step-error">
+    <p>{{ message }}</p>
+    <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else {
+  <div class="pricing-step">
+    <section class="pricing-step__section">
+      <div class="pricing-step__section-header">
+        <h2 class="section-title">Líneas de precio</h2>
+        <button type="button" class="btn btn--secondary" (click)="addLine('lines')">+ Agregar línea</button>
+      </div>
+
+      @if (lines().length === 0) {
+        <p class="pricing-step__empty">Todavía no hay líneas de precio.</p>
+      } @else {
+        <table class="pricing-step__table">
+          <thead>
+            <tr>
+              <th scope="col">Descripción</th>
+              <th scope="col">Cantidad</th>
+              <th scope="col">Precio unitario</th>
+              <th scope="col">Subtotal</th>
+              <th scope="col"><span class="visually-hidden">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines(); track line.id) {
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    [value]="line.label"
+                    (input)="onFieldInput('lines', line.id, 'label', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Descripción de la línea"
+                    placeholder="Ej. Hotel 4 noches"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    [value]="line.quantity"
+                    (input)="onFieldInput('lines', line.id, 'quantity', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Cantidad"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [value]="line.unitPrice"
+                    (input)="onFieldInput('lines', line.id, 'unitPrice', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Precio unitario"
+                  />
+                </td>
+                <td class="pricing-step__line-total">{{ line.quantity * line.unitPrice | currency: currency() }}</td>
+                <td>
+                  <button type="button" class="pricing-step__remove" (click)="removeLine('lines', line.id)" aria-label="Eliminar línea">✕</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="pricing-step__section">
+      <div class="pricing-step__section-header">
+        <h2 class="section-title">Fees</h2>
+        <button type="button" class="btn btn--secondary" (click)="addLine('feesLines')">+ Agregar fee</button>
+      </div>
+
+      @if (feesLines().length === 0) {
+        <p class="pricing-step__empty">Sin fees adicionales.</p>
+      } @else {
+        <table class="pricing-step__table">
+          <thead>
+            <tr>
+              <th scope="col">Descripción</th>
+              <th scope="col">Cantidad</th>
+              <th scope="col">Monto</th>
+              <th scope="col">Subtotal</th>
+              <th scope="col"><span class="visually-hidden">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of feesLines(); track line.id) {
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    [value]="line.label"
+                    (input)="onFieldInput('feesLines', line.id, 'label', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Descripción del fee"
+                    placeholder="Ej. Cargo por servicio"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    [value]="line.quantity"
+                    (input)="onFieldInput('feesLines', line.id, 'quantity', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Cantidad"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [value]="line.unitPrice"
+                    (input)="onFieldInput('feesLines', line.id, 'unitPrice', $event)"
+                    (blur)="onFieldBlur()"
+                    aria-label="Monto"
+                  />
+                </td>
+                <td class="pricing-step__line-total">{{ line.quantity * line.unitPrice | currency: currency() }}</td>
+                <td>
+                  <button type="button" class="pricing-step__remove" (click)="removeLine('feesLines', line.id)" aria-label="Eliminar fee">✕</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="pricing-step__summary">
+      <div class="pricing-step__summary-row">
+        <span>Subtotal (vista previa)</span>
+        <span>{{ previewSubtotal() | currency: currency() }}</span>
+      </div>
+      <div class="pricing-step__summary-row">
+        <span>Fees (vista previa)</span>
+        <span>{{ previewFees() | currency: currency() }}</span>
+      </div>
+      <div class="pricing-step__summary-row pricing-step__summary-row--total">
+        <span>Total (vista previa)</span>
+        <span>{{ previewTotal() | currency: currency() }}</span>
+      </div>
+
+      <p class="pricing-step__authority-note">
+        El total autoritativo lo calcula Supabase al guardar, nunca el navegador.
+        @if (authoritativeTotal() !== null) {
+          Último valor confirmado: <strong>{{ authoritativeTotal() | currency: currency() }}</strong>.
+        }
+      </p>
+
+      @if (saving()) {
+        <p class="pricing-step__saving" role="status">Guardando…</p>
+      }
+      @if (saveError(); as message) {
+        <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+      }
+    </section>
+  </div>
+}

@@ -290,20 +290,54 @@ export class LeadDetail {
       leadId: lead.id,
       destinationText: lead.destinationInterestText ?? undefined,
       travelersCount,
-      startDate: this.parseStrictIsoDate(details.departureDate),
-      endDate: this.parseStrictIsoDate(details.returnDate)
+      startDate: this.parseLeadDate(details.departureDate),
+      endDate: this.parseLeadDate(details.returnDate)
     };
   }
 
-  /** `leads.details.departureDate`/`returnDate` son texto libre del
-   *  formulario público ("marzo 2027", "10 noches", etc.), no fechas reales
-   *  garantizadas — `proposals.start_date`/`end_date` son columnas `date` de
-   *  Postgres. Solo se acepta el valor si ya viene como YYYY-MM-DD exacto
-   *  (el único caso donde es inequívoco y no hay que inventar un día); si el
-   *  lead no dio una fecha exacta, el proposal se crea sin fechas. */
+  /** `leads.details.departureDate`/`returnDate` son texto libre en el
+   *  formulario (el usuario puede escribir "marzo 2027", "10 noches", etc.),
+   *  pero cuando vienen del <app-date-picker> del formulario público
+   *  (src/app/shared/ui/date-picker/date-picker.ts) el valor SIEMPRE tiene
+   *  esta forma exacta y determinística: Intl.DateTimeFormat('en', {month:
+   *  'long', day:'numeric', year:'numeric'}), p. ej. "October 3, 2026" — un
+   *  día real elegido en un calendario, no texto ambiguo. Antes solo se
+   *  aceptaba YYYY-MM-DD (que el formulario público nunca produce), así que
+   *  ningún lead real llegaba a prellenar fechas. Se agrega este segundo
+   *  formato reconocido explícitamente; cualquier otro texto ("Septiembre
+   *  20", "march 2027", "10 nights", una fecha editada a mano) sigue sin
+   *  prellenarse — nunca se inventa un día/mes/año que falte. */
+  private parseLeadDate(value?: string): string | undefined {
+    return this.parseStrictIsoDate(value) ?? this.parsePickerFormattedDate(value);
+  }
+
   private parseStrictIsoDate(value?: string): string | undefined {
     const trimmed = value?.trim();
     return trimmed && /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : undefined;
+  }
+
+  private static readonly ENGLISH_MONTHS = [
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december'
+  ];
+
+  private parsePickerFormattedDate(value?: string): string | undefined {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const match = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(trimmed);
+    if (!match) {
+      return undefined;
+    }
+    const monthIndex = LeadDetail.ENGLISH_MONTHS.indexOf(match[1]!.toLowerCase());
+    const day = Number(match[2]);
+    if (monthIndex === -1 || day < 1 || day > 31) {
+      return undefined;
+    }
+    const mm = String(monthIndex + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return `${match[3]!}-${mm}-${dd}`;
   }
 
   private async refreshLeadAndActivity(): Promise<void> {

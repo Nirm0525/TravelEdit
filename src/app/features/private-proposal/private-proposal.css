@@ -772,13 +772,6 @@
   height: 100%;
 }
 
-@media (max-width: 48rem) {
-  .proposal__itinerary-table {
-    display: block;
-    overflow-x: auto;
-  }
-}
-
 /* --- Travel tips --- */
 
 .proposal__tips-tag {
@@ -1050,6 +1043,11 @@
 }
 
 @media (max-width: 48rem) {
+  .proposal__itinerary-table {
+    display: block;
+    overflow-x: auto;
+  }
+
   .proposal__hero {
     min-height: 100vh;
   }

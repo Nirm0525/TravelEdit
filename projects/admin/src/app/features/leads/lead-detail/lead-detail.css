@@ -70,11 +70,6 @@
   flex-wrap: wrap;
 }
 
-.lead-detail__assigned-to {
-  font-size: var(--size-small);
-  color: var(--text-secondary);
-}
-
 .lead-detail__assign select {
   font: inherit;
   font-size: var(--size-small);

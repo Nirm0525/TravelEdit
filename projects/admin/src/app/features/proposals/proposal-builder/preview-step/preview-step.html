@@ -27,67 +27,195 @@
       </div>
     </section>
 
-    @if (p.content.intro.headline || p.content.intro.body) {
+    @if (p.content.intro.headline || p.content.intro.body || hasSummaryStats()) {
       <section class="preview__section preview__intro">
         <div class="preview__band"><h2>Resumen</h2></div>
         @if (p.content.intro.headline) {
           <h3>{{ p.content.intro.headline }}</h3>
         }
         <div class="preview__rich" [innerHTML]="p.content.intro.body"></div>
+
+        @if (hasSummaryStats()) {
+          <div class="preview__summary">
+            @if (durationDaysLabel(); as days) {
+              <div class="preview__summary-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="preview__summary-value">{{ days }}</p>
+                @if (durationNightsLabel(); as nights) {
+                  <p class="preview__summary-label">{{ nights }}</p>
+                }
+              </div>
+            }
+            @if (travelersLabel(); as travelers) {
+              <div class="preview__summary-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="9" cy="8" r="3" />
+                  <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
+                  <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
+                </svg>
+                <p class="preview__summary-value">{{ travelers }}</p>
+              </div>
+            }
+            @if (seasonLabel(); as season) {
+              <div class="preview__summary-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4.5" />
+                  <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round" />
+                </svg>
+                <p class="preview__summary-value">{{ season }}</p>
+                @if (monthYearLabel(); as monthYear) {
+                  <p class="preview__summary-label">{{ monthYear }}</p>
+                }
+              </div>
+            }
+            <div class="preview__summary-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M12 3l2.2 6.8H21l-5.6 4.1 2.2 6.8L12 16.6l-5.6 4.1 2.2-6.8L3 9.8h6.8z" stroke-linejoin="round" />
+              </svg>
+              <p class="preview__summary-value">Viaje a medida</p>
+              <p class="preview__summary-label">Experiencias únicas</p>
+            </div>
+          </div>
+        }
       </section>
     }
 
     <section class="preview__section">
       <div class="preview__band"><h2>Itinerario</h2></div>
+
       @if (p.content.days.length === 0) {
         <p class="preview__empty">Todavía no hay días cargados.</p>
-      }
-      @for (day of p.content.days; track day.id) {
-        <div class="preview__day">
-          <div class="preview__day-header">
-            <span class="preview__day-number">Día {{ day.dayNumber }}</span>
-            <h3>{{ day.title || 'Sin título' }}</h3>
-            @if (day.location) {
-              <span class="preview__day-location">{{ day.location }}</span>
-            }
-          </div>
-          @if (imageUrl(day.imagePath); as url) {
-            <img [src]="url" alt="" class="preview__day-image" />
-          }
-          @if (day.description) {
-            <p class="preview__day-description">{{ day.description }}</p>
-          }
-          @if (day.services.length > 0) {
-            <ul class="preview__services">
-              @for (service of day.services; track service.id) {
-                <li>
-                  <span class="preview__service-type">{{ serviceTypeLabel[service.type] }}</span>
-                  <strong>{{ service.title || 'Sin título' }}</strong>
-                  @if (service.description) {
-                    <p>{{ service.description }}</p>
+      } @else {
+        @if (itineraryOverview().length > 0) {
+          <div class="preview__itinerary-summary">
+            <div class="preview__itinerary-summary-header">
+              <p class="preview__itinerary-summary-tag">Un recorrido diseñado para inspirar</p>
+              <button type="button" class="preview__itinerary-toggle" (click)="toggleItineraryExpanded()">
+                {{ itineraryExpanded() ? 'Ocultar itinerario completo' : 'Ver itinerario completo' }}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="preview__itinerary-table-wrap">
+              <table class="preview__itinerary-table">
+                <thead>
+                  <tr>
+                    <th scope="col" colspan="2">Destino</th>
+                    <th scope="col">Fechas</th>
+                    <th scope="col">Noches</th>
+                    <th scope="col">Experiencias destacadas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (segment of itineraryOverview(); track $index) {
+                    <tr>
+                      <td class="preview__itinerary-table-thumb">
+                        @if (imageUrl(segment.thumbnailPath); as url) {
+                          <img [src]="url" alt="" loading="lazy" />
+                        } @else {
+                          <div class="preview__itinerary-table-thumb-placeholder" aria-hidden="true"></div>
+                        }
+                      </td>
+                      <td class="preview__itinerary-table-destination">
+                        {{ segment.location || segment.days[0]?.dayLabel }}
+                      </td>
+                      <td>{{ segment.dateRangeLabel }}</td>
+                      <td>{{ segment.nights }}</td>
+                      <td>
+                        @if (segment.highlights.length > 0) {
+                          <div class="preview__itinerary-highlights">
+                            @for (highlight of segment.highlights; track $index) {
+                              <span class="preview__itinerary-highlight">{{ highlight.label }}</span>
+                            }
+                          </div>
+                        }
+                      </td>
+                    </tr>
                   }
-                </li>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        @if (itineraryExpanded()) {
+          @for (day of p.content.days; track day.id) {
+            <div class="preview__day">
+              <div class="preview__day-header">
+                <span class="preview__day-number">Día {{ day.dayNumber }}</span>
+                <h3>{{ day.title || 'Sin título' }}</h3>
+                @if (day.location) {
+                  <span class="preview__day-location">{{ day.location }}</span>
+                }
+              </div>
+              @if (imageUrl(day.imagePath); as url) {
+                <img [src]="url" alt="" class="preview__day-image" />
               }
-            </ul>
+              @if (day.description) {
+                <p class="preview__day-description">{{ day.description }}</p>
+              }
+              @if (day.services.length > 0) {
+                <ul class="preview__services">
+                  @for (service of day.services; track service.id) {
+                    <li>
+                      <span class="preview__service-type">
+                        {{ serviceTypeLabel[service.type] }}
+                        @if (service.time) {
+                          <span class="preview__service-time">· {{ service.time }}</span>
+                        }
+                      </span>
+                      <strong>{{ service.title || 'Sin título' }}</strong>
+                      @if (service.description) {
+                        <p>{{ service.description }}</p>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
           }
-        </div>
+        }
       }
     </section>
 
     @if (p.content.travelTips.length > 0) {
       <section class="preview__section preview__tips">
         <div class="preview__band"><h2>Consejos de viaje</h2></div>
+        <p class="preview__tips-tag">Todo lo que necesitas para un viaje perfecto</p>
         @for (group of p.content.travelTips; track group.id) {
           <div class="preview__tip-group">
-            <h3>{{ group.destination || 'Sin destino' }}</h3>
+            @if (p.content.travelTips.length > 1) {
+              <h3>{{ group.destination || 'Sin destino' }}</h3>
+            }
             @if (group.tips.length === 0) {
               <p class="preview__empty">Todavía no hay tips para este destino.</p>
-            }
-            @for (tip of group.tips; track tip.id) {
-              <div class="preview__tip">
-                <strong>{{ tip.title || 'Sin título' }}</strong>
-                @if (tip.body) {
-                  <p>{{ tip.body }}</p>
+            } @else {
+              <div class="preview__tip-card-grid">
+                @for (tip of group.tips; track tip.id) {
+                  <details class="preview__tip">
+                    <summary class="preview__tip-summary">
+                      <span class="preview__tip-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 11v5.5M12 8v.01" stroke-linecap="round" />
+                        </svg>
+                      </span>
+                      <span class="preview__tip-summary-text">{{ tip.title || 'Sin título' }}</span>
+                      <span class="preview__tip-chevron" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </span>
+                    </summary>
+                    @if (tip.body) {
+                      <p class="preview__tip-body">{{ tip.body }}</p>
+                    }
+                  </details>
                 }
               </div>
             }
@@ -98,24 +226,47 @@
 
     <section class="preview__section preview__pricing">
       <div class="preview__band"><h2>Inversión</h2></div>
-      <table class="preview__pricing-table">
-        @for (line of p.content.pricing.lines; track line.id) {
-          <tr>
-            <td>{{ line.label || 'Sin descripción' }} @if (line.quantity > 1) { × {{ line.quantity }} }</td>
-            <td>{{ line.quantity * line.unitPrice | currency: p.currency }}</td>
+
+      <div class="preview__pricing-summary">
+        <p class="preview__pricing-copy">
+          Esta propuesta incluye los servicios y experiencias detallados en el itinerario, con el respaldo de tu
+          asesora durante todo el viaje.
+        </p>
+        <div class="preview__pricing-card">
+          <p class="preview__pricing-card-label">Inversión total</p>
+          <p class="preview__pricing-card-total">{{ p.pricingTotal | currency: p.currency }}</p>
+          @if (travelersLabel(); as travelers) {
+            <p class="preview__pricing-card-meta">Para {{ travelers }}</p>
+          }
+          <button type="button" class="preview__pricing-toggle" (click)="togglePricingExpanded()">
+            {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      @if (pricingExpanded()) {
+        <table class="preview__pricing-table">
+          @for (line of p.content.pricing.lines; track line.id) {
+            <tr>
+              <td>{{ line.label || 'Sin descripción' }} @if (line.quantity > 1) { × {{ line.quantity }} }</td>
+              <td>{{ line.quantity * line.unitPrice | currency: p.currency }}</td>
+            </tr>
+          }
+          @for (line of p.content.pricing.feesLines; track line.id) {
+            <tr>
+              <td>{{ line.label || 'Fee' }} @if (line.quantity > 1) { × {{ line.quantity }} }</td>
+              <td>{{ line.quantity * line.unitPrice | currency: p.currency }}</td>
+            </tr>
+          }
+          <tr class="preview__pricing-total">
+            <td>Total</td>
+            <td>{{ p.pricingTotal | currency: p.currency }}</td>
           </tr>
-        }
-        @for (line of p.content.pricing.feesLines; track line.id) {
-          <tr>
-            <td>{{ line.label || 'Fee' }} @if (line.quantity > 1) { × {{ line.quantity }} }</td>
-            <td>{{ line.quantity * line.unitPrice | currency: p.currency }}</td>
-          </tr>
-        }
-        <tr class="preview__pricing-total">
-          <td>Total</td>
-          <td>{{ p.pricingTotal | currency: p.currency }}</td>
-        </tr>
-      </table>
+        </table>
+      }
     </section>
 
     @if (p.content.terms.body) {
@@ -126,11 +277,13 @@
     }
 
     <section class="preview__section preview__cta">
+      <div class="preview__band"><h2>¿Listos para comenzar?</h2></div>
       @if (p.status === 'accepted') {
         <p class="preview__accepted">✓ Propuesta aceptada por {{ p.acceptedByName }}</p>
       } @else {
-        <button type="button" class="btn btn--primary" disabled aria-disabled="true">Accept Proposal</button>
-        <p class="preview__cta-hint">Este botón solo funciona en la vista pública real, con sesión de cliente.</p>
+        <h3>Esta propuesta fue diseñada especialmente para tu viaje.</h3>
+        <button type="button" class="btn btn--primary" disabled aria-disabled="true">Aceptar propuesta</button>
+        <p class="preview__cta-hint">Disponible en la propuesta pública.</p>
       }
     </section>
   </article>

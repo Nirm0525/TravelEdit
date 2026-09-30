@@ -67,10 +67,15 @@
       <span class="field__hint">{{ form.controls.shortDescription.value.length }}/200</span>
     </label>
 
-    <label class="field">
+    <!-- No usar <label>: un click en el área del editor (contenteditable, no
+         un control "labelable") dispara la delegación nativa del <label>
+         hacia el primer control real dentro de app-rich-text-editor —el
+         <select> de estilo de párrafo del toolbar— robándole el foco al
+         editor. Bug real: no se podía escribir en la descripción. -->
+    <div class="field">
       <span>Descripción larga</span>
       <app-rich-text-editor formControlName="longDescription" />
-    </label>
+    </div>
 
     <div class="destination-general__footer">
       <button type="button" class="btn btn--secondary" [disabled]="saving() || !form.dirty" (click)="cancel()">

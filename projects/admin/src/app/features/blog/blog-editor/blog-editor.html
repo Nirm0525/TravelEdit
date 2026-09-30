@@ -119,10 +119,15 @@
       </div>
 
       <div class="content-section">
-        <label class="field">
+        <!-- No usar <label>: un click en el área del editor (contenteditable,
+             no un control "labelable") dispara la delegación nativa del
+             <label> hacia el primer control real dentro de app-rich-text-editor
+             —el <select> de estilo de párrafo del toolbar— robándole el foco
+             al editor. Bug real: no se podía escribir en el contenido. -->
+        <div class="field">
           <span>Contenido</span>
           <app-rich-text-editor formControlName="body" [imageUpload]="bodyImageUpload" />
-        </label>
+        </div>
       </div>
     </app-content-editor-layout>
   </form>

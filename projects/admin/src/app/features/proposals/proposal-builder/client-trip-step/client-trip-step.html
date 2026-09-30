@@ -164,10 +164,16 @@
           <span>Titular</span>
           <input type="text" formControlName="introHeadline" placeholder="Ej. Un viaje pensado para ustedes" />
         </label>
-        <label class="field client-trip-step__rich-field">
+        <!-- No usar <label>: envolver el rich-text-editor en un <label> hace
+             que un click en el área de texto (contenteditable, no un control
+             "labelable") dispare la delegación nativa del <label> hacia el
+             primer control real que encuentre dentro —el <select> de estilo
+             de párrafo del toolbar— robándole el foco al editor. Bug real:
+             no se podía escribir ni un carácter (ver mismo caso en terms). -->
+        <div class="field client-trip-step__rich-field">
           <span>Texto de bienvenida</span>
           <app-rich-text-editor formControlName="introBody" [imageUpload]="bodyImageUpload" />
-        </label>
+        </div>
       </section>
     }
 
@@ -189,10 +195,13 @@
           <span>Título</span>
           <input type="text" formControlName="termsTitle" />
         </label>
-        <label class="field client-trip-step__rich-field">
+        <!-- Ver comentario equivalente en la sección "cover" de este mismo
+             archivo: <label> redirige el foco del click al <select> del
+             toolbar en vez de al editor. -->
+        <div class="field client-trip-step__rich-field">
           <span>Contenido</span>
           <app-rich-text-editor formControlName="termsBody" />
-        </label>
+        </div>
       </section>
     }
 

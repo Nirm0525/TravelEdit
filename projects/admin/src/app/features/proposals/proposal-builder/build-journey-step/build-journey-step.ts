@@ -43,7 +43,9 @@ export class BuildJourneyStep implements OnInit {
 
   readonly days = signal<ProposalDay[]>([]);
   readonly dayImageUrls = signal<Record<string, string | null>>({});
+  readonly serviceImageUrls = signal<Record<string, string | null>>({});
   readonly uploadingDayId = signal<string | null>(null);
+  readonly uploadingServiceId = signal<string | null>(null);
   readonly dayPendingDelete = signal<ProposalDay | null>(null);
 
   private content: ProposalContent | null = null;
@@ -66,6 +68,7 @@ export class BuildJourneyStep implements OnInit {
       this.content = proposal.content;
       this.days.set(proposal.content.days);
       this.refreshDayImageUrls(proposal.content.days);
+      this.refreshServiceImageUrls(proposal.content.days);
     } catch (error) {
       console.error('No se pudo cargar el itinerario.', error);
       this.loadError.set('No se pudo cargar el itinerario. Inténtalo nuevamente.');
@@ -80,6 +83,16 @@ export class BuildJourneyStep implements OnInit {
       map[day.id] = this.proposalImages.publicUrl(day.imagePath);
     }
     this.dayImageUrls.set(map);
+  }
+
+  private refreshServiceImageUrls(days: ProposalDay[]): void {
+    const map: Record<string, string | null> = {};
+    for (const day of days) {
+      for (const service of day.services) {
+        map[service.id] = this.proposalImages.publicUrl(service.imagePath ?? null);
+      }
+    }
+    this.serviceImageUrls.set(map);
   }
 
   // Bug real encontrado en QA (mismo patrón que client-trip-step.ts):
@@ -118,6 +131,7 @@ export class BuildJourneyStep implements OnInit {
       this.content = updated.content;
       this.days.set(updated.content.days);
       this.refreshDayImageUrls(updated.content.days);
+      this.refreshServiceImageUrls(updated.content.days);
       this.saved.emit();
     } catch (error) {
       console.error('No se pudo guardar el itinerario.', error);
@@ -182,6 +196,30 @@ export class BuildJourneyStep implements OnInit {
       this.saveError.set(error instanceof Error ? error.message : 'No se pudo subir la imagen.');
     } finally {
       this.uploadingDayId.set(null);
+    }
+  }
+
+  async onServiceImageSelected(day: ProposalDay, service: ProposalServiceItem, images: ReadyImage[]): Promise<void> {
+    const image = images[0];
+    if (!image) {
+      return;
+    }
+    this.uploadingServiceId.set(service.id);
+    this.saveError.set(null);
+    try {
+      const path = await this.proposalImages.upload(image.file);
+      await this.enqueueMutation((days) =>
+        days.map((d) =>
+          d.id === day.id
+            ? { ...d, services: d.services.map((s) => (s.id === service.id ? { ...s, imagePath: path } : s)) }
+            : d
+        )
+      );
+    } catch (error) {
+      console.error('No se pudo subir la imagen del servicio.', error);
+      this.saveError.set(error instanceof Error ? error.message : 'No se pudo subir la imagen.');
+    } finally {
+      this.uploadingServiceId.set(null);
     }
   }
 

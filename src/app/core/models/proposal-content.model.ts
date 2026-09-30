@@ -24,6 +24,7 @@ export interface ProposalServiceItem {
   description: string;
   notes: string;
   time: string;
+  imagePath: string | null;
 }
 
 export interface ProposalDay {

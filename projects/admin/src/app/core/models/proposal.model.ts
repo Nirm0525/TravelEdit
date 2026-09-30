@@ -24,6 +24,7 @@ export interface ProposalServiceItem {
   /** Hora opcional en texto libre (ej. "07:45") — se usa en la tabla Overview
    *  del itinerario público. Vacío = no se muestra hora, no se inventa una. */
   time: string;
+  imagePath: string | null;
 }
 
 export interface ProposalDay {
@@ -164,7 +165,8 @@ export function createProposalService(type: ProposalServiceType): ProposalServic
     title: '',
     description: '',
     notes: '',
-    time: ''
+    time: '',
+    imagePath: null
   };
 }
 

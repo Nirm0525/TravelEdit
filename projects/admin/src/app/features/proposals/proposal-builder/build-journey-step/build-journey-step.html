@@ -103,6 +103,19 @@
                         placeholder="Notas (horarios, proveedor, etc.)"
                         aria-label="Notas del servicio"
                       />
+
+                      <div class="service-card__image">
+                        @if (serviceImageUrls()[service.id]; as url) {
+                          <img [src]="url" alt="" class="service-card__image-preview" />
+                        }
+                        <app-image-uploader
+                          [multiple]="false"
+                          [requireAltText]="false"
+                          [disabled]="uploadingServiceId() === service.id"
+                          [confirmLabel]="serviceImageUrls()[service.id] ? 'Cambiar imagen' : 'Subir imagen'"
+                          (filesReady)="onServiceImageSelected(day, service, $event)"
+                        />
+                      </div>
                     </div>
                   }
                 </div>

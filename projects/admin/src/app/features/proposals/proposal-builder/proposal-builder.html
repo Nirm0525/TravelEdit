@@ -175,7 +175,12 @@
               <app-travel-tips-step [proposalId]="proposalId" (saved)="onSaved()" />
             }
             @case ('assistant') {
-              <app-ai-polish-step [proposalId]="proposalId" [presetTargetKey]="assistantPreset()" (saved)="onSaved()" />
+              <app-ai-polish-step
+                [proposalId]="proposalId"
+                [presetTargetKey]="assistantPreset()"
+                (saved)="onSaved()"
+                (goToItinerary)="goToItineraryFromAssistant()"
+              />
             }
             @default {
               <app-client-trip-step

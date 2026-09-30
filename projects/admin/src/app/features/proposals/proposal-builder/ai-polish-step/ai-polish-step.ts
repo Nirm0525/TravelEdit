@@ -21,18 +21,26 @@ interface AiTargetOption {
   serviceId?: string;
 }
 
-interface ChatSuggestion {
+interface ChatAction {
   targetKey: string;
   targetLabel: string;
-  text: string;
+  isTermsTarget: boolean;
+  suggestions: string[];
+  appliedSuggestionIndex: number | null;
 }
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  suggestions?: ChatSuggestion[];
-  isTermsTarget?: boolean;
-  appliedIndex?: number | null;
+  /** Una entrada por campo distinto que el turno resolvió — reemplaza el
+   *  `suggestions`/`isTermsTarget`/`appliedIndex` singulares de antes, que
+   *  solo podían representar UN campo por turno. */
+  actions?: ChatAction[];
+  followUp?: string | null;
+  /** Día mencionado por número que todavía no existe en el itinerario — se
+   *  detecta localmente (nunca se le pregunta a OpenAI si un día existe,
+   *  Angular ya tiene esa verdad) y corta antes de llamar a la IA. */
+  dayNotFound?: number;
 }
 
 /** HTML -> texto plano, para mandar intro/terms (TipTap) a OpenAI. Esta fase
@@ -77,6 +85,10 @@ export class AiPolishStep implements OnInit {
    *  y lo envíe. */
   readonly presetTargetKey = input<string | null>(null);
   readonly saved = output<void>();
+  /** El paso no tiene navegación propia entre tabs — el shell (proposal-
+   *  builder.ts) es quien sabe cómo cambiar a la pestaña Itinerario, igual
+   *  que ya hace con activateAssistant() en sentido inverso. */
+  readonly goToItinerary = output<void>();
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -91,6 +103,11 @@ export class AiPolishStep implements OnInit {
   readonly draftMessage = signal('');
   readonly sending = signal(false);
   readonly applyingKey = signal<string | null>(null);
+  /** Índice del mensaje cuyo "Aplicar todos" está en curso — separado de
+   *  applyingKey (que marca la sugerencia individual en curso dentro del
+   *  mismo loop secuencial) para que ambos indicadores de UI tengan sentido
+   *  a la vez. */
+  readonly applyingAllIndex = signal<number | null>(null);
   readonly applyError = signal<string | null>(null);
   readonly appliedFlash = signal(false);
 
@@ -216,6 +233,44 @@ export class AiPolishStep implements OnInit {
     setTimeout(() => this.scrollAnchor()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50);
   }
 
+  /** Nunca se le pregunta a OpenAI si un día existe — Angular ya tiene esa
+   *  verdad estructural (content.days). Si el mensaje menciona un número de
+   *  día por su nombre y ese día no existe todavía, se corta ANTES de
+   *  llamar a la IA: ni inventa la estructura ni confunde ese pedido con
+   *  otro día real. Solo dispara con una mención explícita ("día 5"/"day
+   *  5") — referencias vagas ("ese día", "el segundo") siguen su curso
+   *  normal hacia la IA, que puede resolverlas con el historial. */
+  private detectMissingDayNumber(message: string): number | null {
+    const existing = new Set((this.content?.days ?? []).map((d) => d.dayNumber));
+    const regex = /\b(?:d[ií]a|day)\s+(\d{1,2})\b/gi;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(message)) !== null) {
+      const mentioned = Number(match[1]);
+      if (!existing.has(mentioned)) {
+        return mentioned;
+      }
+    }
+    return null;
+  }
+
+  /** El historial que se manda a la IA incluye, para cada turno donde el
+   *  agente ya aplicó una sugerencia, una nota explícita de qué se aplicó —
+   *  así "ahora hazla más corta" en el turno siguiente se resuelve contra el
+   *  texto YA aplicado, no contra el original que la IA propuso antes (ver
+   *  sección 18 de la spec). Esta nota solo viaja a OpenAI, nunca se
+   *  renderiza como un mensaje nuevo en el transcript (el "✓ Aplicado" en la
+   *  tarjeta ya comunica eso visualmente). */
+  private toHistoryContent(message: ChatMessage): string {
+    const applied = (message.actions ?? []).filter((a) => a.appliedSuggestionIndex !== null);
+    if (applied.length === 0) {
+      return message.content;
+    }
+    const notes = applied.map(
+      (a) => `[Aplicado: "${a.targetLabel}" → "${a.suggestions[a.appliedSuggestionIndex!]}"]`
+    );
+    return [message.content, ...notes].join('\n');
+  }
+
   async sendMessage(): Promise<void> {
     const text = this.draftMessage().trim();
     if (!text || this.sending()) {
@@ -224,13 +279,28 @@ export class AiPolishStep implements OnInit {
 
     this.messages.update((items) => [...items, { role: 'user', content: text }]);
     this.draftMessage.set('');
-    this.sending.set(true);
     this.applyError.set(null);
     this.scrollToBottom();
 
+    const missingDay = this.detectMissingDayNumber(text);
+    if (missingDay !== null) {
+      this.messages.update((items) => [
+        ...items,
+        {
+          role: 'assistant',
+          content: `El Día ${missingDay} todavía no existe. Puedo ayudarte a redactarlo cuando lo agregues al itinerario.`,
+          dayNotFound: missingDay
+        }
+      ]);
+      this.scrollToBottom();
+      return;
+    }
+
+    this.sending.set(true);
+
     const history: AiChatTurn[] = this.messages()
       .slice(0, -1)
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => ({ role: m.role, content: this.toHistoryContent(m) }));
 
     try {
       const response = await this.proposalAi.chat({
@@ -245,20 +315,30 @@ export class AiPolishStep implements OnInit {
         return;
       }
 
-      const { reply, targetKey, suggestions } = response.result;
-      const target = targetKey ? this.findTarget(targetKey) : null;
+      const { reply, actions, followUp } = response.result;
+      const resolvedActions: ChatAction[] = actions
+        .map((a): ChatAction | null => {
+          const target = this.findTarget(a.targetKey);
+          if (!target) {
+            return null;
+          }
+          return {
+            targetKey: target.key,
+            targetLabel: target.label,
+            isTermsTarget: target.kind === 'terms',
+            suggestions: a.suggestions,
+            appliedSuggestionIndex: null
+          };
+        })
+        .filter((a): a is ChatAction => a !== null);
 
       this.messages.update((items) => [
         ...items,
         {
           role: 'assistant',
           content: reply,
-          isTermsTarget: target?.kind === 'terms',
-          suggestions:
-            target && suggestions.length > 0
-              ? suggestions.map((s) => ({ targetKey: target.key, targetLabel: target.label, text: s }))
-              : undefined,
-          appliedIndex: null
+          actions: resolvedActions.length > 0 ? resolvedActions : undefined,
+          followUp
         }
       ]);
     } catch (error) {
@@ -271,6 +351,25 @@ export class AiPolishStep implements OnInit {
       this.sending.set(false);
       this.scrollToBottom();
     }
+  }
+
+  /** El follow-up es clickeable: precompleta el composer con la pregunta que
+   *  la IA misma ofreció como siguiente paso, para que el agente solo tenga
+   *  que confirmar con Enter en vez de reescribirla. */
+  useFollowUp(text: string): void {
+    this.draftMessage.set(text);
+  }
+
+  onGoToItinerary(): void {
+    this.goToItinerary.emit();
+  }
+
+  actionLabelsSummary(actions: ChatAction[]): string {
+    return actions.map((a) => a.targetLabel).join(' · ');
+  }
+
+  hasPendingAction(actions: ChatAction[]): boolean {
+    return actions.some((a) => a.appliedSuggestionIndex === null);
   }
 
   private describeError(code?: string): string {
@@ -303,18 +402,21 @@ export class AiPolishStep implements OnInit {
     return run;
   }
 
-  async useSuggestion(messageIndex: number, suggestionIndex: number): Promise<void> {
-    const message = this.messages()[messageIndex];
-    const suggestion = message?.suggestions?.[suggestionIndex];
-    if (!suggestion) {
+  /** Aplica UNA sugerencia de UNA acción del mensaje. Las escrituras pasan
+   *  siempre por enqueueSave (una sola cadena secuencial compartida con
+   *  "aplicar todos") para que dos campos nunca se pisen entre sí. */
+  async applySuggestion(messageIndex: number, actionIndex: number, suggestionIndex: number): Promise<void> {
+    const action = this.messages()[messageIndex]?.actions?.[actionIndex];
+    const suggestionText = action?.suggestions[suggestionIndex];
+    if (action === undefined || suggestionText === undefined) {
       return;
     }
-    const target = this.findTarget(suggestion.targetKey);
+    const target = this.findTarget(action.targetKey);
     if (!target) {
       return;
     }
 
-    const key = `${messageIndex}:${suggestionIndex}`;
+    const key = `${messageIndex}:${actionIndex}:${suggestionIndex}`;
     this.applyingKey.set(key);
     this.applyError.set(null);
 
@@ -322,14 +424,23 @@ export class AiPolishStep implements OnInit {
       if (!this.content) {
         return;
       }
-      const nextContent = this.mutateContent(this.content, target, suggestion.text);
+      const nextContent = this.mutateContent(this.content, target, suggestionText);
       try {
         const updated = await this.proposalsService.updateContent(this.proposalId(), nextContent);
         this.proposal = updated;
         this.content = updated.content;
         this.targetOptions.set(this.buildTargetOptions(updated.content));
         this.messages.update((items) =>
-          items.map((m, i) => (i === messageIndex ? { ...m, appliedIndex: suggestionIndex } : m))
+          items.map((m, i) =>
+            i === messageIndex
+              ? {
+                  ...m,
+                  actions: (m.actions ?? []).map((a, ai) =>
+                    ai === actionIndex ? { ...a, appliedSuggestionIndex: suggestionIndex } : a
+                  )
+                }
+              : m
+          )
         );
         this.appliedFlash.set(true);
         setTimeout(() => this.appliedFlash.set(false), 1800);
@@ -341,6 +452,26 @@ export class AiPolishStep implements OnInit {
     });
 
     this.applyingKey.set(null);
+  }
+
+  /** "Aplicar todos" (sección 9 de la spec): requiere click explícito del
+   *  usuario, nunca se dispara solo. Aplica, EN ORDEN (una escritura a la
+   *  vez vía enqueueSave), la primera sugerencia de cada acción que todavía
+   *  no fue aplicada — las acciones que el usuario ya resolvió a mano quedan
+   *  intactas y no se tocan de nuevo. */
+  async applyAllActions(messageIndex: number): Promise<void> {
+    const pendingIndexes = (this.messages()[messageIndex]?.actions ?? [])
+      .map((a, ai) => (a.appliedSuggestionIndex === null ? ai : null))
+      .filter((ai): ai is number => ai !== null);
+    if (pendingIndexes.length === 0) {
+      return;
+    }
+
+    this.applyingAllIndex.set(messageIndex);
+    for (const actionIndex of pendingIndexes) {
+      await this.applySuggestion(messageIndex, actionIndex, 0);
+    }
+    this.applyingAllIndex.set(null);
   }
 
   private mutateContent(content: ProposalContent, target: AiTargetOption, suggestion: string): ProposalContent {

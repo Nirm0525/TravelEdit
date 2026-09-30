@@ -184,6 +184,12 @@ export class ProposalBuilder {
     this.goToStep('assistant');
   }
 
+  /** Botón "Ir a Itinerario" que The Edit Assistant muestra cuando el agente
+   *  pide un día que todavía no existe. */
+  goToItineraryFromAssistant(): void {
+    this.goToStep('journey');
+  }
+
   setPreviewDevice(device: PreviewDevice): void {
     this.previewDevice.set(device);
   }

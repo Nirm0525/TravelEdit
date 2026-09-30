@@ -25,36 +25,78 @@
           <span class="ai-polish__turn-author">{{ message.role === 'user' ? 'Tú' : 'Assistant' }}</span>
           <p class="ai-polish__turn-text">{{ message.content }}</p>
 
-          @if (message.isTermsTarget) {
-            <p class="ai-polish__terms-warning">
-              ⚠️ Estás por editar los términos y condiciones. Revisa el resultado con cuidado antes de aplicarlo.
-            </p>
+          @if (message.dayNotFound; as dayNotFound) {
+            <button type="button" class="btn btn--secondary ai-polish__day-missing-btn" (click)="onGoToItinerary()">
+              Ir a Itinerario
+            </button>
           }
 
-          @if (message.suggestions; as suggestions) {
-            <div class="ai-polish__suggestions">
-              @for (suggestion of suggestions; track $index; let si = $index) {
-                <div class="ai-polish__suggestion-card">
-                  <p class="ai-polish__suggestion-text">{{ suggestion.text }}</p>
-                  <button
-                    type="button"
-                    class="btn btn--secondary ai-polish__suggestion-btn"
-                    [disabled]="applyingKey() === (mi + ':' + si) || message.appliedIndex !== null"
-                    (click)="useSuggestion(mi, si)"
-                  >
-                    @if (message.appliedIndex === si) {
-                      ✓ Aplicado
-                    } @else if (applyingKey() === (mi + ':' + si)) {
-                      Aplicando…
-                    } @else if (suggestions.length > 1) {
-                      Usar opción {{ si + 1 }}
-                    } @else {
-                      Aplicar a {{ suggestion.targetLabel }}
+          @if (message.actions; as actions) {
+            @if (actions.length > 1) {
+              <p class="ai-polish__actions-header">
+                Trabajando en {{ actions.length }} campos:
+                <span class="ai-polish__actions-header-list">{{ actionLabelsSummary(actions) }}</span>
+              </p>
+            }
+
+            <div class="ai-polish__actions">
+              @for (action of actions; track $index; let ai = $index) {
+                <div class="ai-polish__action">
+                  <p class="ai-polish__action-label">{{ action.targetLabel }}</p>
+
+                  @if (action.isTermsTarget) {
+                    <p class="ai-polish__terms-warning">
+                      ⚠️ Estás por editar los términos y condiciones. Revisa el resultado con cuidado antes de aplicarlo.
+                    </p>
+                  }
+
+                  <div class="ai-polish__suggestions">
+                    @for (suggestion of action.suggestions; track $index; let si = $index) {
+                      <div class="ai-polish__suggestion-card">
+                        <p class="ai-polish__suggestion-text">{{ suggestion }}</p>
+                        <button
+                          type="button"
+                          class="btn btn--secondary ai-polish__suggestion-btn"
+                          [disabled]="
+                            applyingKey() === (mi + ':' + ai + ':' + si) ||
+                            action.appliedSuggestionIndex !== null ||
+                            applyingAllIndex() === mi
+                          "
+                          (click)="applySuggestion(mi, ai, si)"
+                        >
+                          @if (action.appliedSuggestionIndex === si) {
+                            ✓ Aplicado
+                          } @else if (applyingKey() === (mi + ':' + ai + ':' + si)) {
+                            Aplicando…
+                          } @else if (action.suggestions.length > 1) {
+                            Usar opción {{ si + 1 }}
+                          } @else {
+                            Aplicar a {{ action.targetLabel }}
+                          }
+                        </button>
+                      </div>
                     }
-                  </button>
+                  </div>
                 </div>
               }
             </div>
+
+            @if (actions.length > 1 && hasPendingAction(actions)) {
+              <button
+                type="button"
+                class="btn btn--primary ai-polish__apply-all-btn"
+                [disabled]="applyingAllIndex() === mi || applyingKey()?.startsWith(mi + ':')"
+                (click)="applyAllActions(mi)"
+              >
+                {{ applyingAllIndex() === mi ? 'Aplicando todos…' : 'Aplicar todos' }}
+              </button>
+            }
+          }
+
+          @if (message.followUp; as followUp) {
+            <button type="button" class="ai-polish__followup-chip" (click)="useFollowUp(followUp)">
+              {{ followUp }}
+            </button>
           }
         </div>
       }

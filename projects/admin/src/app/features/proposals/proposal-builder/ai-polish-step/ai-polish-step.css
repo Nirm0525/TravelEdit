@@ -106,6 +106,57 @@
   font-size: var(--size-small);
 }
 
+.ai-polish__actions-header {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.ai-polish__actions-header-list {
+  display: block;
+  color: var(--ink-900);
+}
+
+.ai-polish__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ai-polish__action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.ai-polish__action-label {
+  font-size: var(--size-eyebrow);
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.ai-polish__apply-all-btn {
+  align-self: flex-start;
+}
+
+.ai-polish__day-missing-btn {
+  align-self: flex-start;
+}
+
+.ai-polish__followup-chip {
+  align-self: flex-start;
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--canvas-100);
+  color: var(--brand-600);
+  font-size: var(--size-small);
+  cursor: pointer;
+}
+
+.ai-polish__followup-chip:hover {
+  background: color-mix(in srgb, var(--brand-600) 8%, var(--canvas-100));
+}
+
 .ai-polish__suggestions {
   display: flex;
   flex-direction: column;

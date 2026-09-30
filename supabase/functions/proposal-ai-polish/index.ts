@@ -186,8 +186,16 @@ function isValidAiResult(value: unknown): value is AiResult {
 
 // ------------------------------------------------------------------
 // Prompt de sistema del modo chat: mismas reglas de preservación de hechos
-// que SYSTEM_PROMPT, más la tarea de identificar A CUÁL campo se refiere el
-// mensaje del usuario, tomando la clave EXACTA de la lista provista.
+// que SYSTEM_PROMPT, más la tarea de identificar TODOS los campos a los que
+// se refiere el mensaje del usuario (puede ser más de uno), tomando la
+// clave EXACTA de la lista provista para cada uno.
+//
+// Antes el contrato forzaba un único `targetKey` — un mensaje como "mejora
+// el título Y la descripción del día 2" literalmente no podía expresarse en
+// esa forma, así que el modelo elegía uno solo (normalmente el título) e
+// ignoraba el resto. No era un problema de prompt, era que el schema no
+// tenía dónde poner la segunda acción. `actions[]` lo resuelve: una entrada
+// por cada campo distinto que el mensaje pide editar.
 // ------------------------------------------------------------------
 const CHAT_SYSTEM_PROMPT = `Eres "The Edit Assistant", el editor de copy premium de The Travel Edit, una agencia de viajes de lujo, conversando con un agente de viajes que está editando una propuesta.
 
@@ -199,14 +207,29 @@ Debes preservar EXACTAMENTE (nunca inventar ni cambiar):
 - precios, monedas y porcentajes
 - políticas y condiciones comerciales existentes (depósitos, cancelaciones, penalidades, reembolsos)
 
-Tienes PROHIBIDO, bajo cualquier circunstancia: inventar o cambiar precios, disponibilidad, servicios, fechas o políticas; afirmar confirmaciones o garantías que no existan en el texto original.
+Tienes PROHIBIDO, bajo cualquier circunstancia: inventar o cambiar precios, disponibilidad, servicios, fechas o políticas; afirmar confirmaciones o garantías que no existan en el texto original; decir que un cambio ya quedó aplicado (el agente humano siempre confirma cada cambio manualmente — tú solo propones texto, nunca lo aplicas).
 
-En cada turno recibes: la lista de campos editables de ESTA propuesta (con su clave exacta, etiqueta y texto actual), la conversación previa (si la hay) y el nuevo mensaje del agente.
+En cada turno recibes: la lista de campos editables de ESTA propuesta (con su clave exacta, etiqueta y texto actual), la conversación previa —incluyendo notas de qué sugerencia aplicó el agente a qué campo, si aplicó alguna— y el nuevo mensaje del agente.
 
-Tu tarea:
-1. Decide a qué campo de la lista se refiere el mensaje. Usa la clave EXACTA tal como aparece en la lista — nunca inventes una clave que no esté en la lista. Si el mensaje no pide modificar ningún campo, o es ambiguo a cuál campo se refiere, usa la clave "none".
-2. Si identificaste un campo, redacta de 1 a 3 propuestas de texto de reemplazo para ESE campo siguiendo el pedido del agente (más elegante, más corto, tono luxury, alternativas de título, etc.), basadas EXCLUSIVAMENTE en el texto actual de ese campo. Si el mensaje pide varias alternativas, devuelve varias; si pide un solo resultado, devuelve solo una.
-3. Escribe una respuesta conversacional breve (1-2 frases, en español) confirmando qué hiciste o pidiendo la aclaración que falte. Nunca prometas que el cambio ya se aplicó — el agente todavía tiene que elegir y confirmar una opción.
+Tu tarea, en orden:
+
+1. Identifica TODAS las tareas de edición que pide el mensaje, no solo la primera. Si el agente pide dos o más cosas ("mejora el título y la descripción", "dame un título y también acorta la intro", "el título más corto y la introducción más elegante"), debes resolver TODAS — una entrada en \`actions\` por cada campo distinto involucrado. Nunca ignores una parte del pedido para quedarte solo con la más obvia.
+
+2. Para cada campo identificado, usa su clave EXACTA tal como aparece en la lista de campos editables — nunca inventes una clave que no esté ahí. Si el agente menciona algo que no corresponde a ningún campo de la lista (por ejemplo un día que todavía no existe en el itinerario), no le asignes por error la clave de otro campo parecido ni inventes una — simplemente no generes una acción para eso, y explícalo en \`reply\`.
+
+3. Para cada acción, redacta de 1 a 3 propuestas de texto de reemplazo para ESE campo, basadas EXCLUSIVAMENTE en el texto actual de ese campo y en el pedido del agente (más elegante, más corto, tono luxury, alternativas de título, etc.). Si pide varias alternativas, da varias; si pide un resultado único, da uno solo. Nunca mezcles en una misma acción propuestas que correspondan a campos distintos.
+
+4. Si el mensaje no requiere ninguna edición (una pregunta, pedir tu opinión, pedir que revises algo sin cambiarlo todavía), deja \`actions\` vacío y responde directamente en \`reply\`.
+
+5. Si el mensaje es realmente ambiguo — no queda claro a qué campo se refiere, y el historial tampoco lo aclara — no adivines: deja \`actions\` vacío y en \`reply\` pregunta puntualmente qué campo quiere trabajar (ej. "¿Quieres que mejore el título, la descripción o ambos?").
+
+6. Usa el historial de la conversación para resolver referencias como "esa", "también", "la segunda", "ahora hazla más corta" — si un turno anterior ya dejó claro de qué campo se habla, no vuelvas a preguntar cuál es.
+
+7. Las notas de qué sugerencia aplicó el agente son la versión vigente de ese campo para cualquier pedido posterior sobre él — ej. "ahora hazla más corta" después de una nota de aplicación se refiere a ESE texto ya aplicado, no al original que viste antes.
+
+8. Después de resolver el pedido (con o sin acciones), en \`followUp\` podés ofrecer un siguiente paso breve y relevante al contexto — pero SOLO cuando tenga sentido natural, no en cada turno. Ejemplos: tras título+descripción de un día, preguntar por sus servicios; tras portada, preguntar por la introducción; tras términos, ofrecer revisar claridad sin tocar condiciones. Nunca repitas la misma pregunta genérica turno tras turno ("¿algo más en lo que pueda ayudarte?"). Dejá \`followUp\` como cadena vacía si no aplica ahora.
+
+9. Varía el tono. No abras cada respuesta con la misma muletilla ("Perfecto...", "Claro...", "Con gusto..."). Sé breve y profesional, como un copiloto editorial — no un asistente genérico.
 
 Responde siempre en español.`;
 
@@ -230,39 +253,75 @@ function buildChatUserPrompt(message: string, targets: ChatTarget[], history: Ch
   return parts.join('\n');
 }
 
+// maxItems/minItems no están soportados de forma confiable en el modo
+// structured outputs "strict" de OpenAI (se documentan como ignorados en
+// varias versiones del API) — el límite real de 1-3 sugerencias y el tope
+// de acciones por turno se hacen cumplir en isValidChatResult(), no en el
+// schema en sí.
 function buildChatResponseSchema(targetKeys: string[]) {
   return {
     type: 'object',
     properties: {
-      reply: { type: 'string', description: 'Respuesta conversacional breve en español.' },
-      targetKey: {
-        type: 'string',
-        enum: [...targetKeys, 'none'],
-        description: 'Clave EXACTA del campo identificado, tomada de la lista dada, o "none" si no aplica.'
-      },
-      suggestions: {
+      reply: { type: 'string', description: 'Respuesta conversacional breve en español, variada en tono.' },
+      actions: {
         type: 'array',
-        items: { type: 'string' },
-        description: 'De 0 a 3 propuestas de texto para targetKey. Vacío si targetKey es "none".'
+        items: {
+          type: 'object',
+          properties: {
+            targetKey: {
+              type: 'string',
+              enum: targetKeys,
+              description: 'Clave EXACTA del campo a editar, tomada de la lista de campos editables. Nunca inventar una clave fuera de esta lista.'
+            },
+            suggestions: {
+              type: 'array',
+              items: { type: 'string' },
+              description: '1 a 3 propuestas de texto de reemplazo para este campo.'
+            }
+          },
+          required: ['targetKey', 'suggestions'],
+          additionalProperties: false
+        },
+        description: 'Una entrada por cada campo distinto que el mensaje pide editar. Vacío si no se identifica ninguna edición o si el mensaje es ambiguo.'
+      },
+      followUp: {
+        type: 'string',
+        description: 'Sugerencia breve y contextual de siguiente paso (1 frase). Cadena vacía si no aplica ahora.'
       }
     },
-    required: ['reply', 'targetKey', 'suggestions'],
+    required: ['reply', 'actions', 'followUp'],
     additionalProperties: false
   };
 }
 
-interface ChatAiResult {
-  reply: string;
+const MAX_ACTIONS_PER_TURN = 6;
+const MAX_SUGGESTIONS_PER_ACTION = 3;
+
+interface ChatAiAction {
   targetKey: string;
   suggestions: string[];
+}
+
+interface ChatAiResult {
+  reply: string;
+  actions: ChatAiAction[];
+  followUp: string;
 }
 
 function isValidChatResult(value: unknown, validKeys: string[]): value is ChatAiResult {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
-  if (typeof v.reply !== 'string' || typeof v.targetKey !== 'string') return false;
-  if (!Array.isArray(v.suggestions) || !v.suggestions.every((s) => typeof s === 'string')) return false;
-  return v.targetKey === 'none' || validKeys.includes(v.targetKey);
+  if (typeof v.reply !== 'string' || typeof v.followUp !== 'string') return false;
+  if (!Array.isArray(v.actions) || v.actions.length > MAX_ACTIONS_PER_TURN) return false;
+
+  return v.actions.every((entry) => {
+    if (!entry || typeof entry !== 'object') return false;
+    const action = entry as Record<string, unknown>;
+    if (typeof action.targetKey !== 'string' || !validKeys.includes(action.targetKey)) return false;
+    if (!Array.isArray(action.suggestions) || action.suggestions.length === 0) return false;
+    if (action.suggestions.length > MAX_SUGGESTIONS_PER_ACTION) return false;
+    return action.suggestions.every((s) => typeof s === 'string' && s.trim().length > 0);
+  });
 }
 
 // ------------------------------------------------------------------
@@ -350,8 +409,8 @@ async function handleChatMode(body: ChatRequestBody, json: (body: unknown, statu
         success: true,
         result: {
           reply: parsed.reply,
-          targetKey: parsed.targetKey === 'none' ? null : parsed.targetKey,
-          suggestions: parsed.suggestions
+          actions: parsed.actions.map((a) => ({ targetKey: a.targetKey, suggestions: a.suggestions })),
+          followUp: parsed.followUp.trim() || null
         }
       },
       200

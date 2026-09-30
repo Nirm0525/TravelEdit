@@ -42,10 +42,19 @@ export interface AiChatRequest {
   context?: { destination?: string };
 }
 
+export interface AiChatResultAction {
+  targetKey: string;
+  suggestions: string[];
+}
+
 export interface AiChatResult {
   reply: string;
-  targetKey: string | null;
-  suggestions: string[];
+  /** Una entrada por cada campo distinto que el mensaje pidió editar —
+   *  reemplaza el `targetKey`/`suggestions` singulares de antes, que solo
+   *  podían expresar un campo por turno (la causa real de que pedidos como
+   *  "mejora el título y la descripción" resolvieran solo uno). */
+  actions: AiChatResultAction[];
+  followUp: string | null;
 }
 
 export interface AiChatResponse {

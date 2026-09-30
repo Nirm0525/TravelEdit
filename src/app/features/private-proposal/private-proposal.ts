@@ -7,6 +7,7 @@ import { ProposalDay, ProposalServiceType } from '../../core/models/proposal-con
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
+import { Footer } from '../footer/footer';
 
 type Phase = 'loading' | 'unavailable' | 'gate' | 'content';
 
@@ -135,7 +136,7 @@ function nightsBetween(startIso: string, endIso: string): number | null {
  */
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, RevealOnScrollDirective],
+  imports: [DatePipe, CurrencyPipe, RevealOnScrollDirective, Footer],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })

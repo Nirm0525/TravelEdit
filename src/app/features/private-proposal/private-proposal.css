@@ -4,17 +4,19 @@
   color: var(--color-ink);
 }
 
-.private-proposal__wordmark {
-  font-family: var(--font-ui);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--color-burgundy);
+/* Logo real de Travel Edit — reemplaza el wordmark de texto en todas las
+   pantallas de la propuesta (gate, loading, no-disponible, topbar, hero,
+   footer). Un solo color fijo (cobre de marca): se apoya en que loading/
+   unavailable/topbar/footer usan fondos claros o el panel vino, donde ya
+   probamos que el contraste es correcto. */
+.private-proposal__wordmark-img {
+  display: block;
+  width: 7rem;
+  height: auto;
 }
 
-.private-proposal__wordmark--on-dark {
-  color: var(--color-cream);
+.private-proposal__wordmark-img--topbar {
+  width: 5.5rem;
 }
 
 /* --- Loading / unavailable --- */
@@ -30,12 +32,12 @@
   gap: var(--space-sm);
 }
 
-.private-proposal__center--loading {
-  background: var(--color-ink);
+.private-proposal__center .private-proposal__wordmark-img {
+  width: 9rem;
 }
 
-.private-proposal__center--loading .private-proposal__wordmark {
-  color: var(--color-cream);
+.private-proposal__center--loading {
+  background: var(--color-ink);
 }
 
 .private-proposal__loading-copy {
@@ -90,8 +92,10 @@
   padding: var(--space-xl) var(--space-lg);
 }
 
-.private-proposal__gate-panel .private-proposal__wordmark {
-  color: var(--color-cream);
+.private-proposal__gate-logo {
+  display: block;
+  width: 9rem;
+  height: auto;
 }
 
 .private-proposal__gate-tagline {
@@ -155,6 +159,23 @@
 
 .private-proposal__field input[aria-invalid='true'] {
   border-color: #d98282;
+}
+
+/* private-proposal__field se diseñó para el panel vino del gate (fondo
+   oscuro): cream sobre wine, warm-beige de label sobre wine. Reusado tal
+   cual en el formulario de aceptación (fondo cream de la página, sección
+   "¿Listos para comenzar?") el input quedaba cream-sobre-cream —
+   completamente invisible, no un input "roto": el usuario nunca podía ver
+   ni llenar el campo, así que el botón "Aceptar propuesta" nunca dejaba de
+   estar disabled. Contraste correcto para fondo claro: */
+.proposal__accept-form .private-proposal__field span {
+  color: var(--color-stone);
+}
+
+.proposal__accept-form .private-proposal__field input {
+  background: var(--color-white);
+  border-color: var(--color-warm-beige);
+  color: var(--color-ink);
 }
 
 .private-proposal__gate-error {
@@ -312,18 +333,29 @@
   transform: translateY(0);
 }
 
+/* Antes era una barra separada, de color cream, apilada ARRIBA de la foto
+   del hero — se veía como dos bloques de color distintos pegados uno sobre
+   el otro. Ahora vive DENTRO de .proposal__hero (ver HTML), superpuesta a la
+   foto con su propio scrim: así el header "se completa" con el hero en vez
+   de cortarlo. */
 .proposal__topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-sm) var(--space-md);
+  background: linear-gradient(180deg, rgba(22, 17, 15, 0.55) 0%, rgba(22, 17, 15, 0) 100%);
 }
 
 .proposal__topbar-tag {
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-stone);
+  color: var(--color-cream);
 }
 
 .proposal__hero {
@@ -1003,18 +1035,6 @@
 .proposal__accepted-date {
   color: var(--color-stone);
   margin-top: var(--space-sm);
-}
-
-.proposal__footer {
-  text-align: center;
-  padding: var(--space-xl) var(--space-md) var(--space-2xl);
-  border-top: 1px solid var(--color-warm-beige);
-}
-
-.proposal__footer-copy {
-  margin-top: var(--space-2xs);
-  color: var(--color-stone);
-  font-size: 0.85rem;
 }
 
 /* --- Responsive --- */

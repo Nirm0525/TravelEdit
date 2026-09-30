@@ -2,14 +2,14 @@
   @switch (phase()) {
     @case ('loading') {
       <div class="private-proposal__center private-proposal__center--loading" role="status" aria-live="polite">
-        <p class="private-proposal__wordmark">TRAVEL EDIT</p>
+        <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
         <p class="private-proposal__loading-copy">Preparando tu propuesta…</p>
       </div>
     }
 
     @case ('unavailable') {
       <div class="private-proposal__center">
-        <p class="private-proposal__wordmark">TRAVEL EDIT</p>
+        <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
         <h1 class="private-proposal__center-title">Esta propuesta no está disponible</h1>
         <p class="private-proposal__center-copy">
           El enlace puede haber expirado o la propuesta todavía no está lista para verse. Contacta a tu asesora de
@@ -24,7 +24,11 @@
           <aside class="private-proposal__gate-panel">
             <div class="private-proposal__gate-panel-inner">
               <div>
-                <p class="private-proposal__wordmark">Travel Edit</p>
+                <img
+                  src="images/logos/logos_alternativos/travel-edit-wordmark.png"
+                  alt="The Travel Edit"
+                  class="private-proposal__gate-logo"
+                />
                 <p class="private-proposal__gate-tagline">Experiencias de viaje curadas</p>
               </div>
 
@@ -105,7 +109,7 @@
             </div>
 
             <div class="private-proposal__gate-hero-footer">
-              <p class="private-proposal__wordmark">Travel Edit</p>
+              <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
               <p class="private-proposal__gate-hero-footer-tag">Experiencias de viaje curadas</p>
             </div>
           </section>
@@ -116,19 +120,19 @@
     @case ('content') {
       @if (data(); as d) {
         <article class="proposal" [class.is-revealed]="contentRevealed()">
-          <header class="proposal__topbar">
-            <span class="private-proposal__wordmark">Travel Edit</span>
-            <span class="proposal__topbar-tag">Propuesta privada</span>
-          </header>
-
           <section class="proposal__hero">
             @if (d.content.cover.imagePath) {
               <img [src]="d.content.cover.imagePath" alt="" class="proposal__hero-image" loading="eager" />
             }
             <div class="proposal__hero-overlay" aria-hidden="true"></div>
 
+            <header class="proposal__topbar">
+              <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img private-proposal__wordmark-img--topbar" />
+              <span class="proposal__topbar-tag">Propuesta privada</span>
+            </header>
+
             <div class="proposal__hero-content">
-              <p class="private-proposal__wordmark private-proposal__wordmark--on-dark">Travel Edit</p>
+              <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
               @if (destinationBadge(); as badge) {
                 <p class="proposal__hero-destination">{{ badge }}</p>
               }
@@ -510,10 +514,7 @@
             }
           </section>
 
-          <footer class="proposal__footer no-print">
-            <p class="private-proposal__wordmark">Travel Edit</p>
-            <p class="proposal__footer-copy">Diseñado especialmente para tu viaje.</p>
-          </footer>
+          <app-footer class="no-print" />
         </article>
       }
     }

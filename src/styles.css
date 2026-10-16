@@ -74,6 +74,18 @@ html {
   background-clip: content-box;
 }
 
+/* Páginas que ocultan la barra de scroll (la propuesta privada y sus términos):
+   la página sigue desplazándose con rueda, trackpad, teclado y táctil. */
+html.no-scrollbar {
+  scrollbar-width: none;
+}
+
+html.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 body {
   margin: 0;
   background: var(--color-cream);

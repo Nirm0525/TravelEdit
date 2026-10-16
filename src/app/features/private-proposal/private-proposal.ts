@@ -1,6 +1,6 @@
 import type { gsap } from 'gsap';
 import { Component, ElementRef, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
-import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { CurrencyPipe, DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
@@ -163,6 +163,7 @@ export class PrivateProposal implements OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly reducedMotion = inject(ReducedMotionService);
+  private readonly document = inject(DOCUMENT);
 
   readonly token = input.required<string>();
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
@@ -529,6 +530,7 @@ export class PrivateProposal implements OnDestroy {
   private daysMotion?: gsap.Context;
 
   constructor() {
+    this.document.documentElement.classList.add('no-scrollbar');
     this.title.setTitle('Propuesta privada | The Travel Edit');
     this.meta.updateTag({ name: 'robots', content: 'noindex, nofollow' });
 
@@ -841,6 +843,7 @@ export class PrivateProposal implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.document.documentElement.classList.remove('no-scrollbar');
     this.scrollObserver?.disconnect();
     this.introMotion?.revert();
     this.scrollMotion?.revert();

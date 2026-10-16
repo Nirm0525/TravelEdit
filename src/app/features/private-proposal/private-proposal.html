@@ -25,7 +25,7 @@
             <div class="private-proposal__gate-panel-inner">
               <div>
                 <img
-                  src="images/logos/logos_alternativos/travel-edit-wordmark.png"
+                  src="images/logos/logos_alternativos/travel-edit-wordmark-white.png"
                   alt="The Travel Edit"
                   class="private-proposal__gate-logo"
                 />
@@ -127,12 +127,11 @@
             <div class="proposal__hero-overlay" aria-hidden="true"></div>
 
             <header class="proposal__topbar">
-              <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img private-proposal__wordmark-img--topbar" />
+              <img src="images/logos/logos_alternativos/travel-edit-wordmark-white.png" alt="The Travel Edit" class="private-proposal__wordmark-img private-proposal__wordmark-img--topbar" />
               <span class="proposal__topbar-tag">Propuesta privada</span>
             </header>
 
             <div class="proposal__hero-content">
-              <img src="images/logos/logos_alternativos/travel-edit-wordmark.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
               @if (destinationBadge(); as badge) {
                 <p class="proposal__hero-destination">{{ badge }}</p>
               }
@@ -650,28 +649,6 @@
                   Esta propuesta incluye los servicios y experiencias detallados en el itinerario, cuidadosamente
                   seleccionados y con el respaldo de tu asesora durante todo el viaje.
                 </p>
-
-                <div class="proposal__pricing-card">
-                  <p class="proposal__pricing-card-label">Inversión total</p>
-                  <p class="proposal__pricing-card-total">{{ d.pricingTotal | currency: d.currency }}</p>
-                  @if (travelersLabel(); as travelers) {
-                    <p class="proposal__pricing-card-meta">Para {{ travelers }}</p>
-                  }
-                  @if (pricePerTraveler(); as perTraveler) {
-                    <p class="proposal__pricing-card-meta">
-                      ≈ {{ perTraveler | currency: d.currency }} por viajero
-                    </p>
-                  }
-                  @if (durationLabel(); as duration) {
-                    <p class="proposal__pricing-card-meta">{{ duration }}</p>
-                  }
-                  <button type="button" class="proposal__pricing-toggle" (click)="togglePricingExpanded()">
-                    {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                      <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                  </button>
-                </div>
               </div>
 
               <ng-template #costIcon let-kind>
@@ -709,24 +686,47 @@
                 }
               </ng-template>
               @if (pricingBreakdown(); as b) {
-                @if (b.mix.length > 1) {
-                  <div class="proposal__pricing-mix">
-                    <p class="proposal__pricing-mix-title">¿En qué se invierte?</p>
-                    @for (item of b.mix; track item.kind) {
-                      <div class="proposal__pricing-mix-row">
-                        <span class="proposal__pricing-icon" aria-hidden="true">
-                          <ng-container [ngTemplateOutlet]="costIcon" [ngTemplateOutletContext]="{ $implicit: item.kind }" />
-                        </span>
-                        <span class="proposal__pricing-mix-label">{{ item.label }}</span>
-                        <span class="proposal__pricing-mix-bar" aria-hidden="true">
-                          <span [style.width.%]="item.percent"></span>
-                        </span>
-                        <span class="proposal__pricing-mix-amount">{{ item.amount | currency: d.currency }}</span>
-                        <span class="proposal__pricing-mix-percent">{{ item.percent }}%</span>
-                      </div>
+                <div class="proposal__pricing-overview" [class.has-mix]="b.mix.length > 1">
+                  <div class="proposal__pricing-card">
+                    <p class="proposal__pricing-card-label">Inversión total</p>
+                    <p class="proposal__pricing-card-total">{{ d.pricingTotal | currency: d.currency }}</p>
+                    @if (travelersLabel(); as travelers) {
+                      <p class="proposal__pricing-card-meta">Para {{ travelers }}</p>
                     }
+                    @if (pricePerTraveler(); as perTraveler) {
+                      <p class="proposal__pricing-card-meta">
+                        ≈ {{ perTraveler | currency: d.currency }} por viajero
+                      </p>
+                    }
+                    @if (durationLabel(); as duration) {
+                      <p class="proposal__pricing-card-meta">{{ duration }}</p>
+                    }
+                    <button type="button" class="proposal__pricing-toggle" (click)="togglePricingExpanded()">
+                      {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </button>
                   </div>
-                }
+                  @if (b.mix.length > 1) {
+                    <div class="proposal__pricing-mix">
+                      <p class="proposal__pricing-mix-title">¿En qué se invierte?</p>
+                      @for (item of b.mix; track item.kind) {
+                        <div class="proposal__pricing-mix-row">
+                          <span class="proposal__pricing-icon" aria-hidden="true">
+                            <ng-container [ngTemplateOutlet]="costIcon" [ngTemplateOutletContext]="{ $implicit: item.kind }" />
+                          </span>
+                          <span class="proposal__pricing-mix-label">{{ item.label }}</span>
+                          <span class="proposal__pricing-mix-bar" aria-hidden="true">
+                            <span [style.width.%]="item.percent"></span>
+                          </span>
+                          <span class="proposal__pricing-mix-amount">{{ item.amount | currency: d.currency }}</span>
+                          <span class="proposal__pricing-mix-percent">{{ item.percent }}%</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
 
                 @if (pricingExpanded()) {
                   <div class="proposal__pricing-detail">

@@ -16,7 +16,7 @@
 }
 
 .private-proposal__wordmark-img--topbar {
-  width: 5.5rem;
+  width: 9rem;
 }
 
 /* --- Loading / unavailable --- */
@@ -88,8 +88,9 @@
 
 .private-proposal__gate-logo {
   display: block;
-  width: 9rem;
+  width: min(17rem, 100%);
   height: auto;
+  margin-left: -0.5rem;
 }
 
 .private-proposal__gate-tagline {
@@ -312,6 +313,38 @@
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--color-stone);
+}
+
+/* Escritorio: la pantalla de acceso ocupa exactamente la ventana, sin scroll. La
+   foto absorbe el espacio sobrante (min-height: 0), la franja con el logo se
+   compacta y, si la ventana es muy baja, solo el panel del formulario
+   desplaza por dentro — nunca la página. */
+@media (min-width: 48.01rem) {
+  .private-proposal__gate {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .private-proposal__gate-panel {
+    min-height: 0;
+  }
+
+  .private-proposal__gate-panel-inner {
+    gap: var(--space-md);
+    padding-block: var(--space-lg);
+    overflow-y: auto;
+  }
+
+  .private-proposal__gate-hero-photo {
+    min-height: 0;
+  }
+
+  .private-proposal__gate-hero-footer {
+    flex: none;
+    padding: var(--space-sm) var(--space-lg);
+  }
 }
 
 /* --- Proposal content --- */
@@ -762,6 +795,12 @@
 
 .proposal__day-band {
   background: color-mix(in srgb, var(--color-warm-beige) 35%, var(--color-cream));
+}
+
+/* La foto va pegada a la banda, sin el espacio que separa al resto de los
+   bloques del día. */
+.proposal__day-band + .proposal__day-media {
+  margin-top: calc(var(--space-lg) * -1);
 }
 
 .proposal__day-band p {
@@ -1294,60 +1333,92 @@
 
 /* --- Pricing --- */
 
+/* Inversión: sección más ancha y centrada — texto arriba, tarjeta del total y
+   mezcla por tipo lado a lado (apiladas en pantallas angostas). */
+.proposal__pricing {
+  max-width: 72rem;
+}
+
+.proposal__pricing .proposal__band h2 {
+  max-width: 72rem;
+}
+
 .proposal__pricing-summary {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-xl);
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .proposal__pricing-copy {
-  flex: 1;
-  min-width: 16rem;
+  max-width: 40rem;
+  margin: 0 auto var(--space-xl);
+  text-align: center;
   line-height: 1.7;
   color: var(--color-stone);
 }
 
+.proposal__pricing-overview {
+  display: grid;
+  grid-template-columns: minmax(18rem, 26rem);
+  justify-content: center;
+  gap: var(--space-lg);
+}
+
+.proposal__pricing-overview.has-mix {
+  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  justify-content: stretch;
+}
+
 .proposal__pricing-card {
-  flex: 0 0 auto;
-  min-width: 16rem;
-  padding: var(--space-lg);
-  background: color-mix(in srgb, var(--color-warm-beige) 30%, var(--color-cream));
-  border-radius: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--color-wine);
+  color: var(--color-cream);
   text-align: center;
 }
 
 .proposal__pricing-card-label {
   font-size: 0.72rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--color-stone);
+  color: var(--color-warm-beige);
 }
 
 .proposal__pricing-card-total {
+  margin: 0.15rem 0 var(--space-xs);
   font-family: var(--font-display);
-  font-size: var(--size-lead);
-  color: var(--color-burgundy);
-  margin: 0.15rem 0;
+  font-size: clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);
+  line-height: 1.05;
+  color: var(--color-white);
+  font-variant-numeric: tabular-nums;
 }
 
 .proposal__pricing-card-meta {
-  font-size: 0.85rem;
-  color: var(--color-stone);
+  font-size: 0.88rem;
+  color: color-mix(in srgb, var(--color-cream) 80%, transparent);
 }
 
-.proposal__pricing-toggle {
+.proposal__pricing-card .proposal__pricing-toggle {
   margin-top: var(--space-md);
+  color: var(--color-cream);
+  border-color: color-mix(in srgb, var(--color-cream) 60%, transparent);
+}
+
+.proposal__pricing-card .proposal__pricing-toggle:hover {
+  background: var(--color-cream);
+  color: var(--color-wine);
 }
 
 /* Mezcla por tipo: cuánto de la inversión va a cada categoría. */
 .proposal__pricing-mix {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  margin-top: var(--space-lg);
-  padding: var(--space-md);
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
   background: color-mix(in srgb, var(--color-warm-beige) 18%, var(--color-cream));
 }
 
@@ -1477,6 +1548,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+@media (max-width: 64rem) {
+  .proposal__pricing-overview.has-mix {
+    grid-template-columns: minmax(0, 28rem);
+    justify-content: center;
+  }
+}
+
 @media (max-width: 48rem) {
   .proposal__pricing-mix-row {
     grid-template-columns: 1.75rem 1fr auto 2.5rem;
@@ -1517,8 +1595,8 @@
 .proposal__terms-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-sm);
-  font-size: 0.95rem;
+  gap: var(--space-md);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.75rem);
   font-weight: 500;
   color: var(--color-ink);
 }
@@ -1526,21 +1604,22 @@
 .proposal__terms-link-icon {
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  flex: none;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   background: var(--color-wine);
   color: var(--color-cream);
 }
 
 .proposal__terms-link-icon svg {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 2rem;
+  height: 2rem;
 }
 
 .proposal__terms-link-arrow {
-  width: 1rem;
-  height: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
   color: var(--color-burgundy);
   transition: transform 0.2s ease;
 }

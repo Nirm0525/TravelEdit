@@ -34,20 +34,29 @@
         </div>
 
         <div class="terms-page__content">
-          @if (summary().length > 0) {
-            <nav class="terms-page__summary" aria-label="Resumen">
-              <h2>Resumen</h2>
-              <ul>
-                @for (item of summary(); track item.id) {
-                  <li>
-                    <button type="button" (click)="goTo(item.id)">{{ item.text }}</button>
-                  </li>
-                }
-              </ul>
-            </nav>
-          }
+          @if (sections().length > 0) {
+            @if (intro(); as html) {
+              <div class="terms-page__body terms-page__intro" [innerHTML]="html"></div>
+            }
 
-          @if (body(); as html) {
+            <h2 class="terms-page__summary-title">Resumen</h2>
+            <div class="terms-page__accordion">
+              @for (section of sections(); track section.id) {
+                <details class="terms-page__item">
+                  <summary class="terms-page__item-summary">
+                    <span class="terms-page__item-dot" aria-hidden="true"></span>
+                    <span class="terms-page__item-title">{{ section.title }}</span>
+                    <span class="terms-page__item-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div class="terms-page__body terms-page__item-body" [innerHTML]="section.body"></div>
+                </details>
+              }
+            </div>
+          } @else if (body(); as html) {
             <div class="terms-page__body" [innerHTML]="html"></div>
           }
         </div>

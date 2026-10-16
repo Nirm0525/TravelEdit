@@ -345,7 +345,7 @@
 }
 
 .preview__day-band {
-  margin: 0 calc(var(--space-lg) * -1) var(--space-sm);
+  margin: 0 calc(var(--space-lg) * -1);
   padding: var(--space-sm) var(--space-lg);
   background: var(--canvas-100);
   font-family: var(--font-display);

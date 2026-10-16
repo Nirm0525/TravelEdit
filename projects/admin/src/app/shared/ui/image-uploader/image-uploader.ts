@@ -28,6 +28,10 @@ export class ImageUploader {
   readonly requireAltText = input(true);
   readonly confirmLabel = input('Subir imagen(es)');
   readonly disabled = input(false);
+  /** Sube apenas se elige el archivo, sin pasar por el botón de confirmar.
+   *  Solo aplica si no se exige texto alternativo (no hay nada que completar
+   *  antes de subir) — pensado para imágenes únicas como la portada. */
+  readonly autoConfirm = input(false);
 
   readonly filesReady = output<ReadyImage[]>();
 
@@ -49,6 +53,10 @@ export class ImageUploader {
 
     this.pending.update((current) => [...current, ...additions]);
     input.value = '';
+
+    if (this.autoConfirm() && !this.requireAltText()) {
+      this.confirm();
+    }
   }
 
   onAltTextInput(id: string, event: Event): void {

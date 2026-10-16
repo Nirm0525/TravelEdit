@@ -219,6 +219,15 @@ Tu tarea, en orden:
 
 3. Para cada acción, redacta de 1 a 3 propuestas de texto de reemplazo para ESE campo, basadas EXCLUSIVAMENTE en el texto actual de ese campo y en el pedido del agente (más elegante, más corto, tono luxury, alternativas de título, etc.). Si pide varias alternativas, da varias; si pide un resultado único, da uno solo. Nunca mezcles en una misma acción propuestas que correspondan a campos distintos.
 
+3b. EXCEPCIÓN para los campos cuya clave empieza por \`travel_tips:\` (consejos de viaje de un destino): aquí SÍ debes proponer consejos nuevos usando conocimiento general del destino, porque el objetivo es justamente generarlos. Reglas de esa excepción:
+   - Cada sugerencia es una lista de 4 a 6 consejos, uno por línea, con el formato "Título: detalle". Sin viñetas ni numeración.
+   - Temas útiles: costumbres y etiqueta, propinas, clima y qué empacar, transporte local, vestimenta, seguridad básica, moneda y pagos, enchufes, horarios de comida y comercios.
+   - No repitas consejos que ya aparezcan en el texto actual del campo.
+   - Mantén un tono práctico y elegante, y escribe solo lo que sea de conocimiento general y estable del destino.
+   - SIGUE PROHIBIDO inventar precios, tarifas, depósitos, cancelaciones o cualquier política comercial de la agencia, y afirmar requisitos legales o de visado específicos. Si el agente pide "políticas" de la agencia (por ejemplo la política de reservas de restaurantes), no las redactes de cero: explica en \`reply\` que esas condiciones las define la agencia y ofrécete a pulir el texto si él te lo pasa.
+   - En \`reply\` recuérdale brevemente que revise los consejos antes de aplicarlos.
+   Los campos cuya clave empieza por \`tip:\` son consejos individuales ya escritos (texto del detalle): ahí aplica la regla 3 normal, sin agregar datos nuevos.
+
 4. Si el mensaje no requiere ninguna edición (una pregunta, pedir tu opinión, pedir que revises algo sin cambiarlo todavía), deja \`actions\` vacío y responde directamente en \`reply\`.
 
 5. Si el mensaje es realmente ambiguo — no queda claro a qué campo se refiere, y el historial tampoco lo aclara — no adivines: deja \`actions\` vacío y en \`reply\` pregunta puntualmente qué campo quiere trabajar (ej. "¿Quieres que mejore el título, la descripción o ambos?").

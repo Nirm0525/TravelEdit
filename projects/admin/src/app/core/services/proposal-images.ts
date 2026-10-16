@@ -5,7 +5,7 @@ const BUCKET = 'proposal-images';
 const MAX_DIMENSION = 2400;
 const WEBP_QUALITY = 0.82;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_MIME_TYPES = new Set(['image/webp', 'image/jpeg', 'image/png']);
+const ACCEPTED_MIME_TYPES = new Set(['image/webp', 'image/jpeg', 'image/png', 'image/avif']);
 
 async function compressImage(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -52,7 +52,7 @@ export class ProposalImagesService {
    *  pública recién al mostrarla vía getPublicUrl(). */
   async upload(file: File): Promise<string> {
     if (!ACCEPTED_MIME_TYPES.has(file.type)) {
-      throw new Error('Formato no permitido. Usa una imagen WEBP, JPEG o PNG.');
+      throw new Error('Formato no permitido. Usa una imagen WEBP, JPEG, PNG o AVIF.');
     }
     if (file.size > MAX_UPLOAD_BYTES) {
       throw new Error('La imagen supera el máximo de 10 MB.');

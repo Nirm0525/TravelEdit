@@ -2,7 +2,7 @@ import { Component, OnInit, inject, input, output, signal } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
-import { Proposal, ProposalContent } from '../../../../core/models/proposal.model';
+import { Proposal, ProposalContent, defaultWelcomeText } from '../../../../core/models/proposal.model';
 import { PROPOSAL_CURRENCY_OPTIONS } from '../../../../core/data/proposal-options';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
@@ -70,6 +70,7 @@ export class ClientTripStep implements OnInit {
     expiresAt: this.fb.control('', { nonNullable: true }),
     coverTitle: this.fb.control('', { nonNullable: true }),
     coverSubtitle: this.fb.control('', { nonNullable: true }),
+    welcomeBody: this.fb.control('', { nonNullable: true }),
     introHeadline: this.fb.control('', { nonNullable: true }),
     introBody: this.fb.control('', { nonNullable: true }),
     termsTitle: this.fb.control('', { nonNullable: true }),
@@ -119,6 +120,7 @@ export class ClientTripStep implements OnInit {
         expiresAt: proposal.expiresAt ? proposal.expiresAt.slice(0, 16) : '',
         coverTitle: proposal.content.cover.title,
         coverSubtitle: proposal.content.cover.subtitle,
+        welcomeBody: proposal.content.welcome.body,
         introHeadline: proposal.content.intro.headline,
         introBody: proposal.content.intro.body,
         termsTitle: proposal.content.terms.title,
@@ -237,6 +239,50 @@ export class ClientTripStep implements OnInit {
         this.flashSaved();
       } catch (error) {
         console.error('No se pudo guardar la portada.', error);
+        this.saveError.set('No se pudo guardar. Inténtalo nuevamente.');
+      } finally {
+        this.savingField.set(null);
+      }
+    });
+  }
+
+  welcomeIsEmpty(): boolean {
+    return this.form.controls.welcomeBody.value.replace(/<[^>]*>/g, '').trim().length === 0;
+  }
+
+  /** Rellena el editor con el borrador (nombre del cliente incluido) y lo
+   *  guarda — solo se ofrece con el campo vacío, nunca pisa texto escrito. */
+  generateWelcome(): Promise<void> {
+    const text = defaultWelcomeText(this.form.controls.clientName.value);
+    const escape = (line: string) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = text
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => `<p>${escape(line)}</p>`)
+      .join('');
+    this.form.controls.welcomeBody.setValue(html);
+    return this.saveWelcome();
+  }
+
+  saveWelcome(): Promise<void> {
+    return this.enqueueSave(async () => {
+      if (!this.content) {
+        return;
+      }
+      this.savingField.set('welcome');
+      this.saveError.set(null);
+      const nextContent: ProposalContent = {
+        ...this.content,
+        welcome: { body: this.form.getRawValue().welcomeBody }
+      };
+      try {
+        const updated = await this.proposalsService.updateContent(this.proposalId(), nextContent);
+        this.proposal = updated;
+        this.content = updated.content;
+        this.flashSaved();
+      } catch (error) {
+        console.error('No se pudo guardar el mensaje de bienvenida.', error);
         this.saveError.set('No se pudo guardar. Inténtalo nuevamente.');
       } finally {
         this.savingField.set(null);

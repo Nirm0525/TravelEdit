@@ -11,6 +11,7 @@ import {
 } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_SERVICE_TYPE_OPTIONS } from '../../../../core/data/proposal-options';
+import { PROPOSAL_SERVICE_FIELDS } from '../../../../core/data/proposal-service-fields';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 
@@ -35,6 +36,9 @@ export class BuildJourneyStep implements OnInit {
 
   readonly serviceTypeOptions = PROPOSAL_SERVICE_TYPE_OPTIONS;
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
+  /** Campos de la ficha por tipo, sin 'time' — la hora ya tiene su propio
+   *  input en la fila superior de cada servicio. */
+  readonly serviceFields = (type: ProposalServiceType) => PROPOSAL_SERVICE_FIELDS[type].filter((f) => f.key !== 'time');
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -247,6 +251,22 @@ export class BuildJourneyStep implements OnInit {
         moveItemInArray(services, previousIndex, currentIndex);
         return { ...d, services };
       })
+    );
+  }
+
+  onServiceDetailBlur(day: ProposalDay, service: ProposalServiceItem, key: string, event: Event): Promise<void> {
+    const value = (event.target as HTMLInputElement).value;
+    return this.enqueueMutation((days) =>
+      days.map((d) =>
+        d.id === day.id
+          ? {
+              ...d,
+              services: d.services.map((s) =>
+                s.id === service.id ? { ...s, details: { ...(s.details ?? {}), [key]: value } } : s
+              )
+            }
+          : d
+      )
     );
   }
 

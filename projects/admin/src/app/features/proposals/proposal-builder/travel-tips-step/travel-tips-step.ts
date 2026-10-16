@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { ProposalsService } from '../../../../core/services/proposals';
 import {
   ProposalContent,
@@ -11,6 +11,32 @@ import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dial
 
 type TipField = 'title' | 'body';
 
+/** Tipos de consejo — el valor se guarda en tip.category y el sitio público lo
+ *  traduce a la misma etiqueta (ver private-proposal.ts). */
+export const PROPOSAL_TIP_CATEGORIES = [
+  { value: '', label: 'Sin tipo' },
+  { value: 'restaurants', label: 'Restaurantes' },
+  { value: 'transport', label: 'Transporte' },
+  { value: 'weather', label: 'Clima y equipaje' },
+  { value: 'customs', label: 'Costumbres y propinas' },
+  { value: 'safety', label: 'Seguridad y salud' },
+  { value: 'payments', label: 'Pagos y compras' },
+  { value: 'other', label: 'Otro' }
+];
+
+function uniqueLocations(days: ProposalContent['days']): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const day of [...days].sort((a, b) => a.dayNumber - b.dayNumber)) {
+    const name = day.location?.trim();
+    if (name && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      result.push(name);
+    }
+  }
+  return result;
+}
+
 @Component({
   selector: 'app-travel-tips-step',
   imports: [ConfirmDialog],
@@ -22,6 +48,9 @@ export class TravelTipsStep implements OnInit {
 
   readonly proposalId = input.required<string>();
   readonly saved = output<void>();
+  /** Clave de destino para The Edit Assistant (ver buildTargetOptions en
+   *  ai-polish-step): `travel_tips:<groupId>` o `tip:<groupId>:<tipId>`. */
+  readonly openAssistant = output<string>();
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -29,6 +58,15 @@ export class TravelTipsStep implements OnInit {
   readonly saveError = signal<string | null>(null);
 
   readonly groups = signal<ProposalTravelTipGroup[]>([]);
+  readonly tipCategories = PROPOSAL_TIP_CATEGORIES;
+  /** Ubicaciones únicas de los días del itinerario, en orden de aparición. */
+  private readonly itineraryLocations = signal<string[]>([]);
+  /** Destinos del itinerario que todavía no tienen un grupo de consejos —
+   *  se ofrecen con "Agregar tips" en vez de obligar a escribirlos de nuevo. */
+  readonly pendingDestinations = computed(() => {
+    const existing = new Set(this.groups().map((g) => g.destination.trim().toLowerCase()));
+    return this.itineraryLocations().filter((name) => !existing.has(name.toLowerCase()));
+  });
   readonly groupPendingDelete = signal<ProposalTravelTipGroup | null>(null);
 
   private content: ProposalContent | null = null;
@@ -50,6 +88,7 @@ export class TravelTipsStep implements OnInit {
       }
       this.content = proposal.content;
       this.groups.set(proposal.content.travelTips);
+      this.itineraryLocations.set(uniqueLocations(proposal.content.days));
     } catch (error) {
       console.error('No se pudieron cargar los travel tips.', error);
       this.loadError.set('No se pudieron cargar los travel tips. Inténtalo nuevamente.');
@@ -87,6 +126,19 @@ export class TravelTipsStep implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  addGroupFor(destination: string): Promise<void> {
+    return this.enqueueMutation((groups) => [...groups, { ...createTravelTipGroup(), destination }]);
+  }
+
+  onTipCategoryChange(group: ProposalTravelTipGroup, tip: ProposalTravelTip, event: Event): Promise<void> {
+    const value = (event.target as HTMLSelectElement).value;
+    return this.enqueueMutation((groups) =>
+      groups.map((g) =>
+        g.id === group.id ? { ...g, tips: g.tips.map((t) => (t.id === tip.id ? { ...t, category: value } : t)) } : g
+      )
+    );
   }
 
   addGroup(): Promise<void> {

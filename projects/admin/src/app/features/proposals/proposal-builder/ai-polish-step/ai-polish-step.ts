@@ -1,16 +1,27 @@
 import { Component, ElementRef, OnInit, inject, input, output, signal, viewChild } from '@angular/core';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalAiService, AiChatTurn } from '../../../../core/services/proposal-ai';
-import { Proposal, ProposalContent, ProposalDay, ProposalServiceItem } from '../../../../core/models/proposal.model';
+import {
+  Proposal,
+  ProposalContent,
+  ProposalDay,
+  ProposalServiceItem,
+  ProposalTravelTip,
+  createTravelTip,
+  defaultWelcomeText
+} from '../../../../core/models/proposal.model';
 
 type AiTargetKind =
   | 'cover_title'
   | 'cover_subtitle'
+  | 'welcome'
   | 'intro'
   | 'day_title'
   | 'day_description'
   | 'service_description'
   | 'terms'
+  | 'travel_tips'
+  | 'tip_body'
   | 'custom';
 
 interface AiTargetOption {
@@ -19,6 +30,8 @@ interface AiTargetOption {
   label: string;
   dayId?: string;
   serviceId?: string;
+  groupId?: string;
+  tipId?: string;
 }
 
 interface ChatAction {
@@ -57,6 +70,29 @@ function htmlToPlainText(html: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .trim();
+}
+
+/** "Título: detalle" por línea → consejos nuevos. Ignora viñetas/numeración
+ *  y los títulos que el destino ya tiene, para que aplicar dos veces la misma
+ *  sugerencia no duplique nada. */
+function parseSuggestedTips(text: string, existing: ProposalTravelTip[]): ProposalTravelTip[] {
+  const known = new Set(existing.map((t) => t.title.trim().toLowerCase()));
+  const tips: ProposalTravelTip[] = [];
+  for (const raw of text.split(/\n+/)) {
+    const line = raw.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, '').trim();
+    if (!line) {
+      continue;
+    }
+    const separator = line.indexOf(':');
+    const title = (separator > 0 ? line.slice(0, separator) : line).trim();
+    const body = separator > 0 ? line.slice(separator + 1).trim() : '';
+    if (!title || known.has(title.toLowerCase())) {
+      continue;
+    }
+    known.add(title.toLowerCase());
+    tips.push({ ...createTravelTip(), title, body });
+  }
+  return tips;
 }
 
 function plainTextToHtml(text: string): string {
@@ -138,7 +174,14 @@ export class AiPolishStep implements OnInit {
       const preset = this.presetTargetKey();
       const presetTarget = preset ? this.targetOptions().find((t) => t.key === preset) : null;
       if (presetTarget) {
-        this.draftMessage.set(`Mejora ${this.lowerFirst(presetTarget.label)}.`);
+        const destination = proposal.content.travelTips.find((g) => g.id === presetTarget.groupId)?.destination.trim();
+        this.draftMessage.set(
+          presetTarget.kind === 'travel_tips'
+            ? `Sugiere consejos de viaje prácticos para ${destination || 'este destino'}: costumbres, propinas, clima, transporte y vestimenta.`
+            : presetTarget.kind === 'welcome'
+            ? `Mejora el mensaje de bienvenida dirigido a ${proposal.clientName || 'el cliente'}, con tono cálido y de lujo. Conserva su nombre.`
+            : `Mejora ${this.lowerFirst(presetTarget.label)}.`
+        );
       }
     } catch (error) {
       console.error('No se pudo cargar la propuesta para AI Polish.', error);
@@ -156,6 +199,7 @@ export class AiPolishStep implements OnInit {
     const options: AiTargetOption[] = [
       { key: 'cover_title', kind: 'cover_title', label: 'Título de portada' },
       { key: 'cover_subtitle', kind: 'cover_subtitle', label: 'Subtítulo de portada' },
+      { key: 'welcome', kind: 'welcome', label: 'Mensaje de bienvenida' },
       { key: 'intro', kind: 'intro', label: 'Introducción' }
     ];
 
@@ -174,6 +218,25 @@ export class AiPolishStep implements OnInit {
           label: `Día ${day.dayNumber} · ${service.title || 'Servicio'}: descripción`,
           dayId: day.id,
           serviceId: service.id
+        });
+      }
+    }
+
+    for (const group of content.travelTips) {
+      const destination = group.destination.trim() || 'destino sin nombre';
+      options.push({
+        key: `travel_tips:${group.id}`,
+        kind: 'travel_tips',
+        label: `Consejos de viaje — ${destination}`,
+        groupId: group.id
+      });
+      for (const tip of group.tips) {
+        options.push({
+          key: `tip:${group.id}:${tip.id}`,
+          kind: 'tip_body',
+          label: `Consejo (${destination}): ${tip.title.trim() || 'sin título'}`,
+          groupId: group.id,
+          tipId: tip.id
         });
       }
     }
@@ -203,6 +266,11 @@ export class AiPolishStep implements OnInit {
         return this.content.cover.title;
       case 'cover_subtitle':
         return this.content.cover.subtitle;
+      case 'welcome':
+        // Con el campo vacío se le da al asistente el borrador con el nombre
+        // del cliente como base — si no, no tendría texto sobre el cual
+        // trabajar (solo reescribe lo que ya existe, nunca inventa).
+        return htmlToPlainText(this.content.welcome.body) || defaultWelcomeText(this.proposal?.clientName ?? '');
       case 'intro':
         return htmlToPlainText(this.content.intro.body);
       case 'day_title':
@@ -213,6 +281,15 @@ export class AiPolishStep implements OnInit {
         return this.findService(target.dayId!, target.serviceId!)?.description ?? '';
       case 'terms':
         return htmlToPlainText(this.content.terms.body);
+      case 'travel_tips':
+        // Los consejos que ya existen, para que la IA no los repita.
+        return (this.content.travelTips.find((g) => g.id === target.groupId)?.tips ?? [])
+          .map((tip) => `${tip.title}: ${tip.body}`)
+          .join('\n');
+      case 'tip_body':
+        return (
+          this.content.travelTips.find((g) => g.id === target.groupId)?.tips.find((t) => t.id === target.tipId)?.body ?? ''
+        );
       case 'custom':
         return '';
     }
@@ -480,10 +557,28 @@ export class AiPolishStep implements OnInit {
         return { ...content, cover: { ...content.cover, title: suggestion } };
       case 'cover_subtitle':
         return { ...content, cover: { ...content.cover, subtitle: suggestion } };
+      case 'welcome':
+        return { ...content, welcome: { body: plainTextToHtml(suggestion) } };
       case 'intro':
         return { ...content, intro: { ...content.intro, body: plainTextToHtml(suggestion) } };
       case 'terms':
         return { ...content, terms: { ...content.terms, body: plainTextToHtml(suggestion) } };
+      case 'travel_tips':
+        return {
+          ...content,
+          travelTips: content.travelTips.map((g) =>
+            g.id === target.groupId ? { ...g, tips: [...g.tips, ...parseSuggestedTips(suggestion, g.tips)] } : g
+          )
+        };
+      case 'tip_body':
+        return {
+          ...content,
+          travelTips: content.travelTips.map((g) =>
+            g.id === target.groupId
+              ? { ...g, tips: g.tips.map((t) => (t.id === target.tipId ? { ...t, body: suggestion.trim() } : t)) }
+              : g
+          )
+        };
       case 'day_title':
         return { ...content, days: content.days.map((d) => (d.id === target.dayId ? { ...d, title: suggestion } : d)) };
       case 'day_description':

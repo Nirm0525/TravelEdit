@@ -1,5 +1,6 @@
+import type { gsap } from 'gsap';
 import { Component, ElementRef, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { PublicProposalService, ProposalAccessResult, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
 import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../core/models/proposal-enums-public';
@@ -8,6 +9,15 @@ import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scrol
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 import { Footer } from '../footer/footer';
+import { serviceDetailRows } from '../../core/data/proposal-service-fields';
+import {
+  animateItineraryDays,
+  moveSidebarIndicator,
+  playGateExit,
+  playProposalIntro,
+  refreshScrollTriggers,
+  setupProposalScroll
+} from '../../core/gsap/proposal-motion';
 
 type Phase = 'loading' | 'unavailable' | 'gate' | 'content';
 
@@ -21,6 +31,10 @@ interface StoredSession {
 interface NavSection {
   id: string;
   label: string;
+}
+
+interface NavItem extends NavSection {
+  isDay: boolean;
 }
 
 interface ItineraryDayView {
@@ -136,7 +150,7 @@ function nightsBetween(startIso: string, endIso: string): number | null {
  */
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, RevealOnScrollDirective, Footer],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RevealOnScrollDirective, Footer],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })
@@ -150,6 +164,16 @@ export class PrivateProposal implements OnDestroy {
 
   readonly token = input.required<string>();
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
+  readonly tipCategoryLabel: Record<string, string> = {
+    restaurants: 'Restaurantes',
+    transport: 'Transporte',
+    weather: 'Clima y equipaje',
+    customs: 'Costumbres y propinas',
+    safety: 'Seguridad y salud',
+    payments: 'Pagos y compras',
+    other: 'Otro'
+  };
+  readonly detailRows = serviceDetailRows;
 
   readonly phase = signal<Phase>('loading');
   readonly gate = signal<ProposalGateResponse | null>(null);
@@ -170,10 +194,6 @@ export class PrivateProposal implements OnDestroy {
    *  mismo mensaje ("no disponible"), lo cual es engañoso para un simple
    *  problema de conexión. */
   readonly accessError = signal<ProposalAccessResult | 'network_error' | null>(null);
-  /** Fade de salida corto del panel de acceso antes de pasar a 'content' —
-   *  evita el salto brusco de un swap instantáneo del @switch. Se omite en
-   *  reduced-motion (ver attemptVerify). */
-  readonly gateExiting = signal(false);
   private readonly gateCodeInput = viewChild<ElementRef<HTMLInputElement>>('gateCodeInput');
 
   readonly acceptedByName = signal('');
@@ -181,6 +201,18 @@ export class PrivateProposal implements OnDestroy {
   readonly accepting = signal(false);
   readonly acceptError = signal<string | null>(null);
   readonly justAccepted = signal(false);
+
+  /** "Sí, por favor" por servicio — { [serviceId]: true|false }, tal cual
+   *  viene del servidor (ver set_proposal_service_choice, migración 0043). */
+  readonly serviceChoices = signal<Record<string, boolean>>({});
+  readonly choiceBusyId = signal<string | null>(null);
+  readonly choiceError = signal<string | null>(null);
+  /** Las elecciones solo se editan mientras la propuesta siga abierta — una
+   *  vez aceptada quedan fijas (el RPC también lo rechaza). */
+  readonly canChooseServices = computed(() => {
+    const status = this.data()?.status;
+    return status === 'published' || status === 'viewed';
+  });
 
   readonly navOpen = signal(false);
   readonly activeSectionId = signal<string | null>(null);
@@ -193,6 +225,11 @@ export class PrivateProposal implements OnDestroy {
   readonly safeIntroBody = computed<SafeHtml | null>(() => {
     const body = this.data()?.content.intro.body;
     return body ? this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body)) : null;
+  });
+
+  readonly safeWelcomeBody = computed<SafeHtml | null>(() => {
+    const body = this.data()?.content.welcome.body;
+    return body && body.replace(/<[^>]*>/g, '').trim() ? this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body)) : null;
   });
 
   readonly safeTermsBody = computed<SafeHtml | null>(() => {
@@ -327,13 +364,41 @@ export class PrivateProposal implements OnDestroy {
     return segments;
   });
 
+  /** Texto de la banda de cada día — "Viernes, 2 de octubre de 2026 – Madrid".
+   *  Se arma solo con lo que existe: sin start_date no hay fecha y sin
+   *  "Ubicación" no hay destino; si no hay ninguno de los dos, no hay banda. */
+  dayBandLabel(day: ProposalDay): string {
+    const view = this.itineraryOverview()
+      .flatMap((segment) => segment.days)
+      .find((v) => v.day.id === day.id);
+    const when = [view?.weekdayLabel, view?.dateLabel].filter(Boolean).join(', ');
+    const where = day.location?.trim() ?? '';
+    return [when, where].filter(Boolean).join(' – ');
+  }
+
   /** Colapsado por defecto — la tabla resumen del itinerario es lo primero
    *  que se ve, y "Ver itinerario completo" revela las tarjetas día a día
    *  que ya existían (mismo contenido, ahora detrás de un toggle en vez de
    *  siempre visible). */
   readonly itineraryExpanded = signal(false);
   toggleItineraryExpanded(): void {
-    this.itineraryExpanded.update((v) => !v);
+    const expanded = !this.itineraryExpanded();
+    this.itineraryExpanded.set(expanded);
+    this.daysMotion?.revert();
+    this.daysMotion = undefined;
+    if (this.reducedMotion.reduced()) {
+      return;
+    }
+    // Las tarjetas de día se montan en el ciclo de CD siguiente — igual que
+    // en loadContent, hay que esperar a que existan antes de animarlas.
+    setTimeout(() => {
+      if (expanded) {
+        this.daysMotion = animateItineraryDays(this.elementRef.nativeElement);
+      }
+      // Expandir/colapsar cambia la altura de la página: sin esto los
+      // ScrollTriggers de las secciones de abajo quedan con posiciones viejas.
+      refreshScrollTriggers();
+    }, 30);
   }
 
   /** Igual que itineraryExpanded pero para el desglose de precios — el total
@@ -367,6 +432,9 @@ export class PrivateProposal implements OnDestroy {
       return [];
     }
     const sections: NavSection[] = [];
+    if (this.safeWelcomeBody()) {
+      sections.push({ id: 'bienvenida', label: 'Bienvenida' });
+    }
     if (d.content.intro.headline || d.content.intro.body) {
       sections.push({ id: 'resumen', label: 'Resumen' });
     }
@@ -382,8 +450,42 @@ export class PrivateProposal implements OnDestroy {
     if (d.content.terms.body) {
       sections.push({ id: 'terminos', label: 'Términos' });
     }
+    sections.push({ id: 'aceptar', label: d.status === 'accepted' ? 'Propuesta aceptada' : 'Aceptar propuesta' });
     return sections;
   });
+
+  /** Ítems del menú lateral: las secciones, con un ítem por día justo debajo
+   *  de "Itinerario" (fecha solo si la propuesta tiene start_date — nunca se
+   *  inventa). Clic en un día expande el itinerario completo si hace falta. */
+  readonly navItems = computed<NavItem[]>(() => {
+    const d = this.data();
+    if (!d) {
+      return [];
+    }
+    const startDate = d.startDate ? parseIsoDate(d.startDate) : null;
+    const days = [...d.content.days].sort((a, b) => a.dayNumber - b.dayNumber);
+    const items: NavItem[] = [];
+    for (const section of this.navSections()) {
+      items.push({ ...section, isDay: false });
+      if (section.id !== 'itinerario') {
+        continue;
+      }
+      for (const day of days) {
+        const date = startDate ? addDays(startDate, day.dayNumber - 1) : null;
+        const number = day.dayNumber < 10 ? `0${day.dayNumber}` : `${day.dayNumber}`;
+        items.push({
+          id: `dia-${day.id}`,
+          label: date ? `Día ${number} – ${date.getDate()} ${shortMonth(date)} ${date.getFullYear()}` : `Día ${number}`,
+          isDay: true
+        });
+      }
+    }
+    return items;
+  });
+
+  private introMotion?: gsap.Context;
+  private scrollMotion?: gsap.Context;
+  private daysMotion?: gsap.Context;
 
   constructor() {
     this.title.setTitle('Propuesta privada | The Travel Edit');
@@ -413,7 +515,6 @@ export class PrivateProposal implements OnDestroy {
   private async init(token: string): Promise<void> {
     this.phase.set('loading');
     this.contentRevealed.set(false);
-    this.gateExiting.set(false);
 
     let gate: ProposalGateResponse | null;
     try {
@@ -462,6 +563,7 @@ export class PrivateProposal implements OnDestroy {
     try {
       const data = await this.publicProposal.getContent(token, sessionToken);
       this.data.set(data);
+      this.serviceChoices.set(data.serviceChoices);
       this.sessionToken = sessionToken;
       this.phase.set('content');
       // Un tick después de montar el contenido, no en el mismo — así el CSS
@@ -472,6 +574,7 @@ export class PrivateProposal implements OnDestroy {
       // estén en el DOM (Angular las monta en el ciclo de CD posterior al
       // phase.set('content') de arriba) antes de poder observarlas.
       setTimeout(() => this.setupScrollSpy(), 50);
+      setTimeout(() => this.startMotion(), 60);
       return true;
     } catch (error) {
       console.error('Sesión inválida o expirada.', error);
@@ -500,16 +603,14 @@ export class PrivateProposal implements OnDestroy {
       if (res.result === 'ok' && res.sessionToken) {
         this.codeInput.set('');
         this.storeSession(token, res.sessionToken, res.sessionExpiresAt);
-        // Fade de salida corto antes del swap a 'content' — "no navegar con
-        // salto visual brusco" (spec del access gate, sección 10). Se omite
-        // en reduced-motion: ahí la espera artificial no aporta nada.
+        // Salida animada del panel antes del swap a 'content' — "no navegar
+        // con salto visual brusco" (spec del access gate, sección 10). Se
+        // omite en reduced-motion: ahí la espera artificial no aporta nada.
         if (!this.reducedMotion.reduced()) {
-          this.gateExiting.set(true);
-          await new Promise((resolve) => setTimeout(resolve, 280));
+          await playGateExit(this.elementRef.nativeElement);
         }
         const loaded = await this.loadContent(token, res.sessionToken);
         if (!loaded) {
-          this.gateExiting.set(false);
           this.phase.set('unavailable');
         }
       } else {
@@ -523,6 +624,28 @@ export class PrivateProposal implements OnDestroy {
       this.phase.set('gate');
     } finally {
       this.verifying.set(false);
+    }
+  }
+
+  async toggleServiceChoice(serviceId: string): Promise<void> {
+    const session = this.sessionToken;
+    if (!session || !this.canChooseServices() || this.choiceBusyId()) {
+      return;
+    }
+    const previous = this.serviceChoices();
+    const next = !previous[serviceId];
+    // Optimista: el botón responde al instante y vuelve atrás si el RPC falla.
+    this.serviceChoices.set({ ...previous, [serviceId]: next });
+    this.choiceBusyId.set(serviceId);
+    this.choiceError.set(null);
+    try {
+      await this.publicProposal.setServiceChoice(this.token(), session, serviceId, next);
+    } catch (error) {
+      console.error('No se pudo guardar la elección del servicio.', error);
+      this.serviceChoices.set(previous);
+      this.choiceError.set('No pudimos guardar tu elección. Inténtalo de nuevo en unos segundos.');
+    } finally {
+      this.choiceBusyId.set(null);
     }
   }
 
@@ -564,11 +687,45 @@ export class PrivateProposal implements OnDestroy {
 
   scrollToSection(id: string): void {
     this.navOpen.set(false);
-    this.activeSectionId.set(id);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.setActiveSection(id);
+    const target = document.getElementById(id);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    // Es un día y el itinerario completo sigue colapsado: se expande primero
+    // y se espera a que las tarjetas existan antes de desplazarse.
+    if (id.startsWith('dia-') && !this.itineraryExpanded()) {
+      this.toggleItineraryExpanded();
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.setupScrollSpy();
+      }, 120);
+    }
   }
 
   private scrollObserver: IntersectionObserver | null = null;
+
+  private setActiveSection(id: string): void {
+    this.activeSectionId.set(id);
+    moveSidebarIndicator(this.elementRef.nativeElement, id, !this.reducedMotion.reduced());
+  }
+
+  /** Entrada de la portada + animaciones ligadas al scroll. Una sola vez por
+   *  montaje: loadContent() se vuelve a llamar tras aceptar la propuesta y la
+   *  portada no debe reanimarse en ese momento. */
+  private startMotion(): void {
+    if (this.introMotion) {
+      return;
+    }
+    const root = this.elementRef.nativeElement;
+    if (this.reducedMotion.reduced()) {
+      return;
+    }
+    this.introMotion = playProposalIntro(root);
+    this.scrollMotion = setupProposalScroll(root);
+    moveSidebarIndicator(root, this.activeSectionId(), false);
+  }
 
   /** Resalta en el menú "Ir a sección" cuál sección se está viendo mientras se
    *  hace scroll — banda de detección centrada en el tercio superior de la
@@ -576,8 +733,8 @@ export class PrivateProposal implements OnDestroy {
    *  se sienta natural y no cambie recién cuando la sección está por salir. */
   private setupScrollSpy(): void {
     this.scrollObserver?.disconnect();
-    const elements = this.navSections()
-      .map((section) => this.elementRef.nativeElement.querySelector<HTMLElement>(`#${section.id}`))
+    const elements = this.navItems()
+      .map((item) => this.elementRef.nativeElement.querySelector<HTMLElement>(`#${item.id}`))
       .filter((el): el is HTMLElement => !!el);
     if (elements.length === 0) {
       return;
@@ -588,7 +745,7 @@ export class PrivateProposal implements OnDestroy {
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible.length > 0) {
-          this.activeSectionId.set(visible[0].target.id);
+          this.setActiveSection(visible[0].target.id);
         }
       },
       { rootMargin: '-15% 0px -70% 0px', threshold: 0 }
@@ -600,6 +757,9 @@ export class PrivateProposal implements OnDestroy {
 
   ngOnDestroy(): void {
     this.scrollObserver?.disconnect();
+    this.introMotion?.revert();
+    this.scrollMotion?.revert();
+    this.daysMotion?.revert();
   }
 
   private storageKey(token: string): string {

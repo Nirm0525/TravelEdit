@@ -24,6 +24,12 @@
   gap: var(--space-lg);
 }
 
+.journey__add-bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-lg);
+}
+
 .day-card {
   border: 1px solid var(--line-200);
   border-radius: var(--radius-md);
@@ -162,6 +168,49 @@
 
 .service-card.cdk-drag-preview {
   box-shadow: 0 0.5rem 1rem rgba(22, 17, 15, 0.16);
+}
+
+.service-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.service-card__details-title {
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.service-card__details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-xs) var(--space-sm);
+}
+
+.service-card__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+}
+
+.service-card__detail input {
+  background: var(--surface-000);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  font: inherit;
+  font-size: var(--size-small);
+  color: var(--ink-900);
+}
+
+.service-card__detail input:focus {
+  border-color: var(--line-200);
+  outline: none;
 }
 
 .service-card__image {

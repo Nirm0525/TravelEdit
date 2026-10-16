@@ -27,6 +27,17 @@
       </div>
     </section>
 
+    <div class="preview__logo-band">
+      <img src="images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="preview__logo-band-img" />
+    </div>
+
+    @if (p.content.welcome.body) {
+      <section class="preview__section">
+        <div class="preview__band"><h2>Mensaje de bienvenida</h2></div>
+        <div class="preview__rich" [innerHTML]="p.content.welcome.body"></div>
+      </section>
+    }
+
     @if (p.content.intro.headline || p.content.intro.body || hasSummaryStats()) {
       <section class="preview__section preview__intro">
         <div class="preview__band"><h2>Resumen</h2></div>
@@ -92,7 +103,10 @@
         @if (itineraryOverview().length > 0) {
           <div class="preview__itinerary-summary">
             <div class="preview__itinerary-summary-header">
-              <p class="preview__itinerary-summary-tag">Un recorrido diseñado para inspirar</p>
+              <p class="preview__itinerary-summary-tag">
+                <span class="preview__itinerary-summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">   <rect x="3.5" y="5" width="17" height="15" rx="2.5" />   <path d="M3.5 10h17M8 3v4M16 3v4" stroke-linecap="round" />   <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" stroke-linecap="round" stroke-width="2" /> </svg></span>
+                Resumen del recorrido
+              </p>
               <button type="button" class="preview__itinerary-toggle" (click)="toggleItineraryExpanded()">
                 {{ itineraryExpanded() ? 'Ocultar itinerario completo' : 'Ver itinerario completo' }}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -102,40 +116,86 @@
             </div>
 
             <div class="preview__itinerary-table-wrap">
+              <ng-template #typeIcon let-type>
+                @switch (type) {
+                  @case ('flight') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @case ('transfer') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M5 16h14M6 16l1.5-4.5A2 2 0 0 1 9.4 10h5.2a2 2 0 0 1 1.9 1.5L18 16" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M4 16v2.5M20 16v2.5" stroke-linecap="round" />
+                      <circle cx="8" cy="17.3" r="1.4" />
+                      <circle cx="16" cy="17.3" r="1.4" />
+                    </svg>
+                  }
+                  @case ('hotel') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M3 19v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M3 19h18M3 13V6" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('activity') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z" stroke-linejoin="round" />
+                      <circle cx="12" cy="9" r="2.2" />
+                    </svg>
+                  }
+                }
+              </ng-template>
               <table class="preview__itinerary-table">
-                <thead>
-                  <tr>
-                    <th scope="col" colspan="2">Destino</th>
-                    <th scope="col">Fechas</th>
-                    <th scope="col">Noches</th>
-                    <th scope="col">Experiencias destacadas</th>
-                  </tr>
-                </thead>
                 <tbody>
                   @for (segment of itineraryOverview(); track $index) {
-                    <tr>
-                      <td class="preview__itinerary-table-thumb">
-                        @if (imageUrl(segment.thumbnailPath); as url) {
-                          <img [src]="url" alt="" loading="lazy" />
-                        } @else {
-                          <div class="preview__itinerary-table-thumb-placeholder" aria-hidden="true"></div>
-                        }
-                      </td>
-                      <td class="preview__itinerary-table-destination">
-                        {{ segment.location || segment.days[0]?.dayLabel }}
-                      </td>
-                      <td>{{ segment.dateRangeLabel }}</td>
-                      <td>{{ segment.nights }}</td>
-                      <td>
-                        @if (segment.highlights.length > 0) {
-                          <div class="preview__itinerary-highlights">
-                            @for (highlight of segment.highlights; track $index) {
-                              <span class="preview__itinerary-highlight">{{ highlight.label }}</span>
-                            }
-                          </div>
-                        }
-                      </td>
+                    <tr class="preview__itinerary-row preview__itinerary-row--segment">
+                      <th scope="row">{{ segment.dateRangeLabel || segment.nights + (segment.nights === 1 ? ' noche' : ' noches') }}</th>
+                      <td>{{ segment.location || segment.days[0]?.dayLabel }}</td>
                     </tr>
+                    @for (view of segment.days; track view.day.id) {
+                      <tr class="preview__itinerary-row">
+                        <th scope="row">
+                          <span class="preview__itinerary-day">{{ view.dayLabel }}</span>
+                          @if (view.weekdayLabel) {
+                            <span class="preview__itinerary-day-meta">{{ view.weekdayLabel }}</span>
+                          }
+                          @if (view.dateLabel) {
+                            <span class="preview__itinerary-day-meta">{{ view.dateLabel }}</span>
+                          }
+                        </th>
+                        <td>
+                          <ul class="preview__itinerary-services">
+                            @for (service of view.day.services; track service.id) {
+                              <li>
+                                <span class="preview__itinerary-icon" aria-hidden="true">
+                                  <ng-container [ngTemplateOutlet]="typeIcon" [ngTemplateOutletContext]="{ $implicit: service.type }" />
+                                </span>
+                                <span class="preview__itinerary-service">
+                                  @if (service.time) {
+                                    <strong>{{ service.time }}</strong>
+                                  }
+                                  <span>{{ service.title || serviceTypeLabel[service.type] }}</span>
+                                </span>
+                              </li>
+                            } @empty {
+                              <li>
+                                <span class="preview__itinerary-icon" aria-hidden="true">
+                                  <ng-container [ngTemplateOutlet]="typeIcon" [ngTemplateOutletContext]="{ $implicit: 'other' }" />
+                                </span>
+                                <span class="preview__itinerary-service">
+                                  <span>{{ view.day.title || 'Día libre' }}</span>
+                                </span>
+                              </li>
+                            }
+                          </ul>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -146,15 +206,15 @@
         @if (itineraryExpanded()) {
           @for (day of p.content.days; track day.id) {
             <div class="preview__day">
-              <div class="preview__day-header">
-                <span class="preview__day-number">Día {{ day.dayNumber }}</span>
-                <h3>{{ day.title || 'Sin título' }}</h3>
-                @if (day.location) {
-                  <span class="preview__day-location">{{ day.location }}</span>
-                }
-              </div>
+              <p class="preview__day-number">Día {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</p>
+              @if (dayBandLabel(day); as band) {
+                <p class="preview__day-band">{{ band }}</p>
+              }
               @if (imageUrl(day.imagePath); as url) {
                 <img [src]="url" alt="" class="preview__day-image" />
+              }
+              @if (day.title) {
+                <h3 class="preview__day-title">{{ day.title }}</h3>
               }
               @if (day.description) {
                 <p class="preview__day-description">{{ day.description }}</p>
@@ -170,6 +230,24 @@
                         }
                       </span>
                       <strong>{{ service.title || 'Sin título' }}</strong>
+                      @if (p.serviceChoices[service.id]) {
+                        <span class="preview__service-chosen">✓ Aceptado por el cliente</span>
+                      }
+                      @if (imageUrl(service.imagePath); as serviceImage) {
+                        <img [src]="serviceImage" alt="" class="preview__service-image" />
+                      }
+                      @if (detailRows(service); as rows) {
+                        @if (rows.length > 0) {
+                          <dl class="preview__service-facts">
+                            @for (row of rows; track row.label) {
+                              <div>
+                                <dt>{{ row.label }}</dt>
+                                <dd>{{ row.value }}</dd>
+                              </div>
+                            }
+                          </dl>
+                        }
+                      }
                       @if (service.description) {
                         <p>{{ service.description }}</p>
                       }

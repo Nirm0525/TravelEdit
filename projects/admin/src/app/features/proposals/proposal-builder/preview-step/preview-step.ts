@@ -1,9 +1,12 @@
-import { Component, OnInit, computed, effect, inject, input, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, input, signal } from '@angular/core';
+import type { gsap } from 'gsap';
+import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
 import { Proposal, ProposalDay } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
+import { serviceDetailRows } from '../../../../core/data/proposal-service-fields';
+import { animatePreviewDays, playPreviewIntro, refreshPreviewTriggers } from '../../../../core/gsap/preview-motion';
 
 // --- Fechas/agrupación por destino: espejo deliberado de las funciones
 // equivalentes en src/app/features/private-proposal/private-proposal.ts —
@@ -102,13 +105,19 @@ interface ItinerarySegment {
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [DatePipe, CurrencyPipe],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet],
   templateUrl: './preview-step.html',
   styleUrl: './preview-step.css'
 })
 export class PreviewStep implements OnInit {
   private readonly proposalsService = inject(ProposalsService);
   private readonly proposalImages = inject(ProposalImagesService);
+  private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly prefersReducedMotion =
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private introMotion?: gsap.Context;
+  private daysMotion?: gsap.Context;
 
   readonly proposalId = input.required<string>();
   /** Se monta también como columna persistente (no solo página completa) —
@@ -117,6 +126,7 @@ export class PreviewStep implements OnInit {
    *  esta instancia tenga que compartir estado con ellos. */
   readonly refreshTick = input<number>(0);
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
+  readonly detailRows = serviceDetailRows;
 
   readonly proposal = signal<Proposal | null>(null);
   readonly loading = signal(true);
@@ -132,6 +142,26 @@ export class PreviewStep implements OnInit {
   }
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.introMotion?.revert();
+      this.daysMotion?.revert();
+    });
+
+    // La entrada animada corre una sola vez por montaje: cada autosave del
+    // constructor vuelve a cargar la propuesta y re-renderiza el artículo, y
+    // reanimar la portada en cada guardado sería ruido, no ayuda.
+    effect(() => {
+      if (this.loading() || !this.proposal() || this.introMotion || this.prefersReducedMotion) {
+        return;
+      }
+      // El artículo se monta en el ciclo de CD siguiente a este efecto.
+      setTimeout(() => {
+        if (!this.introMotion) {
+          this.introMotion = playPreviewIntro(this.elementRef.nativeElement);
+        }
+      }, 30);
+    });
+
     let firstRun = true;
     effect(() => {
       this.refreshTick();
@@ -162,7 +192,30 @@ export class PreviewStep implements OnInit {
   }
 
   toggleItineraryExpanded(): void {
-    this.itineraryExpanded.update((v) => !v);
+    const expanded = !this.itineraryExpanded();
+    this.itineraryExpanded.set(expanded);
+    this.daysMotion?.revert();
+    this.daysMotion = undefined;
+    if (this.prefersReducedMotion) {
+      return;
+    }
+    setTimeout(() => {
+      if (expanded) {
+        this.daysMotion = animatePreviewDays(this.elementRef.nativeElement);
+      }
+      refreshPreviewTriggers();
+    }, 30);
+  }
+
+  /** "Viernes, 2 de octubre de 2026 – Madrid" — misma regla que dayBandLabel()
+   *  del sitio público: solo con datos reales, sin banda si no hay ninguno. */
+  dayBandLabel(day: ProposalDay): string {
+    const view = this.itineraryOverview()
+      .flatMap((segment) => segment.days)
+      .find((v) => v.day.id === day.id);
+    const when = [view?.weekdayLabel, view?.dateLabel].filter(Boolean).join(', ');
+    const where = day.location?.trim() ?? '';
+    return [when, where].filter(Boolean).join(' – ');
   }
 
   togglePricingExpanded(): void {

@@ -172,7 +172,7 @@
               <app-pricing-step [proposalId]="proposalId" (saved)="onSaved()" />
             }
             @case ('travel-tips') {
-              <app-travel-tips-step [proposalId]="proposalId" (saved)="onSaved()" />
+              <app-travel-tips-step [proposalId]="proposalId" (saved)="onSaved()" (openAssistant)="activateAssistant($event)" />
             }
             @case ('assistant') {
               <app-ai-polish-step

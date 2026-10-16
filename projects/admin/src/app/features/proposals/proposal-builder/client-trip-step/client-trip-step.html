@@ -121,6 +121,7 @@
             <app-image-uploader
               [multiple]="false"
               [requireAltText]="false"
+              [autoConfirm]="true"
               [disabled]="uploadingCover()"
               [confirmLabel]="coverImageUrl() ? 'Cambiar imagen' : 'Subir portada'"
               (filesReady)="onCoverImageSelected($event)"
@@ -146,10 +147,36 @@
         </label>
 
         <label class="field">
-          <span>Subtítulo</span>
+          <span class="client-trip-step__field-label">
+            Subtítulo
+            <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('cover_subtitle')" title="Mejorar con The Edit Assistant">✨</button>
+          </span>
           <input type="text" formControlName="coverSubtitle" (blur)="saveCover()" />
           <span class="client-trip-step__char-count">{{ form.controls.coverSubtitle.value.length }}/120</span>
         </label>
+
+        <div class="client-trip-step__section-header">
+          <span class="client-trip-step__field-label">
+            Mensaje de bienvenida
+            <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('welcome')" title="Mejorar con The Edit Assistant">✨ Mejorar</button>
+          </span>
+          <button type="button" class="btn btn--secondary" [disabled]="savingField() === 'welcome'" (click)="saveWelcome()">
+            {{ savingField() === 'welcome' ? 'Guardando…' : 'Guardar mensaje' }}
+          </button>
+        </div>
+        <p class="field__hint">
+          Se muestra como una sección antes del resumen, dirigida a quien hizo la solicitud
+          ({{ form.controls.clientName.value || 'el cliente' }}).
+        </p>
+        @if (welcomeIsEmpty()) {
+          <button type="button" class="btn btn--secondary" [disabled]="savingField() === 'welcome'" (click)="generateWelcome()">
+            Generar borrador con el nombre del cliente
+          </button>
+        }
+        <!-- Sin <label> alrededor del editor: mismo motivo que el texto del resumen. -->
+        <div class="field client-trip-step__rich-field">
+          <app-rich-text-editor formControlName="welcomeBody" [imageUpload]="bodyImageUpload" />
+        </div>
 
         <div class="client-trip-step__section-header">
           <span class="client-trip-step__field-label">
@@ -171,7 +198,7 @@
              de párrafo del toolbar— robándole el foco al editor. Bug real:
              no se podía escribir ni un carácter (ver mismo caso en terms). -->
         <div class="field client-trip-step__rich-field">
-          <span>Texto de bienvenida</span>
+          <span>Texto del resumen</span>
           <app-rich-text-editor formControlName="introBody" [imageUpload]="bodyImageUpload" />
         </div>
       </section>

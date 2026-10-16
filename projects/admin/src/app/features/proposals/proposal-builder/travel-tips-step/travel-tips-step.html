@@ -8,7 +8,7 @@
 } @else {
   <div class="tips">
     <div class="tips__toolbar">
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addGroup()">+ Agregar destino</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addGroup()">+ Agregar otro destino</button>
       <span class="tips__status" role="status" aria-live="polite">{{ saving() ? 'Guardando…' : '' }}</span>
     </div>
 
@@ -16,8 +16,34 @@
       <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
     }
 
+    <p class="tips__notice">
+      The Edit Assistant propone consejos generales del destino (costumbres, propinas, clima, transporte…). Revísalos
+      antes de aplicarlos. Las políticas y tarifas de tu agencia, como la de reserva de restaurantes, escríbelas tú: el
+      asistente puede pulir tu redacción pero no inventarlas.
+    </p>
+
+    @if (pendingDestinations().length > 0) {
+      <section class="tips__pending" aria-label="Destinos de tu itinerario sin consejos">
+        <p class="tips__pending-title">Destinos de tu itinerario</p>
+        @for (name of pendingDestinations(); track name) {
+          <div class="tips__pending-row">
+            <span>{{ name }}</span>
+            <button type="button" class="btn btn--secondary" [disabled]="saving()" (click)="addGroupFor(name)">
+              + Agregar tips a {{ name }}
+            </button>
+          </div>
+        }
+      </section>
+    }
+
     @if (groups().length === 0) {
-      <p class="tips__empty">Todavía no hay consejos de viaje. Agrega un destino para empezar.</p>
+      <p class="tips__empty">
+        @if (pendingDestinations().length > 0) {
+          Elige un destino de arriba para empezar a agregar consejos.
+        } @else {
+          Todavía no hay consejos de viaje. Agrega un destino para empezar.
+        }
+      </p>
     } @else {
       <div class="tips__groups">
         @for (group of groups(); track group.id) {
@@ -31,6 +57,12 @@
                 aria-label="Destino"
                 placeholder="Destino — ej. España"
               />
+              <button
+                type="button"
+                class="tip-group__ai-trigger"
+                (click)="openAssistant.emit('travel_tips:' + group.id)"
+                title="Sugerir consejos de este destino con The Edit Assistant"
+              >✨ Sugerir tips</button>
               <button type="button" class="tip-group__remove" (click)="requestRemoveGroup(group)">Eliminar destino</button>
             </header>
 
@@ -48,6 +80,22 @@
                           placeholder="Título del tip"
                           aria-label="Título del tip"
                         />
+                        <select
+                          class="tip-card__category"
+                          (change)="onTipCategoryChange(group, tip, $event)"
+                          aria-label="Tipo de consejo"
+                        >
+                          @for (category of tipCategories; track category.value) {
+                            <option [value]="category.value" [selected]="(tip.category ?? '') === category.value">{{ category.label }}</option>
+                          }
+                        </select>
+                        <button
+                          type="button"
+                          class="tip-card__ai-trigger"
+                          (click)="openAssistant.emit('tip:' + group.id + ':' + tip.id)"
+                          title="Mejorar este consejo con The Edit Assistant"
+                          aria-label="Mejorar este consejo con The Edit Assistant"
+                        >✨</button>
                         <button type="button" class="tip-card__remove" (click)="removeTip(group, tip)" aria-label="Eliminar tip">✕</button>
                       </div>
                       <textarea

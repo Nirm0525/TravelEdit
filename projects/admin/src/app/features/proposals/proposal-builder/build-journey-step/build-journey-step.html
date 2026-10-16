@@ -57,6 +57,7 @@
                 <app-image-uploader
                   [multiple]="false"
                   [requireAltText]="false"
+                  [autoConfirm]="true"
                   [disabled]="uploadingDayId() === day.id"
                   confirmLabel="Subir imagen del día"
                   (filesReady)="onDayImageSelected(day, $event)"
@@ -104,6 +105,23 @@
                         aria-label="Notas del servicio"
                       />
 
+                      <div class="service-card__details">
+                        <p class="service-card__details-title">Ficha de {{ serviceTypeLabel[service.type].toLowerCase() }}</p>
+                        <div class="service-card__details-grid">
+                          @for (field of serviceFields(service.type); track field.key) {
+                            <label class="service-card__detail">
+                              <span>{{ field.label }}</span>
+                              <input
+                                type="text"
+                                [value]="service.details?.[field.key] ?? ''"
+                                [placeholder]="field.placeholder"
+                                (blur)="onServiceDetailBlur(day, service, field.key, $event)"
+                              />
+                            </label>
+                          }
+                        </div>
+                      </div>
+
                       <div class="service-card__image">
                         @if (serviceImageUrls()[service.id]; as url) {
                           <img [src]="url" alt="" class="service-card__image-preview" />
@@ -111,6 +129,7 @@
                         <app-image-uploader
                           [multiple]="false"
                           [requireAltText]="false"
+                          [autoConfirm]="true"
                           [disabled]="uploadingServiceId() === service.id"
                           [confirmLabel]="serviceImageUrls()[service.id] ? 'Cambiar imagen' : 'Subir imagen'"
                           (filesReady)="onServiceImageSelected(day, service, $event)"
@@ -129,6 +148,10 @@
             </div>
           </article>
         }
+      </div>
+
+      <div class="journey__add-bottom">
+        <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addDay()">+ Agregar día</button>
       </div>
     }
   </div>

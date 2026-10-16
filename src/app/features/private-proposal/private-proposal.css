@@ -67,12 +67,6 @@
 .private-proposal__gate {
   min-height: 100vh;
   display: flex;
-  transition: opacity 0.28s var(--ease-editorial), transform 0.28s var(--ease-editorial);
-}
-
-.private-proposal__gate.is-exiting {
-  opacity: 0;
-  transform: translateY(-0.5rem);
 }
 
 .private-proposal__gate-panel {
@@ -328,9 +322,11 @@
   transition: opacity 0.5s var(--ease-editorial), transform 0.5s var(--ease-editorial);
 }
 
+/* transform: none (no translateY(0)): cualquier transform crea un bloque
+   contenedor para position:fixed, y el sidebar dejaría de anclarse al viewport. */
 .proposal.is-revealed {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 /* Antes era una barra separada, de color cream, apilada ARRIBA de la foto
@@ -424,70 +420,201 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Internal nav --- */
-
-.proposal__nav {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: color-mix(in srgb, var(--color-cream) 92%, transparent);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--color-warm-beige);
-}
-
-.proposal__nav-inner {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 0 var(--space-md);
-}
-
-.proposal__nav-toggle {
-  display: none;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--color-ink);
-}
-
-.proposal__nav-caret {
-  transition: transform 0.2s var(--ease-editorial);
-}
-
-.proposal__nav-caret.is-open {
-  transform: rotate(180deg);
-}
-
-.proposal__nav-list {
+/* Logo entre la portada y el resumen. */
+.proposal__logo-band {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-lg);
-  padding: var(--space-sm) 0;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
 }
 
-.proposal__nav-list button {
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+.proposal__logo-band-img {
+  width: 11rem;
+}
+
+/* --- Sidebar de la propuesta ---
+   Escritorio: columna oscura fija a la izquierda, visible desde la portada, con
+   una entrada por sección y una por día del itinerario. Móvil/tablet: cajón que
+   se abre con el botón "Menú". El indicador del ítem activo y la barra de
+   progreso los mueve GSAP (ver proposal-motion.ts). */
+
+.proposal__sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  width: 17rem;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xl) var(--space-md) var(--space-md);
+  background: var(--color-wine);
+  color: var(--color-cream);
+}
+
+.proposal__sidebar-heading {
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  line-height: 1;
   text-transform: uppercase;
-  color: var(--color-stone);
-  padding: 0.25rem 0;
-  border-bottom: 2px solid transparent;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  color: var(--color-warm-beige);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-cream) 40%, transparent);
 }
 
-.proposal__nav-list button:hover {
-  color: var(--color-burgundy);
-  border-bottom-color: var(--color-gold);
+/* Scroll propio (las propuestas largas tienen un ítem por día) con fundido
+   hacia abajo para sugerir que hay más. */
+.proposal__sidebar-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding-right: var(--space-sm);
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+}
+
+.proposal__sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.proposal__sidebar-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-xl);
+}
+
+.proposal__sidebar-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 0;
+  background: var(--color-gold);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.proposal__sidebar-list button {
+  display: block;
+  width: 100%;
+  padding: 0.65rem 0 0.65rem var(--space-sm);
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  opacity: 0.62;
+  cursor: pointer;
+  transition: opacity 0.25s ease, color 0.25s ease, padding-left 0.3s var(--ease-editorial);
+}
+
+.proposal__sidebar-day button {
+  font-size: 0.8rem;
+  padding-left: var(--space-md);
+}
+
+.proposal__sidebar-list button:hover {
+  opacity: 1;
+  padding-left: calc(var(--space-sm) + 0.35rem);
+}
+
+.proposal__sidebar-day button:hover {
+  padding-left: calc(var(--space-md) + 0.35rem);
+}
+
+.proposal__sidebar-list button.is-active {
+  opacity: 1;
+  color: var(--color-gold);
+}
+
+.proposal__sidebar-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-md);
+}
+
+/* El wordmark es oscuro (pensado para fondo claro) — se invierte a blanco
+   sobre el fondo vino. */
+.proposal__sidebar-logo {
+  width: 8rem;
+  filter: brightness(0) invert(1);
+}
+
+.proposal__sidebar-progress {
+  position: absolute;
+  top: 8rem;
+  bottom: 10rem;
+  right: 1rem;
+  width: 2px;
+  background: color-mix(in srgb, var(--color-cream) 18%, transparent);
+}
+
+.proposal__sidebar-progress-bar {
+  position: absolute;
+  inset: 0;
+  background: var(--color-gold);
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+.proposal__sidebar-backdrop {
+  display: none;
+}
+
+.proposal__menu-button {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 25;
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-cream);
+  background: var(--color-wine);
+  border-radius: 999px;
   cursor: pointer;
 }
 
-.proposal__nav-list button.is-active {
-  color: var(--color-burgundy);
-  border-bottom-color: var(--color-burgundy);
+.proposal__menu-button-bars,
+.proposal__menu-button-bars::before {
+  display: block;
+  width: 1rem;
+  height: 1.5px;
+  background: currentColor;
+}
+
+.proposal__menu-button-bars {
+  position: relative;
+}
+
+.proposal__menu-button-bars::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+}
+
+@media (min-width: 64.01rem) {
+  /* Deja libre la columna del sidebar para todo el artículo (portada incluida).
+     Las bandas de título usan 100vw para llegar de borde a borde — acá el
+     borde izquierdo es el del sidebar, así que ancho y desplazamiento se
+     calculan sobre lo que queda. */
+  .proposal.has-sidebar {
+    margin-left: 17rem;
+  }
+
+  .proposal.has-sidebar .proposal__band {
+    width: calc(100vw - 17rem);
+    margin-left: calc(-50vw + 8.5rem);
+  }
 }
 
 /* --- Sections --- */
@@ -590,7 +717,11 @@
 /* --- Itinerary --- */
 
 .proposal__itinerary {
-  max-width: 64rem;
+  max-width: 72rem;
+}
+
+.proposal__itinerary .proposal__band h2 {
+  max-width: 72rem;
 }
 
 .proposal__days {
@@ -600,45 +731,72 @@
   margin-top: var(--space-md);
 }
 
+/* Cada día abre como una portada: título enorme, banda con fecha y destino y
+   una foto a todo el ancho. */
 .proposal__day {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-lg);
-  align-items: center;
 }
 
-.proposal__day--reverse .proposal__day-media {
-  order: 2;
+/* Banda y foto salen del ancho de lectura y llegan de borde a borde — mismo
+   truco que .proposal__band (100vw centrado), con el desplazamiento del
+   sidebar descontado en escritorio. */
+.proposal__bleed {
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
 }
 
-.proposal__day-media img,
-.proposal__day-media-placeholder {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--color-warm-beige) 40%, var(--color-cream));
+@media (min-width: 64.01rem) {
+  .proposal.has-sidebar .proposal__bleed {
+    width: calc(100vw - 17rem);
+    margin-left: calc(-50vw + 8.5rem);
+  }
 }
 
 .proposal__day-number {
   font-family: var(--font-display);
-  font-style: italic;
-  color: var(--color-burgundy);
-  font-size: var(--size-lead);
+  font-size: clamp(3.5rem, 1.5rem + 8vw, 8rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-wine);
+}
+
+.proposal__day-band {
+  background: color-mix(in srgb, var(--color-warm-beige) 35%, var(--color-cream));
+}
+
+.proposal__day-band p {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-md);
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 1rem + 0.9vw, 1.75rem);
+  color: var(--color-ink);
+}
+
+/* Recorta el parallax de la foto (GSAP la mueve y la escala dentro de este
+   contenedor, ver animateItineraryDays). */
+.proposal__day-media {
+  overflow: hidden;
+}
+
+.proposal__day-media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  max-height: 40rem;
+  object-fit: cover;
 }
 
 .proposal__day-title {
   font-family: var(--font-display);
   font-size: var(--size-h2);
-  margin: var(--space-2xs) 0;
-}
-
-.proposal__day-location {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.8rem;
-  color: var(--color-stone);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .proposal__day-description {
@@ -646,32 +804,154 @@
   margin-bottom: var(--space-md);
 }
 
+/* Servicios del día: tarjetas a todo el ancho del día (no la columna angosta
+   del texto), con la foto grande y el botón "Sí, por favor". */
 .proposal__services {
+  grid-column: 1 / -1;
+  grid-row: 2;
   display: flex;
   flex-direction: column;
+  gap: var(--space-xl);
+  margin-top: var(--space-md);
+}
+
+.proposal__service {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-gold);
+}
+
+.proposal__service-head {
+  display: flex;
+  align-items: center;
   gap: var(--space-sm);
 }
 
-.proposal__services li {
-  padding: var(--space-sm);
-  border: 1px solid var(--color-warm-beige);
-  border-radius: 0.35rem;
-}
-
-.proposal__service-type {
-  display: block;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.proposal__service-icon {
+  flex: none;
+  display: inline-flex;
   color: var(--color-burgundy);
-  margin-bottom: 0.2rem;
 }
 
-.proposal__service-time {
+.proposal__service-icon svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.proposal__service-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-burgundy);
+}
+
+.proposal__service-clock {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.proposal__service-choice {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.3rem 0.35rem 0.3rem 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  background: var(--color-stone);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.25s ease, opacity 0.25s ease;
+}
+
+.proposal__service-choice:hover:not(:disabled) {
+  background: var(--color-wine);
+}
+
+.proposal__service-choice.is-chosen {
+  background: var(--color-burgundy);
+}
+
+.proposal__service-choice:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.proposal__service-choice-check {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-white);
+  color: color-mix(in srgb, var(--color-stone) 55%, var(--color-white));
+  transition: color 0.25s ease;
+}
+
+.proposal__service-choice.is-chosen .proposal__service-choice-check {
+  color: var(--color-burgundy);
+}
+
+.proposal__service-choice-check svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.proposal__service-image {
+  width: 100%;
+  max-height: 34rem;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-warm-beige) 40%, var(--color-cream));
+}
+
+.proposal__service-facts > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr;
+  gap: var(--space-md);
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--color-warm-beige);
+}
+
+.proposal__service-facts dt {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.proposal__service-facts dd {
   color: var(--color-stone);
-  text-transform: none;
-  letter-spacing: normal;
-  margin-left: 0.15rem;
+}
+
+.proposal__service-description {
+  line-height: 1.75;
+}
+
+@media (max-width: 48rem) {
+  .proposal__service-head {
+    flex-wrap: wrap;
+  }
+
+  .proposal__service-title {
+    flex-basis: calc(100% - 3rem);
+  }
+
+  .proposal__service-clock {
+    margin-left: auto;
+  }
 }
 
 /* --- Itinerary summary table --- */
@@ -726,85 +1006,140 @@
   cursor: pointer;
 }
 
-.proposal__itinerary-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--color-warm-beige);
-  border-radius: 0.25rem;
-  overflow: hidden;
-}
-
-.proposal__itinerary-table thead th {
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--color-warm-beige) 30%, var(--color-cream));
-  text-align: left;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-stone);
-}
-
-.proposal__itinerary-table tbody tr {
-  border-top: 1px solid var(--color-warm-beige);
-}
-
-.proposal__itinerary-table td {
-  padding: var(--space-sm) var(--space-md);
-  vertical-align: middle;
-}
-
-.proposal__itinerary-table-thumb {
-  width: 4.5rem;
-  padding-right: 0 !important;
-}
-
-.proposal__itinerary-table-thumb img,
-.proposal__itinerary-table-thumb-placeholder {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 0.35rem;
-  object-fit: cover;
-  background: color-mix(in srgb, var(--color-warm-beige) 40%, var(--color-cream));
-}
-
-.proposal__itinerary-table-destination {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.05rem;
-  color: var(--color-ink);
-  white-space: nowrap;
-}
-
-.proposal__itinerary-highlights {
-  display: flex;
-  flex-wrap: wrap;
+.proposal__itinerary-summary-tag {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-sm);
 }
 
-.proposal__itinerary-highlight {
+.proposal__itinerary-summary-icon {
   display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  color: var(--color-ink);
-  white-space: nowrap;
-}
-
-.proposal__itinerary-highlight-icon {
-  display: inline-flex;
-  width: 1rem;
-  height: 1rem;
   color: var(--color-burgundy);
-  flex-shrink: 0;
 }
 
-.proposal__itinerary-highlight-icon svg {
+.proposal__itinerary-summary-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Tabla de dos columnas: a la izquierda fecha/día, a la derecha el destino
+   (fila sombreada) y los servicios de cada día con su ícono y hora. */
+.proposal__itinerary-table {
   width: 100%;
-  height: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--color-gold);
+}
+
+.proposal__itinerary-row th,
+.proposal__itinerary-row td {
+  padding: var(--space-md);
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--color-warm-beige);
+}
+
+.proposal__itinerary-row th {
+  width: 30%;
+  min-width: 9rem;
+  font-weight: 400;
+  border-right: 1px solid var(--color-gold);
+}
+
+.proposal__itinerary-row--segment th,
+.proposal__itinerary-row--segment td {
+  background: color-mix(in srgb, var(--color-warm-beige) 22%, var(--color-cream));
+  border-top-color: var(--color-gold);
+  vertical-align: middle;
+}
+
+.proposal__itinerary-row--segment th {
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.proposal__itinerary-row--segment td {
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+}
+
+.proposal__itinerary-day {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+}
+
+.proposal__itinerary-day-meta {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+}
+
+.proposal__itinerary-services {
+  display: flex;
+  flex-direction: column;
+}
+
+.proposal__itinerary-services li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+.proposal__itinerary-services li + li {
+  border-top: 1px solid color-mix(in srgb, var(--color-warm-beige) 70%, transparent);
+}
+
+.proposal__itinerary-services li:first-child {
+  padding-top: 0;
+}
+
+.proposal__itinerary-services li:last-child {
+  padding-bottom: 0;
+}
+
+.proposal__itinerary-icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--color-burgundy);
+}
+
+.proposal__itinerary-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.proposal__itinerary-service {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.proposal__itinerary-service strong {
+  font-weight: 700;
+  font-size: 0.95rem;
 }
 
 /* --- Travel tips --- */
+
+.proposal__tip-category {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
 
 .proposal__tips-tag {
   margin-top: var(--space-2xs);
@@ -1040,18 +1375,41 @@
 /* --- Responsive --- */
 
 @media (max-width: 64rem) {
-  .proposal__nav-toggle {
-    display: flex;
+  .proposal__menu-button {
+    display: inline-flex;
   }
 
-  .proposal__nav-list {
+  .proposal__sidebar {
+    width: min(20rem, 86vw);
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 0.45s var(--ease-editorial), visibility 0s linear 0.45s;
+  }
+
+  .proposal__sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
+    transition: transform 0.45s var(--ease-editorial);
+  }
+
+  .proposal__sidebar-progress {
     display: none;
-    flex-direction: column;
-    gap: var(--space-sm);
   }
 
-  .proposal__nav-list.is-open {
-    display: flex;
+  .proposal__sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    display: block;
+    background: rgba(22, 17, 15, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+
+  .proposal__sidebar-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   /* Tablet: el panel de acceso pasa de ~30% a ~40% en vez de saltar
@@ -1063,25 +1421,21 @@
 }
 
 @media (max-width: 48rem) {
-  .proposal__itinerary-table {
-    display: block;
-    overflow-x: auto;
+  .proposal__itinerary-row th,
+  .proposal__itinerary-row td {
+    padding: var(--space-sm);
+  }
+
+  .proposal__itinerary-row th {
+    width: 36%;
+    min-width: 7rem;
   }
 
   .proposal__hero {
     min-height: 100vh;
   }
 
-  .proposal__day {
-    grid-template-columns: 1fr;
-  }
-
-  .proposal__day--reverse .proposal__day-media {
-    order: initial;
-  }
-
-  .proposal__day-media img,
-  .proposal__day-media-placeholder {
+  .proposal__day-media img {
     aspect-ratio: 16 / 10;
   }
 
@@ -1145,10 +1499,8 @@
     transform: none;
   }
 
-  /* Defensa en profundidad: attemptVerify() ya evita fijar gateExiting con
-     reduced-motion activo, pero si por lo que sea igual se aplicara, que no
-     anime. */
-  .private-proposal__gate {
+  .proposal__sidebar,
+  .proposal__sidebar-backdrop {
     transition: none;
   }
 }
@@ -1156,7 +1508,6 @@
 /* --- Print --- */
 @media print {
   .no-print,
-  .proposal__nav,
   .proposal__topbar {
     display: none !important;
   }
@@ -1169,6 +1520,10 @@
   .proposal {
     opacity: 1;
     transform: none;
+  }
+
+  .proposal.has-sidebar {
+    margin-left: 0;
   }
 
   .proposal__hero {

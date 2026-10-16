@@ -12,6 +12,10 @@ export interface ProposalCover {
   imagePath: string | null;
 }
 
+export interface ProposalWelcome {
+  body: string;
+}
+
 export interface ProposalIntro {
   headline: string;
   body: string;
@@ -25,6 +29,7 @@ export interface ProposalServiceItem {
   notes: string;
   time: string;
   imagePath: string | null;
+  details?: Record<string, string>;
 }
 
 export interface ProposalDay {
@@ -60,6 +65,7 @@ export interface ProposalTravelTip {
   id: string;
   title: string;
   body: string;
+  category?: string;
 }
 
 export interface ProposalTravelTipGroup {
@@ -70,6 +76,7 @@ export interface ProposalTravelTipGroup {
 
 export interface ProposalContent {
   cover: ProposalCover;
+  welcome: ProposalWelcome;
   intro: ProposalIntro;
   days: ProposalDay[];
   pricing: ProposalPricing;
@@ -80,6 +87,7 @@ export interface ProposalContent {
 function emptyContent(): ProposalContent {
   return {
     cover: { title: '', subtitle: '', imagePath: null },
+    welcome: { body: '' },
     intro: { headline: '', body: '' },
     days: [],
     pricing: { lines: [], feesLines: [] },
@@ -96,6 +104,7 @@ export function toProposalContent(value: unknown): ProposalContent {
   const raw = value as Partial<ProposalContent>;
   return {
     cover: { ...empty.cover, ...raw.cover },
+    welcome: { ...empty.welcome, ...raw.welcome },
     intro: { ...empty.intro, ...raw.intro },
     days: Array.isArray(raw.days) ? raw.days : [],
     pricing: {

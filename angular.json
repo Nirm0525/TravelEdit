@@ -37,7 +37,7 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "20kB",
+                  "maximumWarning": "26kB",
                   "maximumError": "28kB"
                 }
               ],
@@ -107,7 +107,7 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "9.5kB",
+                  "maximumWarning": "10.5kB",
                   "maximumError": "16kB"
                 }
               ],
@@ -129,6 +129,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4301
+          },
           "configurations": {
             "production": {
               "buildTarget": "admin:build:production"

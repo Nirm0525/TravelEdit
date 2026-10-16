@@ -25,6 +25,9 @@ export interface ProposalServiceItem {
    *  del itinerario público. Vacío = no se muestra hora, no se inventa una. */
   time: string;
   imagePath: string | null;
+  /** Ficha del servicio según su tipo (ver core/data/proposal-service-fields.ts),
+   *  por clave. Ausente en propuestas anteriores a este campo. */
+  details?: Record<string, string>;
 }
 
 export interface ProposalDay {
@@ -78,6 +81,8 @@ export interface ProposalTravelTip {
   id: string;
   title: string;
   body: string;
+  /** Tipo de consejo (ver PROPOSAL_TIP_CATEGORIES); vacío/ausente = sin categoría. */
+  category?: string;
 }
 
 export interface ProposalTravelTipGroup {
@@ -86,8 +91,15 @@ export interface ProposalTravelTipGroup {
   tips: ProposalTravelTip[];
 }
 
+/** Mensaje de bienvenida: sección propia antes del Resumen, dirigida a la
+ *  persona que hizo la solicitud. Rich text, igual que intro.body. */
+export interface ProposalWelcome {
+  body: string;
+}
+
 export interface ProposalContent {
   cover: ProposalCover;
+  welcome: ProposalWelcome;
   intro: ProposalIntro;
   days: ProposalDay[];
   pricing: ProposalPricing;
@@ -119,6 +131,8 @@ export interface Proposal {
   termsAccepted: boolean;
   acceptedAt: string | null;
   acceptedByName: string | null;
+  /** Servicios que el cliente marcó con "Sí, por favor" en la propuesta pública, por id de servicio. */
+  serviceChoices: Record<string, boolean>;
   publishedAt: string | null;
   viewedAt: string | null;
   expiresAt: string | null;
@@ -130,6 +144,7 @@ export interface Proposal {
 export function createEmptyProposalContent(): ProposalContent {
   return {
     cover: { title: '', subtitle: '', imagePath: null },
+    welcome: { body: '' },
     intro: { headline: '', body: '' },
     days: [],
     pricing: { lines: [], feesLines: [] },
@@ -138,12 +153,28 @@ export function createEmptyProposalContent(): ProposalContent {
   };
 }
 
+/** Borrador del mensaje de bienvenida con el nombre de quien solicitó la
+ *  propuesta. Solo afirma cosas que son ciertas de la propuesta en sí (fue
+ *  hecha a medida, se eligen servicios con "Sí, por favor") — nada de
+ *  disponibilidad, depósitos ni garantías, que dependen de cada agencia y
+ *  que el agente puede agregar a mano o pedirle al asistente. */
+export function defaultWelcomeText(clientName: string): string {
+  const name = clientName.trim();
+  return [
+    name ? `Hola, ${name}:` : 'Hola:',
+    'Esta propuesta ha sido diseñada especialmente para ti y para tu viaje.',
+    'A medida que avances, elige con «Sí, por favor» los servicios que quieres incluir y, al terminar, acepta la propuesta.',
+    'Tu asesora de viajes estará atenta para ajustar cualquier detalle.',
+    'Tu viaje, a tu manera. Diseñado pensando en ti.'
+  ].join('\n\n');
+}
+
 export function createTravelTipGroup(): ProposalTravelTipGroup {
   return { id: crypto.randomUUID(), destination: '', tips: [] };
 }
 
 export function createTravelTip(): ProposalTravelTip {
-  return { id: crypto.randomUUID(), title: '', body: '' };
+  return { id: crypto.randomUUID(), title: '', body: '', category: '' };
 }
 
 export function createProposalDay(dayNumber: number): ProposalDay {
@@ -166,7 +197,8 @@ export function createProposalService(type: ProposalServiceType): ProposalServic
     description: '',
     notes: '',
     time: '',
-    imagePath: null
+    imagePath: null,
+    details: {}
   };
 }
 
@@ -189,6 +221,8 @@ export function toProposalContent(value: unknown): ProposalContent {
   const raw = value as Partial<ProposalContent>;
   return {
     cover: { ...empty.cover, ...raw.cover },
+    // Propuestas creadas antes de existir este campo no lo tienen guardado.
+    welcome: { ...empty.welcome, ...raw.welcome },
     intro: { ...empty.intro, ...raw.intro },
     days: Array.isArray(raw.days) ? raw.days : [],
     pricing: {
@@ -227,6 +261,7 @@ export function toProposal(row: ProposalRow): Proposal {
     termsAccepted: row.terms_accepted,
     acceptedAt: row.accepted_at,
     acceptedByName: row.accepted_by_name,
+    serviceChoices: Object.fromEntries(Object.entries(row.service_choices ?? {}).map(([id, flag]) => [id, flag === true])),
     publishedAt: row.published_at,
     viewedAt: row.viewed_at,
     expiresAt: row.expires_at,

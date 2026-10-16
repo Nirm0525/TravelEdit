@@ -304,6 +304,8 @@ export interface Database {
           terms_accepted: boolean;
           accepted_at: string | null;
           accepted_by_name: string | null;
+          /** { [serviceId]: true|false } — migración 0043; ausente hasta que se aplique. */
+          service_choices?: Record<string, unknown> | null;
           published_at: string | null;
           viewed_at: string | null;
           expires_at: string | null;

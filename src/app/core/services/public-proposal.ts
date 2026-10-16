@@ -41,6 +41,17 @@ export interface PublicProposalData {
   startDate: string | null;
   endDate: string | null;
   travelersCount: number | null;
+  /** { [serviceId]: true|false } — lo que el cliente ya aceptó/descartó de
+   *  cada servicio. Vacío si nunca marcó nada. */
+  serviceChoices: Record<string, boolean>;
+}
+
+function toServiceChoices(value: Record<string, unknown> | null | undefined): Record<string, boolean> {
+  const choices: Record<string, boolean> = {};
+  for (const [key, flag] of Object.entries(value ?? {})) {
+    choices[key] = flag === true;
+  }
+  return choices;
 }
 
 interface GateRpcRow {
@@ -71,6 +82,8 @@ interface ContentRpcRow {
   start_date: string | null;
   end_date: string | null;
   travelers_count: number | null;
+  /** Ausente si la migración 0043 todavía no se aplicó en la base. */
+  service_choices?: Record<string, unknown> | null;
 }
 
 /**
@@ -147,7 +160,8 @@ export class PublicProposalService {
       destinationText: row.destination_text,
       startDate: row.start_date,
       endDate: row.end_date,
-      travelersCount: row.travelers_count
+      travelersCount: row.travelers_count,
+      serviceChoices: toServiceChoices(row.service_choices)
     };
   }
 
@@ -160,7 +174,11 @@ export class PublicProposalService {
     return {
       ...content,
       cover: { ...content.cover, imagePath: this.resolveImageUrl(content.cover.imagePath) },
-      days: content.days.map((day) => ({ ...day, imagePath: this.resolveImageUrl(day.imagePath) }))
+      days: content.days.map((day) => ({
+        ...day,
+        imagePath: this.resolveImageUrl(day.imagePath),
+        services: day.services.map((service) => ({ ...service, imagePath: this.resolveImageUrl(service.imagePath) }))
+      }))
     };
   }
 
@@ -172,6 +190,20 @@ export class PublicProposalService {
       return pathOrUrl;
     }
     return this.supabase.client.storage.from(PROPOSAL_IMAGES_BUCKET).getPublicUrl(pathOrUrl).data.publicUrl;
+  }
+
+  /** Marca/desmarca "Sí, por favor" en un servicio. Falla (RPC) si la sesión
+   *  venció, si la propuesta ya fue aceptada o si el servicio no existe. */
+  async setServiceChoice(token: string, sessionToken: string, serviceId: string, accepted: boolean): Promise<void> {
+    const { error } = await this.supabase.client.rpc('set_proposal_service_choice', {
+      p_token: token,
+      p_session_token: sessionToken,
+      p_service_id: serviceId,
+      p_accepted: accepted
+    });
+    if (error) {
+      throw error;
+    }
   }
 
   async acceptProposal(token: string, sessionToken: string, acceptedByName: string): Promise<void> {

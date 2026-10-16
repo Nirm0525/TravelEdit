@@ -22,7 +22,7 @@
 
 .preview__cover {
   position: relative;
-  min-height: 20rem;
+  min-height: 34rem;
   background-color: var(--ink-900);
   background-size: cover;
   background-position: center;
@@ -58,6 +58,17 @@
   margin-top: var(--space-sm);
   font-size: var(--size-small);
   opacity: 0.85;
+}
+
+.preview__logo-band {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-lg) var(--space-lg);
+}
+
+.preview__logo-band-img {
+  width: 9rem;
+  height: auto;
 }
 
 .preview__section {
@@ -207,6 +218,22 @@
   border-radius: var(--radius-sm);
 }
 
+.preview__itinerary-summary-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.preview__itinerary-summary-icon {
+  display: inline-flex;
+  color: var(--brand-600);
+}
+
+.preview__itinerary-summary-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
 .preview__itinerary-table {
   width: 100%;
   min-width: 26rem;
@@ -214,63 +241,85 @@
   font-size: var(--size-small);
 }
 
-.preview__itinerary-table thead th {
-  padding: var(--space-2xs) var(--space-sm);
-  background: var(--canvas-100);
+.preview__itinerary-row th,
+.preview__itinerary-row td {
+  padding: var(--space-sm);
   text-align: left;
-  font-size: var(--size-eyebrow);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.preview__itinerary-table tbody tr {
+  vertical-align: top;
   border-top: 1px solid var(--line-200);
 }
 
-.preview__itinerary-table td {
-  padding: var(--space-2xs) var(--space-sm);
+.preview__itinerary-row th {
+  width: 30%;
+  min-width: 7rem;
+  font-weight: 400;
+  border-right: 1px solid var(--line-200);
+}
+
+.preview__itinerary-row--segment th,
+.preview__itinerary-row--segment td {
+  background: var(--canvas-100);
   vertical-align: middle;
 }
 
-.preview__itinerary-table-thumb {
-  width: 3rem;
-  padding-right: 0 !important;
+.preview__itinerary-row--segment td {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.preview__itinerary-table-thumb img,
-.preview__itinerary-table-thumb-placeholder {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-  background: var(--canvas-100);
+.preview__itinerary-day {
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.preview__itinerary-table-destination {
-  font-family: var(--font-display);
-  font-style: italic;
-  color: var(--ink-900);
-  white-space: nowrap;
-}
-
-.preview__itinerary-highlights {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.preview__itinerary-highlight {
-  font-size: var(--size-eyebrow);
-  color: var(--ink-900);
-  white-space: nowrap;
-}
-
-.preview__itinerary-highlight:not(:last-child)::after {
-  content: '·';
-  margin-left: 0.4rem;
+.preview__itinerary-day-meta {
+  display: block;
+  margin-top: 0.2rem;
   color: var(--text-secondary);
+}
+
+.preview__itinerary-services {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview__itinerary-services li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+
+.preview__itinerary-services li + li {
+  border-top: 1px solid var(--line-200);
+}
+
+.preview__itinerary-services li:first-child {
+  padding-top: 0;
+}
+
+.preview__itinerary-services li:last-child {
+  padding-bottom: 0;
+}
+
+.preview__itinerary-icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--brand-600);
+}
+
+.preview__itinerary-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.preview__itinerary-service {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .preview__day {
@@ -283,36 +332,38 @@
   padding-top: 0;
 }
 
-.preview__day-header {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
+/* Cada día abre como una portada: número grande, banda con fecha y destino
+   y la foto a todo el ancho de la sección (se sale del padding lateral). */
+.preview__day-number {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 2rem + 2.5vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--brand-600);
   margin-bottom: var(--space-sm);
 }
 
-.preview__day-number {
+.preview__day-band {
+  margin: 0 calc(var(--space-lg) * -1) var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--canvas-100);
   font-family: var(--font-display);
-  font-style: italic;
-  color: var(--brand-600);
-}
-
-.preview__day-header h3 {
   font-size: var(--size-body);
 }
 
-.preview__day-location {
-  color: var(--text-secondary);
-  font-size: var(--size-small);
+.preview__day-image {
+  display: block;
+  width: calc(100% + var(--space-lg) * 2);
+  max-width: none;
+  margin: 0 calc(var(--space-lg) * -1) var(--space-sm);
+  aspect-ratio: 21 / 9;
+  object-fit: cover;
 }
 
-.preview__day-image {
-  width: 100%;
-  max-width: 24rem;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-sm);
+.preview__day-title {
+  font-size: var(--size-body);
+  margin-bottom: var(--space-2xs);
 }
 
 .preview__day-description {
@@ -339,6 +390,46 @@
   letter-spacing: 0.06em;
   color: var(--brand-600);
   margin-bottom: 0.15rem;
+}
+
+.preview__service-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin: var(--space-xs) 0;
+}
+
+.preview__service-facts {
+  margin: var(--space-xs) 0;
+}
+
+.preview__service-facts > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) 1fr;
+  gap: var(--space-sm);
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--line-200);
+  font-size: var(--size-small);
+}
+
+.preview__service-facts dt {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.preview__service-facts dd {
+  color: var(--text-secondary);
+}
+
+.preview__service-chosen {
+  display: inline-block;
+  margin-left: var(--space-xs);
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  color: var(--success-600);
 }
 
 .preview__tips-tag {

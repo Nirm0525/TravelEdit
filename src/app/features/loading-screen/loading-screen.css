@@ -11,8 +11,8 @@
 
 .loading-screen__mark {
   position: relative;
-  width: min(92vw, 860px);
-  height: 270px;
+  width: min(70vw, 420px);
+  height: 130px;
 }
 
 .loading-screen__line {
@@ -30,7 +30,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(86%, 680px);
+  width: min(78%, 300px);
   height: auto;
   transform: translate(-50%, -50%);
   clip-path: inset(50% 0% 50% 0%);
@@ -38,7 +38,7 @@
 }
 
 .loading-screen__tagline {
-  margin: 40px 0 0;
+  margin: 26px 0 0;
   font-family: "Poppins", sans-serif;
   font-weight: 400;
   font-size: 14px;

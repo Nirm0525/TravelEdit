@@ -50,6 +50,44 @@
                     </p>
                   }
 
+                  @if (action.complementary) {
+                    @if (action.suggestions.length > 1 && pendingSuggestionCount(action) > 0) {
+                      <button
+                        type="button"
+                        class="btn btn--primary ai-polish__apply-all-btn"
+                        [disabled]="applyingKey()?.startsWith(mi + ':' + ai + ':') || applyingAllIndex() === mi"
+                        (click)="applyRemainingSuggestions(mi, ai)"
+                      >
+                        Agregar {{ pendingSuggestionCount(action) === action.suggestions.length ? 'todos' : 'los que faltan' }}
+                        ({{ pendingSuggestionCount(action) }})
+                      </button>
+                    }
+                    <div class="ai-polish__suggestions">
+                      @for (suggestion of action.suggestions; track $index; let si = $index) {
+                        <div class="ai-polish__suggestion-card">
+                          <p class="ai-polish__suggestion-text">{{ suggestion }}</p>
+                          <button
+                            type="button"
+                            class="btn btn--secondary ai-polish__suggestion-btn"
+                            [disabled]="
+                              action.appliedIndexes.includes(si) ||
+                              applyingKey() === (mi + ':' + ai + ':' + si) ||
+                              applyingAllIndex() === mi
+                            "
+                            (click)="applySuggestion(mi, ai, si)"
+                          >
+                            @if (action.appliedIndexes.includes(si)) {
+                              ✓ Agregado
+                            } @else if (applyingKey() === (mi + ':' + ai + ':' + si)) {
+                              Agregando…
+                            } @else {
+                              Agregar este tip
+                            }
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  } @else {
                   <div class="ai-polish__suggestions">
                     @for (suggestion of action.suggestions; track $index; let si = $index) {
                       <div class="ai-polish__suggestion-card">
@@ -77,6 +115,7 @@
                       </div>
                     }
                   </div>
+                  }
                 </div>
               }
             </div>

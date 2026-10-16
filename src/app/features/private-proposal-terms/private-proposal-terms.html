@@ -1,0 +1,61 @@
+<div class="terms-page">
+  <header class="terms-page__top">
+    <img
+      src="images/logos/logos_alternativos/travel-edit-wordmark.png"
+      alt="The Travel Edit"
+      class="terms-page__logo"
+    />
+  </header>
+
+  @switch (phase()) {
+    @case ('loading') {
+      <p class="terms-page__status" role="status" aria-live="polite">Cargando…</p>
+    }
+
+    @case ('unavailable') {
+      <div class="terms-page__status">
+        <h1 class="terms-page__title terms-page__title--small">Términos no disponibles</h1>
+        <p>
+          Para ver los términos y condiciones, entra primero a tu propuesta con tu código de acceso.
+        </p>
+        <a class="terms-page__back" [routerLink]="['/private', token()]">Ir a la propuesta</a>
+      </div>
+    }
+
+    @case ('ready') {
+      <main class="terms-page__main">
+        <h1 class="terms-page__title">{{ heading() }}</h1>
+        <div class="terms-page__ornament" aria-hidden="true">
+          <span></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 3l2.2 6.8H21l-5.6 4.1 2.2 6.8L12 16.6l-5.6 4.1 2.2-6.8L3 9.8h6.8z" stroke-linejoin="round" />
+          </svg>
+          <span></span>
+        </div>
+
+        <div class="terms-page__content">
+          @if (summary().length > 0) {
+            <nav class="terms-page__summary" aria-label="Resumen">
+              <h2>Resumen</h2>
+              <ul>
+                @for (item of summary(); track item.id) {
+                  <li>
+                    <button type="button" (click)="goTo(item.id)">{{ item.text }}</button>
+                  </li>
+                }
+              </ul>
+            </nav>
+          }
+
+          @if (body(); as html) {
+            <div class="terms-page__body" [innerHTML]="html"></div>
+          }
+        </div>
+
+        <div class="terms-page__footer">
+          <a class="terms-page__back" [routerLink]="['/private', token()]">← Volver a la propuesta</a>
+        </div>
+      </main>
+    }
+  }
+</div>

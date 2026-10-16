@@ -485,6 +485,52 @@
                             @if (service.description) {
                               <p class="proposal__service-description">{{ service.description }}</p>
                             }
+
+                            @if (commentOpenId() === service.id) {
+                              <div class="proposal__service-feedback no-print">
+                                <label class="proposal__service-feedback-label" [for]="'comment-' + service.id">
+                                  ¿Qué te gustaría cambiar de este servicio?
+                                </label>
+                                <textarea
+                                  [id]="'comment-' + service.id"
+                                  rows="3"
+                                  maxlength="1000"
+                                  [value]="commentDraft()"
+                                  (input)="onCommentInput($event)"
+                                  placeholder="Ej. Preferimos otro hotel, o cambiar el horario del traslado."
+                                ></textarea>
+                                @if (commentError(); as message) {
+                                  <p class="private-proposal__gate-error" role="alert">{{ message }}</p>
+                                }
+                                <div class="proposal__service-feedback-actions">
+                                  <button
+                                    type="button"
+                                    class="proposal__service-feedback-send"
+                                    [disabled]="commentSavingId() === service.id"
+                                    (click)="saveComment(service.id)"
+                                  >
+                                    {{ commentSavingId() === service.id ? 'Enviando…' : 'Enviar comentario' }}
+                                  </button>
+                                  <button type="button" class="proposal__service-feedback-link" (click)="closeComment()">Cancelar</button>
+                                </div>
+                              </div>
+                            } @else {
+                              @if (serviceComments()[service.id]; as comment) {
+                                <div class="proposal__service-feedback-sent">
+                                  <p class="proposal__service-feedback-label">Tu comentario</p>
+                                  <p>{{ comment }}</p>
+                                  @if (canChooseServices()) {
+                                    <button type="button" class="proposal__service-feedback-link no-print" (click)="openComment(service.id)">
+                                      Editar comentario
+                                    </button>
+                                  }
+                                </div>
+                              } @else if (canChooseServices()) {
+                                <button type="button" class="proposal__service-feedback-link no-print" (click)="openComment(service.id)">
+                                  Solicitar cambios o dejar un comentario
+                                </button>
+                              }
+                            }
                           </li>
                         }
                       </ul>
@@ -503,39 +549,93 @@
             <section id="consejos" class="proposal__section proposal__tips" appRevealOnScroll>
               <div class="proposal__band"><h2>Consejos de viaje</h2></div>
               <p class="proposal__tips-tag">Todo lo que necesitas para un viaje perfecto</p>
+              <ng-template #tipIcon let-key>
+                @switch (key) {
+                  @case ('restaurants') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1-3.5 4-3.5 8H17" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @case ('transport') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="4" y="4" width="16" height="13" rx="2" />
+                      <path d="M4 11h16M8 20v-3M16 20v-3" stroke-linecap="round" />
+                      <circle cx="8" cy="14.5" r=".8" />
+                      <circle cx="16" cy="14.5" r=".8" />
+                    </svg>
+                  }
+                  @case ('weather') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="9" r="3.5" />
+                      <path d="M9 2.5V4M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1" stroke-linecap="round" />
+                      <path d="M8 20h9a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.4 1.5A3 3 0 0 0 8 20z" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @case ('customs') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M16 8.5a2.5 2.5 0 1 0 0-5M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('safety') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" stroke-linejoin="round" />
+                      <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @case ('payments') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="6" width="18" height="12" rx="2" />
+                      <path d="M3 10h18M7 15h3" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 11v5.5M12 8v.01" stroke-linecap="round" />
+                    </svg>
+                  }
+                }
+              </ng-template>
               <div class="proposal__tip-groups">
                 @for (group of d.content.travelTips; track group.id) {
+                  @if (group.tips.length > 0) {
                   <div class="proposal__tip-group">
                     @if (d.content.travelTips.length > 1) {
                       <h3 class="proposal__tip-group-title">{{ group.destination }}</h3>
                     }
-                    <div class="proposal__tip-card-grid">
-                      @for (tip of group.tips; track tip.id) {
-                        <details class="proposal__tip">
-                          <summary class="proposal__tip-summary">
+                    <div class="proposal__tip-types">
+                      @for (type of tipTypeGroups(group); track type.key) {
+                        <details class="proposal__tip-type">
+                          <summary class="proposal__tip-type-summary">
                             <span class="proposal__tip-icon" aria-hidden="true">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 11v5.5M12 8v.01" stroke-linecap="round" />
-                              </svg>
+                              <ng-container [ngTemplateOutlet]="tipIcon" [ngTemplateOutletContext]="{ $implicit: type.key }" />
                             </span>
-                            <span class="proposal__tip-summary-text">
-                              @if (tip.category && tipCategoryLabel[tip.category]) {
-                                <span class="proposal__tip-category">{{ tipCategoryLabel[tip.category] }}</span>
-                              }
-                              {{ tip.title }}
-                            </span>
+                            <span class="proposal__tip-type-label">{{ type.label }}</span>
                             <span class="proposal__tip-chevron" aria-hidden="true">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
                               </svg>
                             </span>
                           </summary>
-                          <p class="proposal__tip-body">{{ tip.body }}</p>
+                          <div class="proposal__tip-type-body">
+                            @for (tip of type.tips; track tip.id) {
+                              <div class="proposal__tip-item">
+                                @if (tip.title) {
+                                  <h4>{{ tip.title }}</h4>
+                                }
+                                @if (tip.body) {
+                                  <p>{{ tip.body }}</p>
+                                }
+                              </div>
+                            }
+                          </div>
                         </details>
                       }
                     </div>
                   </div>
+                  }
                 }
               </div>
             </section>
@@ -557,6 +657,11 @@
                   @if (travelersLabel(); as travelers) {
                     <p class="proposal__pricing-card-meta">Para {{ travelers }}</p>
                   }
+                  @if (pricePerTraveler(); as perTraveler) {
+                    <p class="proposal__pricing-card-meta">
+                      ≈ {{ perTraveler | currency: d.currency }} por viajero
+                    </p>
+                  }
                   @if (durationLabel(); as duration) {
                     <p class="proposal__pricing-card-meta">{{ duration }}</p>
                   }
@@ -569,41 +674,139 @@
                 </div>
               </div>
 
-              @if (pricingExpanded()) {
-                <div class="proposal__pricing-list">
-                  @for (line of d.content.pricing.lines; track line.id) {
-                    <div class="proposal__pricing-row">
-                      <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
-                      <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
-                    </div>
+              <ng-template #costIcon let-kind>
+                @switch (kind) {
+                  @case ('flight') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
                   }
-                  @for (line of d.content.pricing.feesLines; track line.id) {
-                    <div class="proposal__pricing-row">
-                      <span class="proposal__pricing-label">{{ line.label }} @if (line.quantity > 1) { <span class="proposal__pricing-qty">× {{ line.quantity }}</span> }</span>
-                      <span class="proposal__pricing-amount">{{ line.quantity * line.unitPrice | currency: d.currency }}</span>
-                    </div>
+                  @case ('transfer') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M5 16h14M6 16l1.5-4.5A2 2 0 0 1 9.4 10h5.2a2 2 0 0 1 1.9 1.5L18 16" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M4 16v2.5M20 16v2.5" stroke-linecap="round" />
+                      <circle cx="8" cy="17.3" r="1.4" />
+                      <circle cx="16" cy="17.3" r="1.4" />
+                    </svg>
                   }
-                  <div class="proposal__pricing-total">
-                    <span>Total</span>
-                    <span class="proposal__pricing-total-amount">{{ d.pricingTotal | currency: d.currency }}</span>
+                  @case ('hotel') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M3 19v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M3 19h18M3 13V6" stroke-linecap="round" />
+                    </svg>
+                  }
+                  @case ('activity') {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" stroke-linejoin="round" />
+                    </svg>
+                  }
+                  @default {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="3" y="6" width="18" height="12" rx="2" />
+                      <path d="M3 10h18M7 15h3" stroke-linecap="round" />
+                    </svg>
+                  }
+                }
+              </ng-template>
+              @if (pricingBreakdown(); as b) {
+                @if (b.mix.length > 1) {
+                  <div class="proposal__pricing-mix">
+                    <p class="proposal__pricing-mix-title">¿En qué se invierte?</p>
+                    @for (item of b.mix; track item.kind) {
+                      <div class="proposal__pricing-mix-row">
+                        <span class="proposal__pricing-icon" aria-hidden="true">
+                          <ng-container [ngTemplateOutlet]="costIcon" [ngTemplateOutletContext]="{ $implicit: item.kind }" />
+                        </span>
+                        <span class="proposal__pricing-mix-label">{{ item.label }}</span>
+                        <span class="proposal__pricing-mix-bar" aria-hidden="true">
+                          <span [style.width.%]="item.percent"></span>
+                        </span>
+                        <span class="proposal__pricing-mix-amount">{{ item.amount | currency: d.currency }}</span>
+                        <span class="proposal__pricing-mix-percent">{{ item.percent }}%</span>
+                      </div>
+                    }
                   </div>
-                </div>
+                }
+
+                @if (pricingExpanded()) {
+                  <div class="proposal__pricing-detail">
+                    @for (group of b.groups.concat(b.fees ? [b.fees] : []); track group.key) {
+                      <div class="proposal__pricing-group">
+                        <div class="proposal__pricing-group-head">
+                          <h3 class="proposal__pricing-group-title">{{ group.title }}</h3>
+                          @if (group.subtitle) {
+                            <span class="proposal__pricing-group-sub">{{ group.subtitle }}</span>
+                          }
+                          <span class="proposal__pricing-group-subtotal">{{ group.subtotal | currency: d.currency }}</span>
+                        </div>
+                        @for (row of group.rows; track row.id) {
+                          <div class="proposal__pricing-row">
+                            <span class="proposal__pricing-icon" aria-hidden="true">
+                              <ng-container [ngTemplateOutlet]="costIcon" [ngTemplateOutletContext]="{ $implicit: row.kind }" />
+                            </span>
+                            <span class="proposal__pricing-label">
+                              {{ row.label }}
+                              @if (row.quantity > 1) {
+                                <span class="proposal__pricing-qty">{{ row.quantity }} × {{ row.unitPrice | currency: d.currency }}</span>
+                              }
+                            </span>
+                            <span class="proposal__pricing-amount">
+                              @if (row.amount > 0) {
+                                {{ row.amount | currency: d.currency }}
+                              } @else {
+                                Incluido
+                              }
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    <div class="proposal__pricing-totals">
+                      @if (b.fees) {
+                        <div class="proposal__pricing-totals-row">
+                          <span>Subtotal</span>
+                          <span>{{ b.subtotal | currency: d.currency }}</span>
+                        </div>
+                        <div class="proposal__pricing-totals-row">
+                          <span>Cargos y tarifas</span>
+                          <span>{{ b.feesTotal | currency: d.currency }}</span>
+                        </div>
+                      }
+                      <div class="proposal__pricing-total">
+                        <span>Total</span>
+                        <span class="proposal__pricing-total-amount">{{ d.pricingTotal | currency: d.currency }}</span>
+                      </div>
+                    </div>
+                  </div>
+                }
               }
             </section>
           }
 
-          @if (safeTermsBody(); as body) {
+          @if (safeTermsBody()) {
             <section id="terminos" class="proposal__section proposal__terms" appRevealOnScroll>
               <div class="proposal__band"><h2>{{ d.content.terms.title || 'Términos y condiciones' }}</h2></div>
-              <div class="proposal__rich proposal__rich--small" [innerHTML]="body"></div>
+              <a class="proposal__terms-link" [routerLink]="['/private', token(), 'terminos']">
+                <span class="proposal__terms-link-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M6 3h9l4 4v14H6z" stroke-linejoin="round" />
+                    <path d="M14 3v5h5M9 13h7M9 17h5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="proposal__terms-link-text">{{ d.content.terms.title || 'Términos y condiciones' }}</span>
+                <svg class="proposal__terms-link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
             </section>
           }
 
           <section id="aceptar" class="proposal__section proposal__accept no-print" appRevealOnScroll>
             @if (d.status === 'accepted') {
-              <div class="proposal__accepted">
+              <div class="proposal__accept-box">
                 <p class="proposal__accepted-check" aria-hidden="true">✓</p>
-                <h2 class="proposal__section-title">Propuesta aceptada</h2>
+                <h2 class="proposal__accept-title">Propuesta aceptada</h2>
                 <p class="proposal__accepted-copy">Gracias, ¡esperamos verte pronto!</p>
                 @if (d.acceptedAt) {
                   <p class="proposal__accepted-date">
@@ -616,29 +819,54 @@
                 }
               </div>
             } @else {
-              <div class="proposal__band"><h2>¿Listos para comenzar?</h2></div>
-              <h3 class="proposal__section-title">Esta propuesta fue diseñada especialmente para tu viaje.</h3>
+              <div class="proposal__accept-box">
+                <h2 class="proposal__accept-title">Haz clic en aceptar para hacernos saber que estás conforme con la propuesta.</h2>
 
-              <form class="proposal__accept-form" (submit)="$event.preventDefault(); accept()">
-                <label class="private-proposal__field">
-                  <span>Nombre de quien acepta</span>
-                  <input type="text" [value]="acceptedByName()" (input)="onAcceptedByNameInput($event)" autocomplete="name" />
-                </label>
+                <form class="proposal__accept-form" (submit)="$event.preventDefault(); accept()">
+                  <label class="private-proposal__field">
+                    <span>Nombre de quien acepta</span>
+                    <input type="text" [value]="acceptedByName()" (input)="onAcceptedByNameInput($event)" autocomplete="name" />
+                  </label>
 
-                <label class="proposal__accept-checkbox">
-                  <input type="checkbox" [checked]="termsChecked()" (change)="toggleTermsChecked($event)" />
-                  <span>Confirmo que he revisado esta propuesta y sus términos.</span>
-                </label>
+                  <label class="proposal__accept-checkbox">
+                    <input type="checkbox" [checked]="termsChecked()" (change)="toggleTermsChecked($event)" />
+                    @if (safeTermsBody()) {
+                      <span>
+                        Confirmo que he revisado esta propuesta y los
+                        <a [routerLink]="['/private', token(), 'terminos']">términos y condiciones</a>.
+                      </span>
+                    } @else {
+                      <span>Confirmo que he revisado esta propuesta.</span>
+                    }
+                  </label>
 
-                @if (acceptError(); as message) {
-                  <p class="private-proposal__gate-error" role="alert">{{ message }}</p>
-                }
+                  @if (acceptError(); as message) {
+                    <p class="private-proposal__gate-error" role="alert">{{ message }}</p>
+                  }
 
-                <button type="submit" class="private-proposal__gate-submit" [disabled]="!canAccept()">
-                  {{ accepting() ? 'Confirmando…' : 'Aceptar propuesta' }}
-                </button>
-              </form>
+                  <button type="submit" class="proposal__accept-button" [disabled]="!canAccept()">
+                    <span class="proposal__accept-button-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M7 17L17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </span>
+                    {{ accepting() ? 'Confirmando…' : 'Aceptar propuesta' }}
+                  </button>
+                </form>
+              </div>
             }
+
+            <div class="proposal__closing">
+              <img
+                src="images/logos/logos_alternativos/travel-edit-wordmark.png"
+                alt="The Travel Edit"
+                class="private-proposal__wordmark-img proposal__closing-logo"
+              />
+              <p class="proposal__closing-text">
+                Tu propuesta ha sido creada especialmente para ti. Si tienes alguna pregunta, comunícate con tu asesora
+                de viajes.
+              </p>
+            </div>
           </section>
           </div>
 

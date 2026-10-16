@@ -1,15 +1,17 @@
 import type { gsap } from 'gsap';
 import { Component, ElementRef, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
-import { PublicProposalService, ProposalAccessResult, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
+import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
 import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../core/models/proposal-enums-public';
-import { ProposalDay, ProposalServiceType } from '../../core/models/proposal-content.model';
+import { ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup } from '../../core/models/proposal-content.model';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 import { Footer } from '../footer/footer';
 import { serviceDetailRows } from '../../core/data/proposal-service-fields';
+import { buildPricingBreakdown } from '../../core/data/proposal-pricing-breakdown';
 import {
   animateItineraryDays,
   moveSidebarIndicator,
@@ -21,7 +23,7 @@ import {
 
 type Phase = 'loading' | 'unavailable' | 'gate' | 'content';
 
-const SESSION_PREFIX = 'te-proposal-session:';
+const SESSION_PREFIX = PROPOSAL_SESSION_PREFIX;
 
 interface StoredSession {
   sessionToken: string;
@@ -150,7 +152,7 @@ function nightsBetween(startIso: string, endIso: string): number | null {
  */
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RevealOnScrollDirective, Footer],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })
@@ -164,6 +166,25 @@ export class PrivateProposal implements OnDestroy {
 
   readonly token = input.required<string>();
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
+  /** Consejos de un destino agrupados por tipo, en un orden fijo; los que no
+   *  tienen tipo van al final como "Consejos generales". Solo salen los tipos
+   *  que tienen al menos un consejo. */
+  tipTypeGroups(group: ProposalTravelTipGroup): { key: string; label: string; tips: ProposalTravelTip[] }[] {
+    const order = ['restaurants', 'transport', 'weather', 'customs', 'safety', 'payments', 'other'];
+    const buckets = new Map<string, ProposalTravelTip[]>();
+    for (const tip of group.tips) {
+      const key = tip.category && order.includes(tip.category) ? tip.category : 'general';
+      buckets.set(key, [...(buckets.get(key) ?? []), tip]);
+    }
+    return [...order, 'general']
+      .filter((key) => buckets.has(key))
+      .map((key) => ({
+        key,
+        label: key === 'general' ? 'Consejos generales' : this.tipCategoryLabel[key],
+        tips: buckets.get(key)!
+      }));
+  }
+
   readonly tipCategoryLabel: Record<string, string> = {
     restaurants: 'Restaurantes',
     transport: 'Transporte',
@@ -206,6 +227,14 @@ export class PrivateProposal implements OnDestroy {
    *  viene del servidor (ver set_proposal_service_choice, migración 0043). */
   readonly serviceChoices = signal<Record<string, boolean>>({});
   readonly choiceBusyId = signal<string | null>(null);
+
+  /** Comentarios / pedidos de cambio por servicio, tal cual están guardados. */
+  readonly serviceComments = signal<Record<string, string>>({});
+  /** Un solo comentario abierto a la vez — el servicio cuyo cuadro de texto se está editando. */
+  readonly commentOpenId = signal<string | null>(null);
+  readonly commentDraft = signal('');
+  readonly commentSavingId = signal<string | null>(null);
+  readonly commentError = signal<string | null>(null);
   readonly choiceError = signal<string | null>(null);
   /** Las elecciones solo se editan mientras la propuesta siga abierta — una
    *  vez aceptada quedan fijas (el RPC también lo rechaza). */
@@ -230,6 +259,18 @@ export class PrivateProposal implements OnDestroy {
   readonly safeWelcomeBody = computed<SafeHtml | null>(() => {
     const body = this.data()?.content.welcome.body;
     return body && body.replace(/<[^>]*>/g, '').trim() ? this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body)) : null;
+  });
+
+  /** Detalle de costos por día + mezcla por tipo (ver buildPricingBreakdown). */
+  readonly pricingBreakdown = computed(() => {
+    const d = this.data();
+    return d ? buildPricingBreakdown(d.content) : null;
+  });
+
+  /** Inversión por viajero — solo con más de un viajero (con uno sería el total repetido). */
+  readonly pricePerTraveler = computed<number | null>(() => {
+    const d = this.data();
+    return d?.travelersCount && d.travelersCount > 1 ? d.pricingTotal / d.travelersCount : null;
   });
 
   readonly safeTermsBody = computed<SafeHtml | null>(() => {
@@ -564,6 +605,7 @@ export class PrivateProposal implements OnDestroy {
       const data = await this.publicProposal.getContent(token, sessionToken);
       this.data.set(data);
       this.serviceChoices.set(data.serviceChoices);
+      this.serviceComments.set(data.serviceComments);
       this.sessionToken = sessionToken;
       this.phase.set('content');
       // Un tick después de montar el contenido, no en el mismo — así el CSS
@@ -646,6 +688,49 @@ export class PrivateProposal implements OnDestroy {
       this.choiceError.set('No pudimos guardar tu elección. Inténtalo de nuevo en unos segundos.');
     } finally {
       this.choiceBusyId.set(null);
+    }
+  }
+
+  openComment(serviceId: string): void {
+    this.commentError.set(null);
+    this.commentDraft.set(this.serviceComments()[serviceId] ?? '');
+    this.commentOpenId.set(serviceId);
+  }
+
+  closeComment(): void {
+    this.commentOpenId.set(null);
+    this.commentError.set(null);
+  }
+
+  onCommentInput(event: Event): void {
+    this.commentDraft.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  async saveComment(serviceId: string): Promise<void> {
+    const session = this.sessionToken;
+    if (!session || !this.canChooseServices() || this.commentSavingId()) {
+      return;
+    }
+    const text = this.commentDraft().trim();
+    this.commentSavingId.set(serviceId);
+    this.commentError.set(null);
+    try {
+      await this.publicProposal.setServiceComment(this.token(), session, serviceId, text);
+      this.serviceComments.update((current) => {
+        const next = { ...current };
+        if (text) {
+          next[serviceId] = text;
+        } else {
+          delete next[serviceId];
+        }
+        return next;
+      });
+      this.commentOpenId.set(null);
+    } catch (error) {
+      console.error('No se pudo guardar el comentario.', error);
+      this.commentError.set('No pudimos enviar tu comentario. Inténtalo de nuevo en unos segundos.');
+    } finally {
+      this.commentSavingId.set(null);
     }
   }
 

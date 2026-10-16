@@ -183,8 +183,13 @@
   white-space: nowrap;
 }
 
+.tip-card__ai-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .tip-group__ai-trigger:hover,
-.tip-card__ai-trigger:hover {
+.tip-card__ai-trigger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--brand-600) 8%, transparent);
 }
 

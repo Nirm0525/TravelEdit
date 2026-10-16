@@ -157,3 +157,47 @@
     padding: var(--space-md);
   }
 }
+
+.pricing-step__hint {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.pricing-step__day {
+  margin-top: var(--space-md);
+}
+
+.pricing-step__day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-bottom: var(--space-2xs);
+}
+
+.pricing-step__day-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--size-body);
+  color: var(--brand-600);
+}
+
+.pricing-step__day-subtotal {
+  font-size: var(--size-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pricing-step__service-type {
+  display: block;
+  font-size: var(--size-eyebrow);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.pricing-step__service-name {
+  display: block;
+  font-size: var(--size-small);
+}

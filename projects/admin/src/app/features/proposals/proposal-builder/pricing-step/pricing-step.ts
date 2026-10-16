@@ -3,11 +3,14 @@ import { CurrencyPipe } from '@angular/common';
 import { ProposalsService } from '../../../../core/services/proposals';
 import {
   ProposalContent,
+  ProposalDay,
   ProposalFeeLine,
   ProposalPricingLine,
+  ProposalServiceItem,
   createFeeLine,
   createPricingLine
 } from '../../../../core/models/proposal.model';
+import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../../../core/models/proposal-enums';
 
 type LineField = 'label' | 'quantity' | 'unitPrice';
 type LineKind = 'lines' | 'feesLines';
@@ -31,6 +34,17 @@ export class PricingStep implements OnInit {
 
   readonly currency = signal('USD');
   readonly lines = signal<ProposalPricingLine[]>([]);
+  readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
+  /** Días del itinerario (con sus servicios) — cada servicio tiene su fila de precio. */
+  readonly days = signal<ProposalDay[]>([]);
+
+  /** Líneas que NO son el precio de un servicio vigente del itinerario: las
+   *  libres y las de un servicio que ya se borró (quedan visibles para que no
+   *  desaparezcan del total en silencio). */
+  readonly otherLines = computed(() => {
+    const serviceIds = new Set(this.days().flatMap((d) => d.services.map((s) => s.id)));
+    return this.lines().filter((l) => !l.serviceId || !serviceIds.has(l.serviceId));
+  });
   readonly feesLines = signal<ProposalFeeLine[]>([]);
 
   /** Vista previa inmediata en el navegador — nunca autoritativa. En cuanto
@@ -69,6 +83,7 @@ export class PricingStep implements OnInit {
       }
       this.content = proposal.content;
       this.currency.set(proposal.currency);
+      this.days.set([...proposal.content.days].sort((a, b) => a.dayNumber - b.dayNumber));
       this.lines.set(proposal.content.pricing.lines);
       this.feesLines.set(proposal.content.pricing.feesLines);
       this.authoritativeSubtotal.set(proposal.pricingSubtotal);
@@ -100,9 +115,15 @@ export class PricingStep implements OnInit {
     }
     this.saving.set(true);
     this.saveError.set(null);
+    // Las líneas de servicio llevan siempre el nombre vigente del servicio —
+    // es lo que el cliente ve en el detalle de costos de la propuesta.
+    const labelled = nextLines.map((line) => {
+      const found = line.serviceId ? this.findService(line.serviceId) : null;
+      return found ? { ...line, label: this.serviceLabel(found.day, found.service) } : line;
+    });
     const nextContent: ProposalContent = {
       ...this.content,
-      pricing: { lines: nextLines, feesLines: nextFeesLines }
+      pricing: { lines: labelled, feesLines: nextFeesLines }
     };
     try {
       const updated = await this.proposalsService.updateContent(this.proposalId(), nextContent);
@@ -119,6 +140,48 @@ export class PricingStep implements OnInit {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  private findService(serviceId: string): { day: ProposalDay; service: ProposalServiceItem } | null {
+    for (const day of this.days()) {
+      const service = day.services.find((s) => s.id === serviceId);
+      if (service) {
+        return { day, service };
+      }
+    }
+    return null;
+  }
+
+  serviceLabel(day: ProposalDay, service: ProposalServiceItem): string {
+    return `Día ${day.dayNumber}: ${service.title.trim() || this.serviceTypeLabel[service.type]}`;
+  }
+
+  serviceLine(serviceId: string): ProposalPricingLine | undefined {
+    return this.lines().find((l) => l.serviceId === serviceId);
+  }
+
+  serviceSubtotal(serviceId: string): number {
+    const line = this.serviceLine(serviceId);
+    return line ? line.quantity * line.unitPrice : 0;
+  }
+
+  daySubtotal(day: ProposalDay): number {
+    return day.services.reduce((total, s) => total + this.serviceSubtotal(s.id), 0);
+  }
+
+  /** La línea de un servicio se crea recién cuando se le escribe algo: abrir
+   *  el paso nunca llena la propuesta de líneas en cero. */
+  onServiceInput(day: ProposalDay, service: ProposalServiceItem, field: 'quantity' | 'unitPrice', event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+    this.lines.update((items) => {
+      if (!items.some((l) => l.serviceId === service.id)) {
+        return [
+          ...items,
+          { ...createPricingLine(), serviceId: service.id, label: this.serviceLabel(day, service), [field]: value }
+        ];
+      }
+      return items.map((l) => (l.serviceId === service.id ? { ...l, [field]: value } : l));
+    });
   }
 
   addLine(kind: LineKind): void {

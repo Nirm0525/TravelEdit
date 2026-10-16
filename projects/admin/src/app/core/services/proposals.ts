@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
-import { Proposal, ProposalContent, toProposal } from '../models/proposal.model';
+import { Proposal, ProposalContent, createEmptyProposalContent, toProposal } from '../models/proposal.model';
 import { PROPOSAL_STATUS_LABEL, ProposalStatus } from '../models/proposal-enums';
 
 export interface ProposalListPage {
@@ -133,6 +133,8 @@ export class ProposalsService {
         travelers_count: payload.travelersCount ?? null,
         start_date: payload.startDate ?? null,
         end_date: payload.endDate ?? null,
+        // Nace con los términos de partida (editables) ya cargados.
+        content: createEmptyProposalContent() as unknown as Record<string, unknown>,
         created_by: this.auth.profile()?.id
       })
       .select('*')

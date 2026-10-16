@@ -1,5 +1,6 @@
 import { Database } from './database.types';
 import { ProposalServiceType, ProposalStatus } from './proposal-enums';
+import { DEFAULT_TERMS_HTML, DEFAULT_TERMS_TITLE } from '../data/proposal-default-terms';
 
 type ProposalRow = Database['public']['Tables']['proposals']['Row'];
 
@@ -58,6 +59,10 @@ export interface ProposalPricingLine {
   label: string;
   quantity: number;
   unitPrice: number;
+  /** Si existe, la línea es el precio de ese servicio del itinerario (ver el
+   *  paso Precios). El trigger de totales solo lee quantity/unitPrice, así que
+   *  este campo no afecta el cálculo. */
+  serviceId?: string;
 }
 
 export type ProposalFeeLine = ProposalPricingLine;
@@ -133,6 +138,8 @@ export interface Proposal {
   acceptedByName: string | null;
   /** Servicios que el cliente marcó con "Sí, por favor" en la propuesta pública, por id de servicio. */
   serviceChoices: Record<string, boolean>;
+  /** Comentarios / pedidos de cambio que el cliente dejó en cada servicio, por id de servicio. */
+  serviceComments: Record<string, string>;
   publishedAt: string | null;
   viewedAt: string | null;
   expiresAt: string | null;
@@ -149,7 +156,9 @@ export function createEmptyProposalContent(): ProposalContent {
     days: [],
     pricing: { lines: [], feesLines: [] },
     travelTips: [],
-    terms: { title: 'Términos y condiciones', body: '' }
+    // Una propuesta NUEVA nace con los términos de partida (editables). Las
+    // que ya existían se leen con el cuerpo vacío — ver toProposalContent().
+    terms: { title: DEFAULT_TERMS_TITLE, body: DEFAULT_TERMS_HTML }
   };
 }
 
@@ -234,7 +243,10 @@ export function toProposalContent(value: unknown): ProposalContent {
     // fallback, abrirla rompería el builder en vez de mostrar la sección
     // vacía como corresponde.
     travelTips: Array.isArray(raw.travelTips) ? raw.travelTips : [],
-    terms: { ...empty.terms, ...raw.terms }
+    // body: '' primero: una propuesta guardada antes de existir este campo NO
+    // debe mostrar de repente los términos de partida sin que el agente los
+    // haya revisado.
+    terms: { ...empty.terms, body: '', ...raw.terms }
   };
 }
 
@@ -262,6 +274,9 @@ export function toProposal(row: ProposalRow): Proposal {
     acceptedAt: row.accepted_at,
     acceptedByName: row.accepted_by_name,
     serviceChoices: Object.fromEntries(Object.entries(row.service_choices ?? {}).map(([id, flag]) => [id, flag === true])),
+    serviceComments: Object.fromEntries(
+      Object.entries(row.service_comments ?? {}).filter(([, text]) => typeof text === 'string' && text.trim()) as [string, string][]
+    ),
     publishedAt: row.published_at,
     viewedAt: row.viewed_at,
     expiresAt: row.expires_at,

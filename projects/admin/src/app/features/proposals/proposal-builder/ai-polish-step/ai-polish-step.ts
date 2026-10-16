@@ -40,6 +40,12 @@ interface ChatAction {
   isTermsTarget: boolean;
   suggestions: string[];
   appliedSuggestionIndex: number | null;
+  /** true cuando las sugerencias NO son alternativas sino piezas distintas que
+   *  se suman (consejos de viaje de varios tipos): cada una se puede agregar
+   *  por separado o todas a la vez. */
+  complementary: boolean;
+  /** Índices ya agregados — solo se usa si complementary. */
+  appliedIndexes: number[];
 }
 
 interface ChatMessage {
@@ -72,6 +78,19 @@ function htmlToPlainText(html: string): string {
     .trim();
 }
 
+/** Tipo de consejo a partir de la palabra con que empieza el título
+ *  ("Propinas", "Clima"…) — así lo que genera la IA llega ya clasificado. */
+function categoryFromTitle(title: string): string {
+  const t = title.toLowerCase();
+  if (/restaurante|gastronom|comida|cena|comer/.test(t)) return 'restaurants';
+  if (/transporte|taxi|metro|tren|conducir|movilidad/.test(t)) return 'transport';
+  if (/clima|tiempo|equipaje|empacar|temperatura|ropa|vestimenta/.test(t)) return 'weather';
+  if (/costumbre|etiqueta|propina|cultura|saludo|horario/.test(t)) return 'customs';
+  if (/seguridad|salud|emergencia/.test(t)) return 'safety';
+  if (/pago|moneda|dinero|compra|efectivo|tarjeta/.test(t)) return 'payments';
+  return '';
+}
+
 /** "Título: detalle" por línea → consejos nuevos. Ignora viñetas/numeración
  *  y los títulos que el destino ya tiene, para que aplicar dos veces la misma
  *  sugerencia no duplique nada. */
@@ -90,7 +109,7 @@ function parseSuggestedTips(text: string, existing: ProposalTravelTip[]): Propos
       continue;
     }
     known.add(title.toLowerCase());
-    tips.push({ ...createTravelTip(), title, body });
+    tips.push({ ...createTravelTip(), title, body, category: categoryFromTitle(title) });
   }
   return tips;
 }
@@ -404,7 +423,9 @@ export class AiPolishStep implements OnInit {
             targetLabel: target.label,
             isTermsTarget: target.kind === 'terms',
             suggestions: a.suggestions,
-            appliedSuggestionIndex: null
+            appliedSuggestionIndex: null,
+            complementary: target.kind === 'travel_tips',
+            appliedIndexes: []
           };
         })
         .filter((a): a is ChatAction => a !== null);
@@ -512,9 +533,21 @@ export class AiPolishStep implements OnInit {
             i === messageIndex
               ? {
                   ...m,
-                  actions: (m.actions ?? []).map((a, ai) =>
-                    ai === actionIndex ? { ...a, appliedSuggestionIndex: suggestionIndex } : a
-                  )
+                  actions: (m.actions ?? []).map((a, ai) => {
+                    if (ai !== actionIndex) {
+                      return a;
+                    }
+                    if (!a.complementary) {
+                      return { ...a, appliedSuggestionIndex: suggestionIndex };
+                    }
+                    const appliedIndexes = [...new Set([...a.appliedIndexes, suggestionIndex])];
+                    // Solo cuenta como "resuelta" cuando se agregó todo.
+                    return {
+                      ...a,
+                      appliedIndexes,
+                      appliedSuggestionIndex: appliedIndexes.length === a.suggestions.length ? suggestionIndex : null
+                    };
+                  })
                 }
               : m
           )
@@ -546,9 +579,34 @@ export class AiPolishStep implements OnInit {
 
     this.applyingAllIndex.set(messageIndex);
     for (const actionIndex of pendingIndexes) {
-      await this.applySuggestion(messageIndex, actionIndex, 0);
+      const action = this.messages()[messageIndex]?.actions?.[actionIndex];
+      if (action?.complementary) {
+        await this.applyRemainingSuggestions(messageIndex, actionIndex);
+      } else {
+        await this.applySuggestion(messageIndex, actionIndex, 0);
+      }
     }
     this.applyingAllIndex.set(null);
+  }
+
+  /** "Agregar todos" de una acción complementaria: suma, en orden, las
+   *  sugerencias que todavía no se agregaron (cada una pasa por la misma cola
+   *  de guardado, así que nunca se pisan entre sí). */
+  async applyRemainingSuggestions(messageIndex: number, actionIndex: number): Promise<void> {
+    const action = this.messages()[messageIndex]?.actions?.[actionIndex];
+    if (!action) {
+      return;
+    }
+    for (let si = 0; si < action.suggestions.length; si++) {
+      const current = this.messages()[messageIndex]?.actions?.[actionIndex];
+      if (current && !current.appliedIndexes.includes(si)) {
+        await this.applySuggestion(messageIndex, actionIndex, si);
+      }
+    }
+  }
+
+  pendingSuggestionCount(action: ChatAction): number {
+    return action.suggestions.length - action.appliedIndexes.length;
   }
 
   private mutateContent(content: ProposalContent, target: AiTargetOption, suggestion: string): ProposalContent {

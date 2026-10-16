@@ -9,12 +9,85 @@
   <div class="pricing-step">
     <section class="pricing-step__section">
       <div class="pricing-step__section-header">
-        <h2 class="section-title">Líneas de precio</h2>
+        <h2 class="section-title">Precios del itinerario</h2>
+      </div>
+      <p class="pricing-step__hint">
+        Cada servicio que cargaste en el itinerario aparece aquí para ponerle su precio. Los precios suman al total y
+        se ven en el detalle de costos de la propuesta.
+      </p>
+
+      @if (days().length === 0) {
+        <p class="pricing-step__empty">Todavía no hay días en el itinerario. Agrégalos en el paso Itinerario.</p>
+      } @else {
+        @for (day of days(); track day.id) {
+          <div class="pricing-step__day">
+            <div class="pricing-step__day-header">
+              <h3 class="pricing-step__day-title">
+                Día {{ day.dayNumber }}@if (day.location) { · {{ day.location }} }
+              </h3>
+              <span class="pricing-step__day-subtotal">{{ daySubtotal(day) | currency: currency() }}</span>
+            </div>
+
+            @if (day.services.length === 0) {
+              <p class="pricing-step__empty">Este día no tiene servicios todavía.</p>
+            } @else {
+              <table class="pricing-step__table">
+                <thead>
+                  <tr>
+                    <th scope="col">Servicio</th>
+                    <th scope="col">Cantidad</th>
+                    <th scope="col">Precio unitario</th>
+                    <th scope="col">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (service of day.services; track service.id) {
+                    <tr>
+                      <td>
+                        <span class="pricing-step__service-type">{{ serviceTypeLabel[service.type] }}</span>
+                        <span class="pricing-step__service-name">{{ service.title || 'Sin título' }}</span>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          [value]="serviceLine(service.id)?.quantity ?? 1"
+                          (input)="onServiceInput(day, service, 'quantity', $event)"
+                          (blur)="onFieldBlur()"
+                          [attr.aria-label]="'Cantidad de ' + (service.title || serviceTypeLabel[service.type])"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          [value]="serviceLine(service.id)?.unitPrice ?? 0"
+                          (input)="onServiceInput(day, service, 'unitPrice', $event)"
+                          (blur)="onFieldBlur()"
+                          [attr.aria-label]="'Precio unitario de ' + (service.title || serviceTypeLabel[service.type])"
+                        />
+                      </td>
+                      <td class="pricing-step__line-total">{{ serviceSubtotal(service.id) | currency: currency() }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <section class="pricing-step__section">
+      <div class="pricing-step__section-header">
+        <h2 class="section-title">Otras líneas de precio</h2>
         <button type="button" class="btn btn--secondary" (click)="addLine('lines')">+ Agregar línea</button>
       </div>
 
-      @if (lines().length === 0) {
-        <p class="pricing-step__empty">Todavía no hay líneas de precio.</p>
+      @if (otherLines().length === 0) {
+        <p class="pricing-step__empty">Sin otras líneas. Úsalas para cosas que no están en el itinerario.</p>
       } @else {
         <table class="pricing-step__table">
           <thead>
@@ -27,7 +100,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (line of lines(); track line.id) {
+            @for (line of otherLines(); track line.id) {
               <tr>
                 <td>
                   <input

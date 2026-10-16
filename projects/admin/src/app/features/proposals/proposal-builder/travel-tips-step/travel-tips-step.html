@@ -92,8 +92,9 @@
                         <button
                           type="button"
                           class="tip-card__ai-trigger"
+                          [disabled]="!tip.body.trim()"
                           (click)="openAssistant.emit('tip:' + group.id + ':' + tip.id)"
-                          title="Mejorar este consejo con The Edit Assistant"
+                          [title]="tip.body.trim() ? 'Mejorar este consejo con The Edit Assistant' : 'Escribe el detalle del consejo para poder mejorarlo'"
                           aria-label="Mejorar este consejo con The Edit Assistant"
                         >✨</button>
                         <button type="button" class="tip-card__remove" (click)="removeTip(group, tip)" aria-label="Eliminar tip">✕</button>

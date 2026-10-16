@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
 import { Proposal, ProposalContent, defaultWelcomeText } from '../../../../core/models/proposal.model';
+import { DEFAULT_TERMS_HTML, termsHasPlaceholders } from '../../../../core/data/proposal-default-terms';
 import { PROPOSAL_CURRENCY_OPTIONS } from '../../../../core/data/proposal-options';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
@@ -314,6 +315,22 @@ export class ClientTripStep implements OnInit {
         this.savingField.set(null);
       }
     });
+  }
+
+  termsIsEmpty(): boolean {
+    return this.form.controls.termsBody.value.replace(/<[^>]*>/g, '').trim().length === 0;
+  }
+
+  /** Avisa mientras el texto siga teniendo campos [entre corchetes] por completar. */
+  termsHavePlaceholders(): boolean {
+    return termsHasPlaceholders(this.form.controls.termsBody.value);
+  }
+
+  /** Carga los términos de partida (solo se ofrece con el campo vacío — nunca
+   *  pisa un texto ya escrito) y los guarda; el agente los edita después. */
+  loadDefaultTerms(): Promise<void> {
+    this.form.controls.termsBody.setValue(DEFAULT_TERMS_HTML);
+    return this.saveTerms();
   }
 
   saveTerms(): Promise<void> {

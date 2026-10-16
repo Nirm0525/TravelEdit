@@ -47,6 +47,7 @@ export interface ProposalPricingLine {
   label: string;
   quantity: number;
   unitPrice: number;
+  serviceId?: string;
 }
 
 export type ProposalFeeLine = ProposalPricingLine;

@@ -218,6 +218,20 @@
         <p class="client-trip-step__terms-notice">
           La IA puede mejorar la redacción, pero no debe cambiar condiciones comerciales.
         </p>
+        <p class="field__hint">
+          En la propuesta, el cliente ve un enlace "{{ form.controls.termsTitle.value || 'Términos y condiciones' }}"
+          que abre estos términos en una página aparte. Sin texto aquí, ese enlace no aparece.
+        </p>
+        @if (termsIsEmpty()) {
+          <button type="button" class="btn btn--secondary" [disabled]="savingField() === 'terms'" (click)="loadDefaultTerms()">
+            Cargar términos predeterminados (editables)
+          </button>
+        } @else if (termsHavePlaceholders()) {
+          <p class="client-trip-step__terms-notice">
+            Todavía hay campos entre [corchetes] por completar (porcentajes, plazos, jurisdicción). Revísalos antes de
+            enviar la propuesta.
+          </p>
+        }
         <label class="field">
           <span>Título</span>
           <input type="text" formControlName="termsTitle" />

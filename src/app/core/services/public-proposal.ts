@@ -4,6 +4,10 @@ import { ProposalContent, toProposalContent } from '../models/proposal-content.m
 
 const PROPOSAL_IMAGES_BUCKET = 'proposal-images';
 
+/** Clave de sessionStorage donde la propuesta guarda su sesión de acceso (la
+ *  página de términos lee la misma, ver PrivateProposalTerms). */
+export const PROPOSAL_SESSION_PREFIX = 'te-proposal-session:';
+
 export type ProposalStatus = 'draft' | 'published' | 'viewed' | 'accepted' | 'expired';
 
 // Mismos 5 valores que verify_proposal_access() devuelve en la columna
@@ -44,6 +48,18 @@ export interface PublicProposalData {
   /** { [serviceId]: true|false } — lo que el cliente ya aceptó/descartó de
    *  cada servicio. Vacío si nunca marcó nada. */
   serviceChoices: Record<string, boolean>;
+  /** { [serviceId]: texto } — comentarios / pedidos de cambio del cliente. */
+  serviceComments: Record<string, string>;
+}
+
+function toServiceComments(value: Record<string, unknown> | null | undefined): Record<string, string> {
+  const comments: Record<string, string> = {};
+  for (const [key, text] of Object.entries(value ?? {})) {
+    if (typeof text === 'string' && text.trim()) {
+      comments[key] = text;
+    }
+  }
+  return comments;
 }
 
 function toServiceChoices(value: Record<string, unknown> | null | undefined): Record<string, boolean> {
@@ -84,6 +100,8 @@ interface ContentRpcRow {
   travelers_count: number | null;
   /** Ausente si la migración 0043 todavía no se aplicó en la base. */
   service_choices?: Record<string, unknown> | null;
+  /** Ausente si la migración 0044 todavía no se aplicó en la base. */
+  service_comments?: Record<string, unknown> | null;
 }
 
 /**
@@ -161,7 +179,8 @@ export class PublicProposalService {
       startDate: row.start_date,
       endDate: row.end_date,
       travelersCount: row.travelers_count,
-      serviceChoices: toServiceChoices(row.service_choices)
+      serviceChoices: toServiceChoices(row.service_choices),
+      serviceComments: toServiceComments(row.service_comments)
     };
   }
 
@@ -200,6 +219,19 @@ export class PublicProposalService {
       p_session_token: sessionToken,
       p_service_id: serviceId,
       p_accepted: accepted
+    });
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** Guarda (o borra, si va vacío) el comentario del cliente sobre un servicio. */
+  async setServiceComment(token: string, sessionToken: string, serviceId: string, comment: string): Promise<void> {
+    const { error } = await this.supabase.client.rpc('set_proposal_service_comment', {
+      p_token: token,
+      p_session_token: sessionToken,
+      p_service_id: serviceId,
+      p_comment: comment
     });
     if (error) {
       throw error;

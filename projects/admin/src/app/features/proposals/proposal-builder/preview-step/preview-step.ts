@@ -3,8 +3,10 @@ import type { gsap } from 'gsap';
 import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
-import { Proposal, ProposalDay } from '../../../../core/models/proposal.model';
+import { Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
+import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
+import { buildPricingBreakdown } from '../../../../core/data/proposal-pricing-breakdown';
 import { serviceDetailRows } from '../../../../core/data/proposal-service-fields';
 import { animatePreviewDays, playPreviewIntro, refreshPreviewTriggers } from '../../../../core/gsap/preview-motion';
 
@@ -127,6 +129,10 @@ export class PreviewStep implements OnInit {
   readonly refreshTick = input<number>(0);
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
   readonly detailRows = serviceDetailRows;
+  readonly pricingBreakdown = computed(() => {
+    const p = this.proposal();
+    return p ? buildPricingBreakdown(p.content) : null;
+  });
 
   readonly proposal = signal<Proposal | null>(null);
   readonly loading = signal(true);
@@ -216,6 +222,20 @@ export class PreviewStep implements OnInit {
     const when = [view?.weekdayLabel, view?.dateLabel].filter(Boolean).join(', ');
     const where = day.location?.trim() ?? '';
     return [when, where].filter(Boolean).join(' – ');
+  }
+
+  /** Consejos de un destino agrupados por tipo — misma regla que el sitio
+   *  público: orden fijo, solo tipos con consejos, sin tipo = "Consejos generales". */
+  tipTypeGroups(group: ProposalTravelTipGroup): { key: string; label: string; tips: ProposalTravelTip[] }[] {
+    const known = PROPOSAL_TIP_CATEGORIES.filter((c) => c.value);
+    const buckets = new Map<string, ProposalTravelTip[]>();
+    for (const tip of group.tips) {
+      const key = known.some((c) => c.value === tip.category) ? tip.category! : 'general';
+      buckets.set(key, [...(buckets.get(key) ?? []), tip]);
+    }
+    return [...known.map((c) => ({ key: c.value, label: c.label })), { key: 'general', label: 'Consejos generales' }]
+      .filter((t) => buckets.has(t.key))
+      .map((t) => ({ ...t, tips: buckets.get(t.key)! }));
   }
 
   togglePricingExpanded(): void {

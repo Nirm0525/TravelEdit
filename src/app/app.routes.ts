@@ -14,5 +14,10 @@ export const routes: Routes = [
     path: 'private/:token',
     loadComponent: () => import('./features/private-proposal/private-proposal').then((m) => m.PrivateProposal)
   },
+  {
+    path: 'private/:token/terminos',
+    loadComponent: () =>
+      import('./features/private-proposal-terms/private-proposal-terms').then((m) => m.PrivateProposalTerms)
+  },
   { path: '**', redirectTo: '' }
 ];

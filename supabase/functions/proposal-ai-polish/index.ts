@@ -265,7 +265,7 @@ function buildChatUserPrompt(message: string, targets: ChatTarget[], history: Ch
 // maxItems/minItems no están soportados de forma confiable en el modo
 // structured outputs "strict" de OpenAI (se documentan como ignorados en
 // varias versiones del API) — el límite real de 1-3 sugerencias y el tope
-// de acciones por turno se hacen cumplir en isValidChatResult(), no en el
+// de acciones por turno se hacen cumplir en normalizeChatResult(), no en el
 // schema en sí.
 function buildChatResponseSchema(targetKeys: string[]) {
   return {
@@ -317,20 +317,47 @@ interface ChatAiResult {
   followUp: string;
 }
 
-function isValidChatResult(value: unknown, validKeys: string[]): value is ChatAiResult {
-  if (!value || typeof value !== 'object') return false;
+/**
+ * Normaliza la respuesta del modelo en vez de rechazarla entera por un solo
+ * detalle: una acción con clave desconocida o sin sugerencias útiles (p. ej.
+ * pedirle mejorar un campo todavía vacío) simplemente se descarta, y el
+ * `reply` conversacional se conserva. Solo es "malformada" si ni siquiera
+ * hay un `reply` de texto.
+ */
+function normalizeChatResult(value: unknown, validKeys: string[]): ChatAiResult | null {
+  if (!value || typeof value !== 'object') return null;
   const v = value as Record<string, unknown>;
-  if (typeof v.reply !== 'string' || typeof v.followUp !== 'string') return false;
-  if (!Array.isArray(v.actions) || v.actions.length > MAX_ACTIONS_PER_TURN) return false;
+  if (typeof v.reply !== 'string') return null;
 
-  return v.actions.every((entry) => {
-    if (!entry || typeof entry !== 'object') return false;
+  const actions: ChatAiAction[] = [];
+  const dropped: string[] = [];
+  for (const entry of Array.isArray(v.actions) ? v.actions : []) {
+    if (!entry || typeof entry !== 'object') {
+      dropped.push('entrada_invalida');
+      continue;
+    }
     const action = entry as Record<string, unknown>;
-    if (typeof action.targetKey !== 'string' || !validKeys.includes(action.targetKey)) return false;
-    if (!Array.isArray(action.suggestions) || action.suggestions.length === 0) return false;
-    if (action.suggestions.length > MAX_SUGGESTIONS_PER_ACTION) return false;
-    return action.suggestions.every((s) => typeof s === 'string' && s.trim().length > 0);
-  });
+    if (typeof action.targetKey !== 'string' || !validKeys.includes(action.targetKey)) {
+      dropped.push('clave_desconocida');
+      continue;
+    }
+    const suggestions = (Array.isArray(action.suggestions) ? action.suggestions : [])
+      .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+      .slice(0, MAX_SUGGESTIONS_PER_ACTION);
+    if (suggestions.length === 0) {
+      dropped.push(`sin_sugerencias:${action.targetKey}`);
+      continue;
+    }
+    actions.push({ targetKey: action.targetKey, suggestions });
+    if (actions.length >= MAX_ACTIONS_PER_TURN) break;
+  }
+
+  // Solo motivos y claves de campo — nunca el texto del usuario ni de la IA.
+  if (dropped.length > 0) {
+    console.warn('proposal-ai-polish (chat): acciones descartadas', dropped);
+  }
+
+  return { reply: v.reply, actions, followUp: typeof v.followUp === 'string' ? v.followUp : '' };
 }
 
 // ------------------------------------------------------------------
@@ -408,7 +435,8 @@ async function handleChatMode(body: ChatRequestBody, json: (body: unknown, statu
       return json({ success: false, error: 'malformed_ai_response' }, 502);
     }
 
-    if (!isValidChatResult(parsed, targetKeys)) {
+    const result = normalizeChatResult(parsed, targetKeys);
+    if (!result) {
       console.error('proposal-ai-polish (chat): JSON de OpenAI no tiene la forma esperada');
       return json({ success: false, error: 'malformed_ai_response' }, 502);
     }
@@ -417,9 +445,9 @@ async function handleChatMode(body: ChatRequestBody, json: (body: unknown, statu
       {
         success: true,
         result: {
-          reply: parsed.reply,
-          actions: parsed.actions.map((a) => ({ targetKey: a.targetKey, suggestions: a.suggestions })),
-          followUp: parsed.followUp.trim() || null
+          reply: result.reply,
+          actions: result.actions,
+          followUp: result.followUp.trim() || null
         }
       },
       200

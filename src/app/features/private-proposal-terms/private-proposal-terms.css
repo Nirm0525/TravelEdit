@@ -1,0 +1,200 @@
+.terms-page {
+  min-height: 100vh;
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+.terms-page__top {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-lg) var(--space-md) 0;
+}
+
+.terms-page__logo {
+  width: 9rem;
+  height: auto;
+}
+
+.terms-page__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl) var(--space-md);
+  text-align: center;
+}
+
+.terms-page__main {
+  padding: var(--space-xl) var(--space-md) var(--space-2xl);
+}
+
+.terms-page__title {
+  max-width: 64rem;
+  margin: 0 auto;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 1rem + 5.5vw, 5.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-wine);
+}
+
+.terms-page__title--small {
+  font-size: clamp(1.75rem, 1rem + 2vw, 2.75rem);
+}
+
+.terms-page__ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin: var(--space-lg) auto var(--space-xl);
+  max-width: 28rem;
+  color: var(--color-gold);
+}
+
+.terms-page__ornament span {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-gold) 55%, transparent);
+}
+
+.terms-page__ornament svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.terms-page__content {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+/* Resumen con enlaces a cada título del texto. */
+.terms-page__summary {
+  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-warm-beige);
+}
+
+.terms-page__summary h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 1.2rem + 1.5vw, 2.5rem);
+  text-transform: uppercase;
+  color: var(--color-wine);
+  margin-bottom: var(--space-sm);
+}
+
+.terms-page__summary ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: var(--space-md);
+  list-style: disc;
+}
+
+.terms-page__summary li::marker {
+  color: var(--color-burgundy);
+}
+
+.terms-page__summary button {
+  text-align: left;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.terms-page__summary button:hover {
+  color: var(--color-burgundy);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Texto de los términos (rich text sanitizado): títulos grandes en la
+   tipografía del sitio, párrafos pequeños como en un documento legal. */
+.terms-page__body {
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: var(--color-ink);
+}
+
+.terms-page__body h1,
+.terms-page__body h2 {
+  margin: var(--space-xl) 0 var(--space-sm);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-warm-beige);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.75rem);
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--color-wine);
+}
+
+.terms-page__body h3 {
+  margin: var(--space-lg) 0 var(--space-xs);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.35rem;
+  color: var(--color-wine);
+}
+
+.terms-page__body h4 {
+  margin: var(--space-md) 0 var(--space-2xs);
+  font-weight: 700;
+}
+
+.terms-page__body p,
+.terms-page__body ul,
+.terms-page__body ol {
+  margin-bottom: var(--space-sm);
+}
+
+.terms-page__body ul {
+  list-style: disc;
+  padding-left: var(--space-md);
+}
+
+.terms-page__body ol {
+  list-style: decimal;
+  padding-left: var(--space-md);
+}
+
+.terms-page__body li::marker {
+  color: var(--color-burgundy);
+}
+
+.terms-page__body a {
+  color: var(--color-burgundy);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.terms-page__footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-xl);
+}
+
+.terms-page__back {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-burgundy);
+  border: 1px solid var(--color-burgundy);
+  border-radius: 999px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.terms-page__back:hover {
+  background: var(--color-burgundy);
+  color: var(--color-white);
+}

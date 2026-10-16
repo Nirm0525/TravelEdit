@@ -17,6 +17,27 @@
           </label>
 
           <label class="field">
+            <span>Correo del cliente{{ leadEmail() ? ' (opcional)' : '' }}</span>
+            <input
+              type="email"
+              formControlName="clientEmail"
+              autocomplete="off"
+              [placeholder]="leadEmail() ?? 'cliente@correo.com'"
+              (blur)="saveField('clientEmail')"
+            />
+            @if (form.controls.clientEmail.touched && form.controls.clientEmail.invalid) {
+              <span class="field__hint field__hint--error">Escribe un correo válido.</span>
+            } @else if (leadEmail(); as email) {
+              <span class="field__hint">
+                La propuesta se enviará al correo de la solicitud: <strong>{{ form.controls.clientEmail.value || email }}</strong>.
+                Escribe otro aquí solo si quieres cambiarlo.
+              </span>
+            } @else {
+              <span class="field__hint">A este correo se envía la propuesta (no hay una solicitud vinculada).</span>
+            }
+          </label>
+
+          <label class="field">
             <span>Destino</span>
             <input type="text" formControlName="destinationText" (blur)="saveField('destinationText')" />
           </label>

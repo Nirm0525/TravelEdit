@@ -26,6 +26,15 @@
         </div>
 
         <div class="proposal-builder__actions">
+          @if (p.status === 'draft') {
+            <button type="button" class="btn btn--primary" [disabled]="publishing() || sendingToClient()" (click)="publishAndSend()">
+              {{ publishing() ? 'Publicando…' : sendingToClient() ? 'Enviando…' : 'Publicar y enviar al cliente' }}
+            </button>
+          } @else if (p.status === 'published' || p.status === 'viewed') {
+            <button type="button" class="btn btn--primary" [disabled]="sendingToClient()" (click)="sendToClient()">
+              {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
+            </button>
+          }
           <button type="button" class="btn btn--secondary proposal-builder__preview-toggle" (click)="togglePreviewDrawer()">
             Vista previa <span aria-hidden="true">👁</span>
           </button>

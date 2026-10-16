@@ -310,7 +310,7 @@ async function handleProposalMode(
 
   const { data: proposal, error: proposalError } = await serviceClient
     .from('proposals')
-    .select('id, status, public_token, lead_id, client_name, access_required')
+    .select('id, status, public_token, lead_id, client_name, client_email, access_required')
     .eq('id', proposalId)
     .maybeSingle();
 
@@ -329,26 +329,30 @@ async function handleProposalMode(
     return json({ code: 'INVALID_STATUS', error: 'Solo se puede enviar una propuesta publicada.' }, 400);
   }
 
-  if (!proposal.lead_id) {
-    // Comportamiento documentado para esta fase (ver sección I de la spec):
-    // sin lead vinculado no hay de dónde resolver un destinatario de forma
-    // segura server-side, y no se acepta un email arbitrario del body.
-    // Una entrada manual queda para una fase posterior, auditada aparte.
-    return json({ code: 'NO_LEAD_LINKED', error: 'Esta propuesta no está vinculada a una solicitud con correo de cliente.' }, 400);
+  // Destinatario: el correo que el staff cargó en la propia propuesta
+  // (proposals.client_email) o, si no hay, el de la solicitud vinculada. Siempre
+  // se lee del row con la service role — nunca del body de la request.
+  let lead: { id: string; name: string; email: string | null; status: string } | null = null;
+  if (proposal.lead_id) {
+    const { data: leadRow, error: leadError } = await serviceClient
+      .from('leads')
+      .select('id, name, email, status')
+      .eq('id', proposal.lead_id)
+      .maybeSingle();
+
+    if (leadError) {
+      console.error('send-proposal (proposal): error leyendo el lead vinculado', leadError);
+      return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la solicitud vinculada.' }, 500);
+    }
+    lead = leadRow;
   }
 
-  const { data: lead, error: leadError } = await serviceClient
-    .from('leads')
-    .select('id, name, email, status')
-    .eq('id', proposal.lead_id)
-    .maybeSingle();
-
-  if (leadError) {
-    console.error('send-proposal (proposal): error leyendo el lead vinculado', leadError);
-    return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la solicitud vinculada.' }, 500);
-  }
-  if (!lead || !lead.email) {
-    return json({ code: 'BAD_REQUEST', error: 'La solicitud vinculada no tiene un correo válido.' }, 400);
+  const recipient = (proposal.client_email?.trim() || lead?.email?.trim() || '').trim();
+  if (!recipient) {
+    return json(
+      { code: 'NO_RECIPIENT', error: 'Falta el correo del cliente. Agrégalo en el paso "Cliente y viaje" de la propuesta.' },
+      400
+    );
   }
 
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -359,19 +363,21 @@ async function handleProposalMode(
 
   const privateUrl = `${SITE}/private/${proposal.public_token}`;
   const fromEmail = await fetchResendFromEmail(serviceClient);
-  const email = buildProposalInviteEmail(proposal.client_name ?? lead.name, privateUrl, proposal.access_required === true);
+  const email = buildProposalInviteEmail(proposal.client_name ?? lead?.name ?? '', privateUrl, proposal.access_required === true);
   const result = await sendViaResend(resendApiKey, fromEmail, {
-    to: [lead.email],
+    to: [recipient],
     subject: email.subject,
     html: email.html,
     text: email.text
   });
 
   if (!result.sent) {
-    await serviceClient
-      .from('leads')
-      .update({ proposal_email_status: 'failed', proposal_email_error: result.error ?? 'Resend rechazó el envío.' })
-      .eq('id', lead.id);
+    if (lead) {
+      await serviceClient
+        .from('leads')
+        .update({ proposal_email_status: 'failed', proposal_email_error: result.error ?? 'Resend rechazó el envío.' })
+        .eq('id', lead.id);
+    }
 
     return json({ code: 'EMAIL_SEND_FAILED', error: 'No se pudo enviar la propuesta. Intenta de nuevo.' }, 502);
   }
@@ -381,45 +387,50 @@ async function handleProposalMode(
   // punto temprano del pipeline; nunca retrocede uno ya más adelante ni uno
   // cerrado. El envío exitoso es la ÚNICA acción de esta fase que mueve el
   // estado del lead — crear el draft, publicar o copiar el link no lo tocan.
-  const nextStatus = lead.status === 'nueva' || lead.status === 'contactada' ? 'propuesta_enviada' : lead.status;
+  if (lead) {
+    const nextStatus = lead.status === 'nueva' || lead.status === 'contactada' ? 'propuesta_enviada' : lead.status;
 
-  const { error: updateError } = await serviceClient
-    .from('leads')
-    .update({
-      proposal_sent_at: sentAt,
-      proposal_sent_by: callerId,
-      proposal_email_status: 'sent',
-      proposal_email_error: null,
-      status: nextStatus
-    })
-    .eq('id', lead.id);
+    const { error: updateError } = await serviceClient
+      .from('leads')
+      .update({
+        proposal_sent_at: sentAt,
+        proposal_sent_by: callerId,
+        proposal_email_status: 'sent',
+        proposal_email_error: null,
+        status: nextStatus
+      })
+      .eq('id', lead.id);
 
-  if (updateError) {
-    console.error('send-proposal (proposal): el correo se envió pero no se pudo actualizar el lead', updateError);
-    return json({ code: 'INTERNAL_ERROR', error: 'La propuesta se envió, pero no se pudo registrar. Refresca la página.' }, 500);
+    if (updateError) {
+      console.error('send-proposal (proposal): el correo se envió pero no se pudo actualizar el lead', updateError);
+      return json({ code: 'INTERNAL_ERROR', error: 'La propuesta se envió, pero no se pudo registrar. Refresca la página.' }, 500);
+    }
   }
 
-  const { error: auditError } = await serviceClient.from('audit_log').insert([
-    {
-      entity_type: 'lead',
-      entity_id: lead.id,
-      actor_id: callerId,
-      action: 'proposal_sent',
-      summary: 'Propuesta enviada por correo al cliente'
-    },
+  const auditRows: Record<string, unknown>[] = [
     {
       entity_type: 'proposal',
       entity_id: proposalId,
       actor_id: callerId,
       action: 'proposal_sent_to_client',
-      summary: `Propuesta enviada a ${lead.email}`
+      summary: `Propuesta enviada a ${recipient}`
     }
-  ]);
+  ];
+  if (lead) {
+    auditRows.unshift({
+      entity_type: 'lead',
+      entity_id: lead.id,
+      actor_id: callerId,
+      action: 'proposal_sent',
+      summary: 'Propuesta enviada por correo al cliente'
+    });
+  }
+  const { error: auditError } = await serviceClient.from('audit_log').insert(auditRows);
   if (auditError) {
     console.error('send-proposal (proposal): no se pudo registrar en audit_log', auditError);
   }
 
-  return json({ ok: true, sentTo: lead.email, sentAt }, 200);
+  return json({ ok: true, sentTo: recipient, sentAt }, 200);
 }
 
 Deno.serve(async (req) => {

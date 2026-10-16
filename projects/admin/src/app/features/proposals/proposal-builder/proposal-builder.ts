@@ -101,7 +101,11 @@ export class ProposalBuilder {
 
   readonly privateLink = computed(() => {
     const token = this.proposal()?.publicToken;
-    return token ? `${environment.publicSiteUrl}/private/${token}` : null;
+    // En producción publicSiteUrl es "" (admin y sitio comparten dominio), lo que daba
+    // una ruta relativa ("/private/…"): al copiarla y pegarla en el navegador no
+    // abre nada. El enlace que se comparte siempre tiene que ser absoluto.
+    const base = environment.publicSiteUrl || window.location.origin;
+    return token ? `${base}/private/${token}` : null;
   });
 
   constructor() {
@@ -269,6 +273,20 @@ export class ProposalBuilder {
       this.publishError.set(error instanceof Error ? error.message : 'No se pudo publicar la propuesta.');
     } finally {
       this.publishing.set(false);
+    }
+  }
+
+  /** Un solo clic: publica y, si se publicó bien, manda el correo. Si el envío
+   *  falla (p. ej. falta el correo del cliente) la propuesta queda publicada y
+   *  el error se muestra con "Reintentar envío". */
+  async publishAndSend(): Promise<void> {
+    if (this.publishing() || this.sendingToClient()) {
+      return;
+    }
+    this.menuOpen.set(false);
+    await this.publish();
+    if (!this.publishError()) {
+      await this.sendToClient();
     }
   }
 

@@ -304,6 +304,8 @@ export interface Database {
           terms_accepted: boolean;
           accepted_at: string | null;
           accepted_by_name: string | null;
+          /** Correo del cliente para enviar la propuesta — migración 0045; ausente hasta que se aplique. */
+          client_email?: string | null;
           /** { [serviceId]: true|false } — migración 0043; ausente hasta que se aplique. */
           service_choices?: Record<string, unknown> | null;
           /** { [serviceId]: texto } — migración 0044; ausente hasta que se aplique. */
@@ -318,6 +320,7 @@ export interface Database {
         Insert: {
           lead_id?: string | null;
           client_name: string;
+          client_email?: string | null;
           destination_text?: string | null;
           start_date?: string | null;
           end_date?: string | null;
@@ -332,6 +335,7 @@ export interface Database {
         Update: {
           lead_id?: string | null;
           client_name?: string;
+          client_email?: string | null;
           destination_text?: string | null;
           start_date?: string | null;
           end_date?: string | null;

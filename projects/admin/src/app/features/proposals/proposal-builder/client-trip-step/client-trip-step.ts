@@ -1,14 +1,15 @@
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
+import { LeadsService } from '../../../../core/services/leads';
 import { Proposal, ProposalContent, defaultWelcomeText } from '../../../../core/models/proposal.model';
 import { DEFAULT_TERMS_HTML, termsHasPlaceholders } from '../../../../core/data/proposal-default-terms';
 import { PROPOSAL_CURRENCY_OPTIONS } from '../../../../core/data/proposal-options';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
 
-type TopLevelField = 'clientName' | 'destinationText' | 'startDate' | 'endDate' | 'travelersCount' | 'expiresAt';
+type TopLevelField = 'clientName' | 'clientEmail' | 'destinationText' | 'startDate' | 'endDate' | 'travelersCount' | 'expiresAt';
 export type ClientTripSection = 'client-trip' | 'cover' | 'terms';
 
 @Component({
@@ -21,6 +22,11 @@ export class ClientTripStep implements OnInit {
   private readonly proposalsService = inject(ProposalsService);
   private readonly proposalImages = inject(ProposalImagesService);
   private readonly fb = inject(FormBuilder);
+  private readonly leadsService = inject(LeadsService);
+
+  /** Correo de la solicitud vinculada (si la hay): es el destinatario por defecto
+   *  del envío, así que no se vuelve a pedir — solo se muestra. */
+  readonly leadEmail = signal<string | null>(null);
 
   readonly proposalId = input.required<string>();
   readonly activeSection = input<ClientTripSection>('client-trip');
@@ -62,6 +68,7 @@ export class ClientTripStep implements OnInit {
 
   readonly form = this.fb.group({
     clientName: this.fb.control('', { nonNullable: true }),
+    clientEmail: this.fb.control('', { nonNullable: true, validators: [Validators.email] }),
     destinationText: this.fb.control('', { nonNullable: true }),
     startDate: this.fb.control('', { nonNullable: true }),
     endDate: this.fb.control('', { nonNullable: true }),
@@ -112,6 +119,7 @@ export class ClientTripStep implements OnInit {
       this.content = proposal.content;
       this.form.patchValue({
         clientName: proposal.clientName,
+        clientEmail: proposal.clientEmail ?? '',
         destinationText: proposal.destinationText ?? '',
         startDate: proposal.startDate ?? '',
         endDate: proposal.endDate ?? '',
@@ -128,6 +136,13 @@ export class ClientTripStep implements OnInit {
         termsBody: proposal.content.terms.body
       });
       this.coverImageUrl.set(this.proposalImages.publicUrl(proposal.content.cover.imagePath));
+      if (proposal.leadId) {
+        // Solo informativo: si falla la lectura, el campo funciona igual.
+        void this.leadsService
+          .getById(proposal.leadId)
+          .then((lead) => this.leadEmail.set(lead?.email ?? null))
+          .catch(() => this.leadEmail.set(null));
+      }
       this.hasAccessCode.set(await this.proposalsService.hasAccessCode(this.proposalId()));
     } catch (error) {
       console.error('No se pudo cargar la propuesta.', error);
@@ -170,6 +185,10 @@ export class ClientTripStep implements OnInit {
       try {
         const updated = await this.proposalsService.update(this.proposalId(), {
           clientName: raw.clientName,
+          // Solo se manda al editar ese campo (así guardar el resto no depende de que
+          // la migración 0045 esté aplicada) y nunca con un formato inválido.
+          clientEmail:
+            field === 'clientEmail' && this.form.controls.clientEmail.valid ? raw.clientEmail.trim() || null : undefined,
           destinationText: raw.destinationText || null,
           startDate: raw.startDate || null,
           endDate: raw.endDate || null,

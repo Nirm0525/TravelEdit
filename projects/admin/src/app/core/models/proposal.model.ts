@@ -118,6 +118,8 @@ export interface Proposal {
   leadId: string | null;
   status: ProposalStatus;
   clientName: string;
+  /** Correo al que se envía la propuesta; si falta, se usa el de la solicitud vinculada. */
+  clientEmail: string | null;
   destinationText: string | null;
   startDate: string | null;
   endDate: string | null;
@@ -257,6 +259,7 @@ export function toProposal(row: ProposalRow): Proposal {
     leadId: row.lead_id,
     status: row.status,
     clientName: row.client_name,
+    clientEmail: row.client_email ?? null,
     destinationText: row.destination_text,
     startDate: row.start_date,
     endDate: row.end_date,

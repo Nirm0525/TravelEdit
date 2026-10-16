@@ -32,6 +32,7 @@ export interface CreateProposalPayload {
 
 export interface UpdateProposalPayload {
   clientName?: string;
+  clientEmail?: string | null;
   destinationText?: string | null;
   startDate?: string | null;
   endDate?: string | null;
@@ -171,6 +172,7 @@ export class ProposalsService {
       .from('proposals')
       .update({
         client_name: patch.clientName,
+        client_email: patch.clientEmail,
         destination_text: patch.destinationText,
         start_date: patch.startDate,
         end_date: patch.endDate,

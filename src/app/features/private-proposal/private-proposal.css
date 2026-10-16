@@ -263,8 +263,15 @@
   padding: var(--space-2xl) var(--space-xl);
 }
 
+/* Frase + título juntos a la izquierda; los datos (para/viaje/de) a la derecha. */
+.private-proposal__gate-hero-heading {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
 .private-proposal__gate-eyebrow {
   font-size: 0.78rem;
+  text-shadow: 0 1px 8px rgba(22, 17, 15, 0.6);
   font-weight: 600;
   letter-spacing: var(--track-label);
   text-transform: uppercase;
@@ -274,12 +281,15 @@
 .private-proposal__gate-proposal-title {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: var(--size-display);
-  margin-top: var(--space-2xs);
+  font-size: clamp(3rem, 1.5rem + 5vw, 7rem);
+  line-height: 1;
+  margin-top: var(--space-xs);
+  text-shadow: 0 2px 18px rgba(22, 17, 15, 0.45);
 }
 
 .private-proposal__gate-facts {
   display: flex;
+  flex: 0 1 20rem;
   flex-direction: column;
   gap: var(--space-sm);
   text-align: right;

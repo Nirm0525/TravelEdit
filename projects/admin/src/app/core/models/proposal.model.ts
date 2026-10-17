@@ -142,6 +142,8 @@ export interface Proposal {
   serviceChoices: Record<string, boolean>;
   /** Comentarios / pedidos de cambio que el cliente dejó en cada servicio, por id de servicio. */
   serviceComments: Record<string, string>;
+  /** Cuando el cliente envió sus comentarios al equipo (null = nunca). */
+  feedbackSentAt: string | null;
   publishedAt: string | null;
   viewedAt: string | null;
   expiresAt: string | null;
@@ -280,6 +282,7 @@ export function toProposal(row: ProposalRow): Proposal {
     serviceComments: Object.fromEntries(
       Object.entries(row.service_comments ?? {}).filter(([, text]) => typeof text === 'string' && text.trim()) as [string, string][]
     ),
+    feedbackSentAt: row.feedback_sent_at ?? null,
     publishedAt: row.published_at,
     viewedAt: row.viewed_at,
     expiresAt: row.expires_at,

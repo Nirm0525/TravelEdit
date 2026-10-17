@@ -248,4 +248,21 @@ export class PublicProposalService {
       throw error;
     }
   }
+
+  /**
+   * Avisa al equipo (jefa + asesora) por correo. Es best-effort: el comentario
+   * o la aceptacion ya quedaron guardados, asi que un fallo del aviso no debe
+   * romper el flujo del cliente — quien llama decide que mostrar.
+   */
+  async notifyActivity(token: string, sessionToken: string, event: 'feedback' | 'accepted'): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke<{ ok?: boolean }>('notify-proposal-activity', {
+        body: { token, sessionToken, event }
+      });
+      return !error && !!data?.ok;
+    } catch (err) {
+      console.error('No se pudo avisar al equipo.', err);
+      return false;
+    }
+  }
 }

@@ -47,6 +47,8 @@ export class LeadDetail {
   readonly emailStatusLabel = LEAD_EMAIL_STATUS_LABEL;
   readonly emailStatusVariant = EMAIL_STATUS_VARIANT;
   readonly isAdmin = this.auth.isAdmin;
+  /** La asesora (rol staff) no puede reasignar solicitudes — lo bloquea tambien la base. */
+  readonly canAssign = computed(() => this.auth.profile()?.role !== 'staff');
   readonly statusLabel = LEAD_STATUS_LABEL;
   readonly originLabel = LEAD_ORIGIN_LABEL;
 

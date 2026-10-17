@@ -235,6 +235,9 @@ export class PrivateProposal implements OnDestroy {
   readonly commentOpenId = signal<string | null>(null);
   readonly commentDraft = signal('');
   readonly commentSavingId = signal<string | null>(null);
+  readonly feedbackSending = signal(false);
+  readonly feedbackSent = signal(false);
+  readonly feedbackError = signal<string | null>(null);
   readonly commentError = signal<string | null>(null);
   readonly choiceError = signal<string | null>(null);
   /** Las elecciones solo se editan mientras la propuesta siga abierta — una
@@ -728,11 +731,37 @@ export class PrivateProposal implements OnDestroy {
         return next;
       });
       this.commentOpenId.set(null);
+      this.feedbackSent.set(false);
     } catch (error) {
       console.error('No se pudo guardar el comentario.', error);
       this.commentError.set('No pudimos enviar tu comentario. Inténtalo de nuevo en unos segundos.');
     } finally {
       this.commentSavingId.set(null);
+    }
+  }
+
+  commentCount(): number {
+    return Object.keys(this.serviceComments()).length;
+  }
+
+  hasComments(): boolean {
+    return Object.keys(this.serviceComments()).length > 0;
+  }
+
+  /** Un solo correo al equipo con todos los comentarios que dejo el cliente. */
+  async sendFeedback(): Promise<void> {
+    const session = this.sessionToken;
+    if (!session || this.feedbackSending() || !this.hasComments()) {
+      return;
+    }
+    this.feedbackSending.set(true);
+    this.feedbackError.set(null);
+    const ok = await this.publicProposal.notifyActivity(this.token(), session, 'feedback');
+    this.feedbackSending.set(false);
+    if (ok) {
+      this.feedbackSent.set(true);
+    } else {
+      this.feedbackError.set('No pudimos enviar tus comentarios. Inténtalo de nuevo en unos segundos.');
     }
   }
 
@@ -760,6 +789,7 @@ export class PrivateProposal implements OnDestroy {
       await this.publicProposal.acceptProposal(token, session, this.acceptedByName().trim());
       await this.loadContent(token, session);
       this.justAccepted.set(true);
+      void this.publicProposal.notifyActivity(token, session, 'accepted');
     } catch (error) {
       console.error('No se pudo confirmar la aceptación.', error);
       this.acceptError.set('No se pudo confirmar. Intenta de nuevo en unos segundos.');

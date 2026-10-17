@@ -34,6 +34,7 @@
             <button type="button" class="btn btn--primary" [disabled]="sendingToClient()" (click)="sendToClient()">
               {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
             </button>
+            <button type="button" class="btn btn--secondary" (click)="openWhatsapp()">Enviar por WhatsApp</button>
           }
           <button type="button" class="btn btn--secondary proposal-builder__preview-toggle" (click)="togglePreviewDrawer()">
             Vista previa <span aria-hidden="true">👁</span>
@@ -69,6 +70,9 @@
                 @if (p.status === 'published' || p.status === 'viewed') {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="sendingToClient()" (click)="sendToClient()">
                     {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
+                  </button>
+                  <button type="button" role="menuitem" class="proposal-builder__menu-item" (click)="openWhatsapp()">
+                    Enviar por WhatsApp
                   </button>
                 }
                 <button type="button" role="menuitem" class="proposal-builder__menu-item proposal-builder__menu-item--danger" (click)="requestDelete()">
@@ -196,6 +200,7 @@
                 [proposalId]="proposalId"
                 [activeSection]="currentStep() === 'cover' ? 'cover' : currentStep() === 'terms' ? 'terms' : 'client-trip'"
                 (saved)="onSaved()"
+                (codeGenerated)="onCodeGenerated($event)"
                 (openAssistant)="activateAssistant($event)"
               />
             }
@@ -244,6 +249,39 @@
 } @else {
   <p>No se encontró la propuesta.</p>
 }
+
+<app-admin-modal [open]="whatsappOpen()" title="Enviar por WhatsApp" (closed)="closeWhatsapp()">
+  <div class="proposal-builder__wa">
+    <label class="proposal-builder__wa-field">
+      <span>Teléfono del cliente (con código de país)</span>
+      <input type="tel" placeholder="+504 9999 9999" [value]="whatsappPhone()" (input)="onWhatsappPhoneInput($event)" />
+      <small>Si lo dejas vacío, WhatsApp te deja elegir el contacto.</small>
+    </label>
+
+    @if (whatsappNeedsCode()) {
+      <label class="proposal-builder__wa-field">
+        <span>Código de acceso</span>
+        <input type="text" placeholder="TRV-XXXXX" [value]="whatsappCode()" (input)="onWhatsappCodeInput($event)" />
+        <small>
+          Por seguridad el código no se guarda: pégalo aquí o genéralo de nuevo en "Cliente y viaje". El código solo
+          sale hacia WhatsApp, nunca pasa por nuestro servidor.
+        </small>
+      </label>
+    }
+
+    <div class="proposal-builder__wa-preview">
+      <span>Mensaje</span>
+      <pre>{{ whatsappMessage() }}</pre>
+    </div>
+  </div>
+
+  <div adminModalFooter>
+    <button type="button" class="btn btn--secondary" (click)="copyWhatsappMessage()">
+      {{ whatsappCopied() ? 'Copiado ✓' : 'Copiar mensaje' }}
+    </button>
+    <button type="button" class="btn btn--primary" [disabled]="!whatsappReady()" (click)="sendWhatsapp()">Abrir WhatsApp</button>
+  </div>
+</app-admin-modal>
 
 <app-confirm-dialog
   [open]="deletePending()"

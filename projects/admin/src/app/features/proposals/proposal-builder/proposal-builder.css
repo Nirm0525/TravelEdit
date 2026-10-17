@@ -404,3 +404,44 @@
     width: 100vw;
   }
 }
+
+.proposal-builder__wa {
+  display: grid;
+  gap: 1rem;
+}
+
+.proposal-builder__wa-field {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.proposal-builder__wa-field input {
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-weight: 400;
+  border: 1px solid var(--canvas-100);
+  border-radius: 6px;
+}
+
+.proposal-builder__wa-field small {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.proposal-builder__wa-preview {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.proposal-builder__wa-preview pre {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font: inherit;
+  font-weight: 400;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--canvas-100);
+  border-radius: 8px;
+}

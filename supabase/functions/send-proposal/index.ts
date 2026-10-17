@@ -87,7 +87,7 @@ function emailFooterHtml(legalLine: string): string {
 
     <tr>
       <td style="background:#4A1F26; padding:16px 32px;">
-        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97;">${legalLine}</p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97; text-align:center;">${legalLine}</p>
       </td>
     </tr>`;
 }
@@ -96,15 +96,21 @@ function emailShellHtml(bodyRowsHtml: string, legalLine: string): string {
   return `
 <!doctype html>
 <html>
-  <body style="margin:0; padding:0; background:#F6EFE6;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EFE6;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="margin:0; padding:0; background:#E9DFD3;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DFD3;">
       <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; background:#F6EFE6;">
+        <td align="center" style="padding:24px 12px;">
+          <!--[if mso]><table role="presentation" width="520" cellpadding="0" cellspacing="0" align="center"><tr><td><![endif]-->
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:100%; max-width:520px; background:#F6EFE6;">
             ${emailHeaderHtml()}
             ${bodyRowsHtml}
             ${emailFooterHtml(legalLine)}
           </table>
+          <!--[if mso]></td></tr></table><![endif]-->
         </td>
       </tr>
     </table>
@@ -153,6 +159,173 @@ function buildProposalEmail(clientName: string, subject: string, message: string
       <td style="padding:20px 32px 32px;">
         <div style="border-top:1px solid #C79A5B; margin:0 0 20px;"></div>
         <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:17px; color:#6D2A34;">Estamos listos para ajustar cualquier detalle.</p>
+      </td>
+    </tr>`;
+
+  const html = emailShellHtml(bodyRows, 'Recibes este correo porque solicitaste un viaje a medida con The Travel Edit.');
+  const text = [`Hola ${clientName}, esto es lo que pensamos para ti.`, '', subject, '', message, '', 'The Travel Edit'].join('\n');
+
+  return { subject: `Tu propuesta de viaje — ${subject}`, html, text };
+}
+
+interface SendResult {
+  sent: boolean;
+  error?: string;
+}
+
+async function sendViaResend(
+  apiKey: string,
+  fromEmail: string,
+  payload: { to: string[]; subject: string; html: string; text: string; replyTo?: string }
+): Promise<SendResult> {
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+        ...(payload.replyTo ? { reply_to: payload.replyTo } : {})
+      })
+    });
+
+    if (!response.ok) {
+      console.error('send-proposal: Resend respondió', response.status, await response.text());
+      return { sent: false, error: `Resend respondió ${response.status}` };
+    }
+
+    return { sent: true };
+  } catch (err) {
+    console.error('send-proposal: error inesperado enviando email', err);
+    return { sent: false, error: 'error de red hacia Resend' };
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function fetchResendFromEmail(serviceClient: any): Promise<string> {
+  try {
+    const { data } = await serviceClient.from('site_settings').select('value').eq('key', 'resend_from_email').maybeSingle();
+    const override = data?.value;
+    if (typeof override === 'string' && override) {
+      return override;
+    }
+  } catch (err) {
+    console.error('send-proposal: no se pudo leer resend_from_email de site_settings, se usa el fallback.', err);
+  }
+  return Deno.env.get('RESEND_FROM_EMAIL') || FALLBACK_FROM_EMAIL;
+}
+
+interface RequestBody {
+  leadId?: string;
+  subject?: string;
+  message?: string;
+}
+
+// ------------------------------------------------------------------
+// Modo "proposal" — nuevo flujo del Smart Proposal Builder: "Enviar al
+// cliente" desde una propuesta ya publicada. A diferencia del modo legacy
+// de arriba (asunto/mensaje libres escritos por el asesor), este SOLO
+// recibe `proposalId` — el destinatario (nombre/email vía el lead
+// vinculado), el status y la URL privada se resuelven todos server-side con
+// la service role, nunca desde lo que mande Angular. El código de acceso
+// NUNCA viaja en este correo (ver K en la especificación): el enlace y el
+// código son dos canales separados a propósito.
+// ------------------------------------------------------------------
+interface ProposalRequestBody {
+  mode: 'proposal';
+  proposalId?: string;
+}
+
+function isProposalBody(value: unknown): value is ProposalRequestBody {
+  return !!value && typeof value === 'object' && (value as Record<string, unknown>).mode === 'proposal';
+}
+
+function buildProposalInviteEmail(clientName: string, privateUrl: string, accessRequired: boolean): EmailContent {
+  const safeName = escapeHtml(clientName.split(' ')[0] || clientName);
+  const safeUrl = escapeHtml(privateUrl);
+  const accessNote = accessRequired
+    ? 'Por tu seguridad, necesitarás un código de acceso para abrirla. Te lo compartiremos por otro canal.'
+    : '';
+
+  const sections = [
+    ['01', 'ITINERARIO', 'Tu viaje, día a día'],
+    ['02', 'EXPERIENCIAS', 'Alojamientos y momentos seleccionados'],
+    ['03', 'DETALLES', 'Inversión y condiciones de tu viaje']
+  ];
+
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 28px 34px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">&mdash; TU PROPUESTA DE VIAJE</p>
+        <p style="margin:0 0 14px; font-family:Georgia,'Times New Roman',serif; font-size:30px; line-height:1.2; color:#F6EFE6;">Hola ${safeName},<br /><em>tu propuesta está lista.</em></p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; color:#F6EFE6;">Hemos preparado una propuesta pensada enteramente para ti, a partir de todo lo que nos compartiste.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 28px 0;">
+        <p style="margin:0 0 12px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#16110F;">EN TU PROPUESTA ENCONTRARÁS</p>
+        <div style="border-top:1px solid #C79A5B;"></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:0 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            ${sections
+              .map(
+                ([n, label, desc], i) => `
+            <td width="33%" valign="top" style="padding:16px ${i === 2 ? '0' : '12px'} 16px ${i === 0 ? '0' : '12px'};${i < 2 ? ' border-right:1px solid #E3D3C0;' : ''}">
+              <p style="margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:16px; color:#CAAE97;">${n}</p>
+              <p style="margin:0 0 4px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:1px; color:#7A2338;">${label}</p>
+              <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.5; color:#8A7F76;">${desc}</p>
+            </td>`
+              )
+              .join('')}
+          </tr>
+        </table>
+        <div style="border-top:1px solid #E3D3C0;"></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center" style="padding:28px 28px 8px;">
+        <a href="${safeUrl}" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; padding:14px 32px;">VER MI PROPUESTA</a>
+        <p style="margin:10px 0 0; font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#8A7F76;">Disponible en línea desde cualquier dispositivo.</p>
+      </td>
+    </tr>
+
+    ${
+      accessNote
+        ? `<tr>
+      <td style="padding:20px 28px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DFD3; border-radius:2px;">
+          <tr>
+            <td width="44" valign="middle" style="padding:16px 0 16px 16px;">
+              <div style="width:30px; height:30px; line-height:30px; border:1px solid #CAAE97; border-radius:15px; text-align:center; font-size:13px; background:#F6EFE6;">&#128274;</div>
+            </td>
+            <td valign="middle" style="padding:16px 16px 16px 12px;">
+              <p style="margin:0 0 3px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#6D2A34;">ACCESO PROTEGIDO</p>
+              <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.5; color:#16110F;">${accessNote}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`
+        : ''
+    }
+
+    <tr>
+      <td align="center" style="padding:28px 28px 32px;">
+        <p style="margin:0 0 6px; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.6; color:#8A7F76;">¿Quieres ajustar algo? Responde a este correo y tu asesor lo afinará contigo.</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:16px; color:#6D2A34;">Con cariño, el equipo de The Travel Edit.</p>
       </td>
     </tr>`;
 
@@ -308,9 +481,16 @@ async function handleProposalMode(
     return json({ code: 'BAD_REQUEST', error: 'Falta la propuesta a enviar.' }, 400);
   }
 
+  // Una asesora solo puede enviar SUS propuestas: se confirma con el cliente
+  // del propio usuario (RLS) — si la propuesta es de otra asesora, no la ve.
+  const { data: visibleProposal } = await callerClient.from('proposals').select('id').eq('id', proposalId).maybeSingle();
+  if (!visibleProposal) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes acceso a esta propuesta.' }, 403);
+  }
+
   const { data: proposal, error: proposalError } = await serviceClient
     .from('proposals')
-    .select('id, status, public_token, lead_id, client_name, client_email, access_required')
+    .select('id, status, public_token, lead_id, client_name, client_email, access_required, advisor_id')
     .eq('id', proposalId)
     .maybeSingle();
 
@@ -364,8 +544,17 @@ async function handleProposalMode(
   const privateUrl = `${SITE}/private/${proposal.public_token}`;
   const fromEmail = await fetchResendFromEmail(serviceClient);
   const email = buildProposalInviteEmail(proposal.client_name ?? lead?.name ?? '', privateUrl, proposal.access_required === true);
+
+  // Las respuestas del cliente van directo a su asesora.
+  let advisorEmail: string | undefined;
+  if (proposal.advisor_id) {
+    const { data: advisorUser } = await serviceClient.auth.admin.getUserById(proposal.advisor_id);
+    advisorEmail = advisorUser?.user?.email ?? undefined;
+  }
+
   const result = await sendViaResend(resendApiKey, fromEmail, {
     to: [recipient],
+    replyTo: advisorEmail,
     subject: email.subject,
     html: email.html,
     text: email.text
@@ -505,6 +694,11 @@ Deno.serve(async (req) => {
   // El correo del destinatario SIEMPRE se lee de la base, nunca del body de
   // la request — así el frontend no puede mandar un destinatario arbitrario
   // aunque lo intente.
+  const { data: visibleLead } = await callerClient.from('leads').select('id').eq('id', leadId).maybeSingle();
+  if (!visibleLead) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes acceso a esta solicitud.' }, 403);
+  }
+
   const { data: lead, error: leadError } = await serviceClient
     .from('leads')
     .select('id, name, email, status')

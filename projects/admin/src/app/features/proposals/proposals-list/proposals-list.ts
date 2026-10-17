@@ -23,6 +23,10 @@ export class ProposalsList {
   private readonly proposalImages = inject(ProposalImagesService);
 
   readonly statusLabel = PROPOSAL_STATUS_LABEL;
+
+  commentCount(item: Proposal): number {
+    return Object.keys(item.serviceComments).length;
+  }
   readonly statusOptions = PROPOSAL_STATUS_OPTIONS;
 
   readonly items = signal<Proposal[]>([]);

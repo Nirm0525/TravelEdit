@@ -300,6 +300,11 @@
   color: #6b4c93;
 }
 
+.proposals-list__status-badge[data-status='feedback'] {
+  background: color-mix(in srgb, #b7791f 16%, var(--surface-000));
+  color: #8a5a12;
+}
+
 .proposals-list__status-badge[data-status='expired'] {
   background: color-mix(in srgb, var(--danger-600) 12%, var(--surface-000));
   color: var(--danger-600);

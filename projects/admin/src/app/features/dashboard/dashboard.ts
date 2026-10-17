@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth';
-import { DashboardData, DashboardService } from '../../core/services/dashboard';
+import { AdvisorDashboardData, DashboardData, DashboardService } from '../../core/services/dashboard';
 import { relativeTime } from '../../core/utils/relative-time';
 import { AdminPageHeader } from '../../shared/ui/admin-page-header/admin-page-header';
 import { AdminTable } from '../../shared/ui/admin-table/admin-table';
@@ -21,6 +21,9 @@ export class Dashboard {
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly data = signal<DashboardData | null>(null);
+  readonly advisorData = signal<AdvisorDashboardData | null>(null);
+  /** La asesora (rol staff) ve un dashboard propio: sus solicitudes y propuestas. */
+  readonly isAdvisor = computed(() => this.profile()?.role === 'staff');
 
   constructor() {
     void this.load();
@@ -30,13 +33,29 @@ export class Dashboard {
     this.loading.set(true);
     this.loadError.set(null);
     try {
-      this.data.set(await this.dashboardService.load());
+      await this.auth.ready();
+      if (this.isAdvisor()) {
+        this.advisorData.set(await this.dashboardService.loadAdvisor());
+      } else {
+        this.data.set(await this.dashboardService.load());
+      }
     } catch (error) {
       console.error('No se pudo cargar el dashboard.', error);
       this.loadError.set('No se pudo cargar el dashboard. Inténtalo nuevamente.');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  statusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      draft: 'Borrador',
+      published: 'Enviada',
+      viewed: 'Vista por el cliente',
+      accepted: 'Aceptada',
+      expired: 'Vencida'
+    };
+    return labels[status] ?? status;
   }
 
   ageInDays(isoDate: string): number {

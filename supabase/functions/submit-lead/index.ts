@@ -193,7 +193,7 @@ function emailFooterHtml(legalLine: string): string {
 
     <tr>
       <td style="background:#4A1F26; padding:16px 32px;">
-        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97;">${legalLine}</p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97; text-align:center;">${legalLine}</p>
       </td>
     </tr>`;
 }
@@ -202,15 +202,21 @@ function emailShellHtml(bodyRowsHtml: string, legalLine: string): string {
   return `
 <!doctype html>
 <html>
-  <body style="margin:0; padding:0; background:#F6EFE6;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6EFE6;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="margin:0; padding:0; background:#E9DFD3;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DFD3;">
       <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%; background:#F6EFE6;">
+        <td align="center" style="padding:24px 12px;">
+          <!--[if mso]><table role="presentation" width="520" cellpadding="0" cellspacing="0" align="center"><tr><td><![endif]-->
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:100%; max-width:520px; background:#F6EFE6;">
             ${emailHeaderHtml()}
             ${bodyRowsHtml}
             ${emailFooterHtml(legalLine)}
           </table>
+          <!--[if mso]></td></tr></table><![endif]-->
         </td>
       </tr>
     </table>
@@ -245,7 +251,7 @@ function buildCustomerEmail(name: string): EmailContent {
 
     ${[
       ['01', 'REVISIÓN', 'Estudiamos tu solicitud, destinos y fechas propuestas.'],
-      ['02', 'CONTACTO', 'Un asesor te escribe en menos de 24 horas hábiles.'],
+      ['02', 'CONTACTO', 'Un asesor te escribirá en menos de 24 horas.'],
       ['03', 'PROPUESTA', 'Recibes un itinerario hecho enteramente a tu medida.']
     ]
       .map(
@@ -288,7 +294,7 @@ function buildCustomerEmail(name: string): EmailContent {
     '',
     'Qué sigue:',
     '01 Revisión — Estudiamos tu solicitud, destinos y fechas propuestas.',
-    '02 Contacto — Un asesor te escribe en menos de 24 horas hábiles.',
+    '02 Contacto — Un asesor te escribirá en menos de 24 horas.',
     '03 Propuesta — Recibes un itinerario hecho enteramente a tu medida.',
     '',
     `Explora Travel Edit: ${SITE}`,

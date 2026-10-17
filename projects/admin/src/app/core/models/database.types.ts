@@ -310,6 +310,7 @@ export interface Database {
           service_choices?: Record<string, unknown> | null;
           /** { [serviceId]: texto } — migración 0044; ausente hasta que se aplique. */
           service_comments?: Record<string, unknown> | null;
+          feedback_sent_at?: string | null;
           published_at: string | null;
           viewed_at: string | null;
           expires_at: string | null;

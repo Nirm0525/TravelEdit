@@ -821,6 +821,25 @@
                 }
               </div>
             } @else {
+              @if (canChooseServices() && hasComments()) {
+                <div class="proposal__feedback-box">
+                  <h2 class="proposal__feedback-title">¿Quieres que ajustemos algo?</h2>
+                  <p class="proposal__feedback-copy">
+                    Dejaste comentarios en {{ commentCount() }} {{ commentCount() === 1 ? 'servicio' : 'servicios' }}. Envíalos
+                    todos juntos a tu asesora para que los revise contigo.
+                  </p>
+                  @if (feedbackError(); as message) {
+                    <p class="private-proposal__gate-error" role="alert">{{ message }}</p>
+                  }
+                  @if (feedbackSent()) {
+                    <p class="proposal__feedback-sent" role="status">✓ Enviamos tus comentarios. Tu asesora te escribirá pronto.</p>
+                  } @else {
+                    <button type="button" class="proposal__feedback-button" [disabled]="feedbackSending()" (click)="sendFeedback()">
+                      {{ feedbackSending() ? 'Enviando…' : 'Enviar comentarios a mi asesora' }}
+                    </button>
+                  }
+                </div>
+              }
               <div class="proposal__accept-box">
                 <h2 class="proposal__accept-title">Haz clic en aceptar para hacernos saber que estás conforme con la propuesta.</h2>
 

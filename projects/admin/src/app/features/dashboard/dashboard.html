@@ -16,6 +16,93 @@
     <p>{{ message }}</p>
     <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
   </div>
+} @else if (advisorData(); as a) {
+  <div class="dashboard__stats">
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Solicitudes nuevas</p>
+      <p class="dashboard__stat-value">{{ a.counts.newLeads }}</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Propuestas en borrador</p>
+      <p class="dashboard__stat-value">{{ a.counts.drafts }}</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Esperando al cliente</p>
+      <p class="dashboard__stat-value">{{ a.counts.awaitingClient }}</p>
+    </div>
+    <div class="dashboard__stat">
+      <p class="dashboard__stat-label">Cambios solicitados</p>
+      <p class="dashboard__stat-value">{{ a.counts.feedback }}</p>
+      <p class="dashboard__stat-hint">{{ a.counts.accepted }} aceptada(s) en total</p>
+    </div>
+  </div>
+
+  <div class="dashboard__grid">
+    <section class="dashboard__card">
+      <h2 class="section-title">Cambios solicitados por clientes</h2>
+
+      @if (a.feedbackProposals.length === 0) {
+        <p class="dashboard__empty">Ningún cliente ha pedido cambios — al día.</p>
+      } @else {
+        <ul class="dashboard__list">
+          @for (item of a.feedbackProposals; track item.id) {
+            <li>
+              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
+              <span class="dashboard__list-meta">
+                {{ item.commentCount }} comentario(s) · {{ item.title || 'Sin título' }}
+                @if (item.feedbackSentAt) {
+                  · {{ relativeTime(item.feedbackSentAt) }}
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="dashboard__card">
+      <h2 class="section-title">Mis solicitudes sin responder</h2>
+
+      @if (a.newLeads.length === 0) {
+        <p class="dashboard__empty">No tienes solicitudes nuevas pendientes — al día.</p>
+      } @else {
+        <ul class="dashboard__list">
+          @for (lead of a.newLeads; track lead.id) {
+            <li [class.dashboard__list-item--stale]="isStale(lead.createdAt)">
+              <a [routerLink]="['/solicitudes', lead.id]">{{ lead.name }}</a>
+              <span class="dashboard__list-meta">
+                {{ lead.destinationInterestText || 'Sin destino especificado' }} · hace {{ ageInDays(lead.createdAt) }} día(s)
+                @if (isStale(lead.createdAt)) {
+                  <strong class="dashboard__attention">· &gt;48h</strong>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <a class="dashboard__see-all" routerLink="/solicitudes">Ver mis solicitudes →</a>
+    </section>
+
+    <section class="dashboard__card">
+      <h2 class="section-title">Mis propuestas recientes</h2>
+
+      @if (a.recentProposals.length === 0) {
+        <p class="dashboard__empty">Todavía no has creado propuestas.</p>
+      } @else {
+        <ul class="dashboard__list">
+          @for (item of a.recentProposals; track item.id) {
+            <li>
+              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
+              <span class="dashboard__list-meta">{{ statusLabel(item.status) }} · {{ relativeTime(item.updatedAt) }}</span>
+            </li>
+          }
+        </ul>
+      }
+
+      <a class="dashboard__see-all" routerLink="/proposals">Ver mis propuestas →</a>
+    </section>
+  </div>
 } @else if (data(); as d) {
   <div class="dashboard__stats">
     <div class="dashboard__stat">

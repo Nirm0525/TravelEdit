@@ -27,15 +27,19 @@
     </div>
 
     <div class="lead-detail__actions">
+    @if (canAssign()) {
       <label class="lead-detail__assign">
-        <span class="visually-hidden">Asignar a</span>
-        <select [value]="l.assignedTo ?? ''" [disabled]="assigning()" (change)="onAssignChange($event)">
-          <option value="">Sin asignar</option>
-          @for (person of staffOptions(); track person.id) {
-            <option [value]="person.id">{{ isAssignedToMe() && person.id === l.assignedTo ? person.name + ' (yo)' : person.name }}</option>
-          }
-        </select>
-      </label>
+          <span class="visually-hidden">Asignar a</span>
+          <select [value]="l.assignedTo ?? ''" [disabled]="assigning()" (change)="onAssignChange($event)">
+            <option value="">Sin asignar</option>
+            @for (person of staffOptions(); track person.id) {
+              <option [value]="person.id">{{ isAssignedToMe() && person.id === l.assignedTo ? person.name + ' (yo)' : person.name }}</option>
+            }
+          </select>
+        </label>
+    } @else {
+      <span class="lead-detail__assign-readonly">Asesora: {{ assignedToName() ?? 'Sin asignar' }}</span>
+    }
       <div class="lead-detail__proposal-action">
         <button
           type="button"

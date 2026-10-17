@@ -8,3 +8,10 @@
 # bloquea al público al que está destinada.
 [functions.submit-lead]
 verify_jwt = false
+
+# notify-proposal-activity la llama el cliente desde la propuesta privada, sin
+# sesión de Supabase Auth. La protección es propia: exige una sesión válida de
+# proposal_access_sessions (emitida por verify_proposal_access) para el mismo
+# token de la URL, y los destinatarios se resuelven siempre server-side.
+[functions.notify-proposal-activity]
+verify_jwt = false

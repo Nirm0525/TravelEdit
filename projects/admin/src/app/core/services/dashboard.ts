@@ -35,6 +35,32 @@ export interface DashboardData {
   recentActivity: AuditLogItem[];
 }
 
+export interface AdvisorProposalRow {
+  id: string;
+  clientName: string;
+  title: string | null;
+  status: string;
+  updatedAt: string;
+  feedbackSentAt: string | null;
+  commentCount: number;
+}
+
+/** Dashboard de la asesora: solo lo suyo (las policies RLS ya filtran por
+ *  asesora asignada, aqui no se vuelve a filtrar por id). */
+export interface AdvisorDashboardData {
+  newLeads: DashboardNewLead[];
+  counts: {
+    newLeads: number;
+    monthLeads: number;
+    drafts: number;
+    awaitingClient: number;
+    feedback: number;
+    accepted: number;
+  };
+  feedbackProposals: AdvisorProposalRow[];
+  recentProposals: AdvisorProposalRow[];
+}
+
 const LIST_LIMIT = 10;
 const TOP_DESTINATIONS_LIMIT = 5;
 
@@ -55,6 +81,48 @@ export class DashboardService {
     ]);
 
     return { newLeads, stalledDrafts, monthly, counts, recentActivity };
+  }
+
+  async loadAdvisor(): Promise<AdvisorDashboardData> {
+    const [newLeads, monthly, proposalsResult] = await Promise.all([
+      this.fetchNewLeads(),
+      this.fetchMonthlySummary(),
+      this.supabase.client
+        .from('proposals')
+        .select('id, client_name, title, status, updated_at, feedback_sent_at, service_comments')
+        .order('updated_at', { ascending: false })
+        .limit(200)
+    ]);
+
+    if (proposalsResult.error) {
+      throw proposalsResult.error;
+    }
+
+    const proposals: AdvisorProposalRow[] = (proposalsResult.data ?? []).map((row) => ({
+      id: row.id,
+      clientName: row.client_name,
+      title: row.title,
+      status: row.status,
+      updatedAt: row.updated_at,
+      feedbackSentAt: row.feedback_sent_at ?? null,
+      commentCount: Object.values(row.service_comments ?? {}).filter((text) => typeof text === 'string' && text.trim()).length
+    }));
+
+    const feedbackProposals = proposals.filter((p) => p.feedbackSentAt && p.status !== 'accepted');
+
+    return {
+      newLeads,
+      counts: {
+        newLeads: newLeads.length,
+        monthLeads: monthly.totalLeads,
+        drafts: proposals.filter((p) => p.status === 'draft').length,
+        awaitingClient: proposals.filter((p) => p.status === 'published' || p.status === 'viewed').length,
+        feedback: feedbackProposals.length,
+        accepted: proposals.filter((p) => p.status === 'accepted').length
+      },
+      feedbackProposals: feedbackProposals.slice(0, LIST_LIMIT),
+      recentProposals: proposals.slice(0, LIST_LIMIT)
+    };
   }
 
   private async fetchCounts(): Promise<DashboardCounts> {

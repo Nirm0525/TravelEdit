@@ -31,6 +31,8 @@ export class ClientTripStep implements OnInit {
   readonly proposalId = input.required<string>();
   readonly activeSection = input<ClientTripSection>('client-trip');
   readonly saved = output<void>();
+  /** El codigo en texto plano solo existe en esta sesion: se avisa al padre para precargarlo en el mensaje de WhatsApp. */
+  readonly codeGenerated = output<string>();
   /** Emite la target key de ai-polish-step (ver buildTargetOptions ahí) que
    *  el shell debe preseleccionar al activar The Edit Assistant desde un
    *  botón ✨ contextual — nunca llama a OpenAI directo, solo cambia de tab. */
@@ -446,6 +448,7 @@ export class ClientTripStep implements OnInit {
     try {
       const code = await this.proposalsService.generateAccessCode(this.proposalId());
       this.generatedCode.set(code);
+      this.codeGenerated.emit(code);
       this.hasAccessCode.set(true);
     } catch (error) {
       console.error('No se pudo generar el código de acceso.', error);

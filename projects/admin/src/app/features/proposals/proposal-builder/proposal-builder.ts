@@ -2,6 +2,8 @@ import { Component, ElementRef, HostListener, computed, inject, signal, viewChil
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProposalsService } from '../../../core/services/proposals';
+import { LeadsService } from '../../../core/services/leads';
+import { AuthService } from '../../../core/services/auth';
 import { Proposal } from '../../../core/models/proposal.model';
 import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
 import { environment } from '../../../../environments/environment';
@@ -12,6 +14,7 @@ import { TravelTipsStep } from './travel-tips-step/travel-tips-step';
 import { AiPolishStep } from './ai-polish-step/ai-polish-step';
 import { PreviewStep } from './preview-step/preview-step';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
+import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
 
 /** 'preview' no es una pestaña visible — la vista previa en vivo es la
  *  columna persistente de la derecha, siempre montada sin importar qué
@@ -47,7 +50,7 @@ const TABS: TabDef[] = [
 
 @Component({
   selector: 'app-proposal-builder',
-  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, ConfirmDialog],
+  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, ConfirmDialog, AdminModal],
   templateUrl: './proposal-builder.html',
   styleUrl: './proposal-builder.css'
 })
@@ -55,6 +58,8 @@ export class ProposalBuilder {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly proposalsService = inject(ProposalsService);
+  private readonly leadsService = inject(LeadsService);
+  private readonly auth = inject(AuthService);
   private readonly menuRef = viewChild<ElementRef<HTMLElement>>('menu');
 
   readonly tabs = TABS;
@@ -67,6 +72,95 @@ export class ProposalBuilder {
   readonly publishing = signal(false);
   readonly publishError = signal<string | null>(null);
   readonly linkCopied = signal(false);
+
+  // --- Envio por WhatsApp: el enlace y el codigo salen del navegador de la
+  // asesora directo a wa.me; el codigo NUNCA pasa por nuestro servidor (solo se
+  // guarda su hash, asi que hay que pegarlo o haberlo generado en esta sesion).
+  readonly whatsappOpen = signal(false);
+  readonly whatsappPhone = signal('');
+  readonly whatsappCode = signal('');
+  readonly whatsappCopied = signal(false);
+  private lastGeneratedCode = '';
+
+  onCodeGenerated(code: string): void {
+    this.lastGeneratedCode = code;
+  }
+
+  readonly whatsappNeedsCode = computed(() => this.proposal()?.accessRequired === true);
+
+  readonly whatsappMessage = computed(() => {
+    const p = this.proposal();
+    const link = this.privateLink();
+    if (!p || !link) {
+      return '';
+    }
+    const firstName = (p.clientName ?? '').trim().split(' ')[0];
+    const advisor = this.auth.profile()?.fullName ?? 'tu asesora';
+    const code = this.whatsappCode().trim();
+    const lines = [
+      `Hola${firstName ? ' ' + firstName : ''}, soy ${advisor} de The Travel Edit. Tu propuesta de viaje está lista ✨`,
+      '',
+      `Ábrela aquí: ${link}`
+    ];
+    if (this.whatsappNeedsCode()) {
+      lines.push('', `Tu código de acceso: ${code || '(escríbelo aquí)'}`);
+    }
+    lines.push('', 'Si quieres ajustar algo, respóndeme por este medio.');
+    return lines.join('\n');
+  });
+
+  readonly whatsappUrl = computed(() => {
+    const digits = this.whatsappPhone().replace(/\D/g, '');
+    return `https://wa.me/${digits}?text=${encodeURIComponent(this.whatsappMessage())}`;
+  });
+
+  readonly whatsappReady = computed(() => !this.whatsappNeedsCode() || this.whatsappCode().trim().length > 0);
+
+  async openWhatsapp(): Promise<void> {
+    this.menuOpen.set(false);
+    this.whatsappCode.set(this.lastGeneratedCode);
+    this.whatsappCopied.set(false);
+    this.whatsappOpen.set(true);
+    const leadId = this.proposal()?.leadId;
+    if (leadId && !this.whatsappPhone()) {
+      try {
+        const lead = await this.leadsService.getById(leadId);
+        this.whatsappPhone.set(lead?.phone ?? '');
+      } catch (error) {
+        console.error('No se pudo cargar el teléfono de la solicitud.', error);
+      }
+    }
+  }
+
+  closeWhatsapp(): void {
+    this.whatsappOpen.set(false);
+  }
+
+  onWhatsappPhoneInput(event: Event): void {
+    this.whatsappPhone.set((event.target as HTMLInputElement).value);
+  }
+
+  onWhatsappCodeInput(event: Event): void {
+    this.whatsappCode.set((event.target as HTMLInputElement).value);
+  }
+
+  async copyWhatsappMessage(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.whatsappMessage());
+      this.whatsappCopied.set(true);
+      setTimeout(() => this.whatsappCopied.set(false), 2000);
+    } catch (error) {
+      console.error('No se pudo copiar el mensaje.', error);
+    }
+  }
+
+  sendWhatsapp(): void {
+    if (!this.whatsappReady()) {
+      return;
+    }
+    window.open(this.whatsappUrl(), '_blank', 'noopener');
+    this.whatsappOpen.set(false);
+  }
 
   readonly sendingToClient = signal(false);
   readonly sendError = signal<string | null>(null);

@@ -1,8 +1,8 @@
 // Dependencias reales de import-proposal-pdf (supabase-js, Postgres de solo
-// lectura y la API de Anthropic). La lógica vive en handler.ts.
+// lectura y la API de OpenAI). La lógica vive en handler.ts.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import postgres from 'npm:postgres@3';
-import { extractTrip } from './anthropic.ts';
+import { extractTrip } from './openai.ts';
 import { claimedRowOrNull } from './claim.ts';
 import type { RealDeps } from './db-lifecycle.ts';
 import type { Deps, ImportRow } from './handler.ts';
@@ -121,8 +121,8 @@ export function createRealDeps(): RealDeps {
       return (data as ProposalSnapshot | null) ?? null;
     },
 
-    extract: ({ pdfBase64, model, apiKey, deadlineAt }) =>
-      extractTrip({ apiKey, model, deadlineAt, log: (m, meta) => console.log(JSON.stringify({ msg: m, ...meta })) }, pdfBase64),
+    extract: ({ pdfBase64, apiKey, deadlineAt, ...provider }) =>
+      extractTrip({ apiKey, deadlineAt, ...provider, log: (m, meta) => console.log(JSON.stringify({ msg: m, ...meta })) }, pdfBase64),
 
     // Solo escribe quien sigue siendo dueño del bloqueo (mismo processing_started_at, comparado con la
     // precisión completa de la base): un proceso viejo que termina tarde no pisa el resultado de quien

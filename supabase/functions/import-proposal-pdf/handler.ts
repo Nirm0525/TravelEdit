@@ -6,7 +6,7 @@ import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
-import { DEADLINE_MESSAGE } from './anthropic.ts';
+import { DEADLINE_MESSAGE, readProviderSettings, type ProviderSettings } from './openai.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
 
 export const MAX_CONCURRENT_PER_USER = 3;
@@ -14,7 +14,6 @@ export const MAX_PER_DAY_PER_USER = 30;
 
 /** Plazo total por defecto de un proceso (cabe en el plan gratuito de Supabase). */
 export const DEFAULT_PROCESS_DEADLINE_MS = 140_000;
-const DEFAULT_MODEL = 'claude-sonnet-5-5';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface ImportRow {
@@ -50,7 +49,7 @@ export interface Deps {
   download(path: string): Promise<Uint8Array | null>;
   getProposalSnapshot(proposalId: string): Promise<ProposalSnapshot | null>;
   /** deadlineAt: instante (ms epoch) en que el proceso debe haber terminado. */
-  extract(args: { pdfBase64: string; model: string; apiKey: string; deadlineAt: number }): Promise<Extraction>;
+  extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number } & ProviderSettings): Promise<Extraction>;
   /** Solo escribe si la fila sigue en 'processing' con el mismo processing_started_at (dueño del bloqueo). */
   finishReady(row: ImportRow, patch: { extracted: StoredExtraction; diff: ProposalDiff | null }): Promise<void>;
   finishFailed(row: ImportRow, message: string): Promise<void>;
@@ -158,11 +157,12 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     }
   };
   try {
-    const apiKey = deps.env('ANTHROPIC_API_KEY');
+    const apiKey = deps.env('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new UserError('El asistente no está configurado todavía. Avisa al administrador.', 'falta ANTHROPIC_API_KEY');
+      throw new UserError('El asistente no está configurado todavía. Avisa al administrador.', 'falta OPENAI_API_KEY');
     }
-    const model = deps.env('ANTHROPIC_MODEL') || DEFAULT_MODEL;
+    const provider = readProviderSettings(deps.env);
+    const model = provider.model;
     const maxPages = Number(deps.env('PDF_MAX_PAGES')) || DEFAULT_MAX_PAGES;
 
     // 5) El objeto existe y es de quien creó la importación.
@@ -183,7 +183,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     checkDeadline();
 
     // 7) Extracción con el modelo.
-    const raw = await deps.extract({ pdfBase64: toBase64(bytes), model, apiKey, deadlineAt });
+    const raw = await deps.extract({ pdfBase64: toBase64(bytes), apiKey, deadlineAt, ...provider });
     // Limpieza de datos sensibles, unión de días repetidos y red de seguridad de precios.
     const { extraction, warnings: postWarnings } = postProcessExtraction(raw);
     if (!hasUsefulContent(extraction)) {

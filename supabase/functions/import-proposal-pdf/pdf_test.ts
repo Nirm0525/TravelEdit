@@ -28,7 +28,7 @@ Deno.test('pdf: más de 20 MB se rechaza con un mensaje claro', () => {
   assertThrows(() => validatePdf(big), UserError, '20 MB');
 });
 
-Deno.test('pdf: más páginas que el límite de Anthropic se rechaza antes de llamar a la API', () => {
+Deno.test('pdf: más páginas que el tope configurado se rechaza antes de llamar a la API', () => {
   assertThrows(() => validatePdf(fakePdf(101)), UserError, '101 páginas');
   assertEquals(validatePdf(fakePdf(100)).pages, 100);
   assertEquals(validatePdf(fakePdf(150), 600).pages, 150);

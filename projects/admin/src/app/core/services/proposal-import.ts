@@ -25,7 +25,7 @@ const BUCKET = 'proposal-imports';
 /**
  * Importación de una propuesta desde un PDF (modo "nueva"): sube el archivo, registra la importación,
  * pide a The Edit Assistant que lo lea (import-proposal-pdf) y, con la vista previa aprobada, crea la
- * propuesta en borrador (apply-proposal-import). La clave de Anthropic nunca pasa por aquí: vive solo
+ * propuesta en borrador (apply-proposal-import). La clave de OpenAI nunca pasa por aquí: vive solo
  * como secret de la Edge Function.
  */
 @Injectable({ providedIn: 'root' })

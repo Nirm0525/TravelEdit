@@ -7,7 +7,7 @@ import {
   type Deps,
   type ImportRow
 } from './handler.ts';
-import { DEADLINE_MESSAGE } from './anthropic.ts';
+import { DEADLINE_MESSAGE } from './openai.ts';
 import { UserError } from './pdf.ts';
 import { extraction, matchingExtraction, proposalSnapshot } from '../_shared/test-fixtures.ts';
 import type { Extraction, StoredExtraction } from '../_shared/proposal-extraction.ts';
@@ -41,7 +41,7 @@ interface Harness {
   failed: { id: string; startedAt: string | null | undefined; message: string }[];
   logs: string[];
   extractCalls: number;
-  extractArgs: { deadlineAt: number }[];
+  extractArgs: { deadlineAt: number; model: string; detail: string; reasoningEffort: string | undefined; maxOutputTokens: number }[];
   countProcessingCalls: string[];
   lockCalls: string[];
 }
@@ -60,7 +60,7 @@ function harness(over: Partial<Deps> = {}, importRow: ImportRow | null = row()):
     deps: undefined as unknown as Deps
   };
   h.deps = {
-    env: (name) => ({ ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'claude-sonnet-5-5' } as Record<string, string>)[name],
+    env: (name) => ({ OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'gpt-6.1-sol' } as Record<string, string>)[name],
     getUser: (token) => Promise.resolve(token === 'good' ? { id: USER } : null),
     getImportAsUser: () => Promise.resolve(importRow),
     canEditProposal: () => Promise.resolve(true),
@@ -87,7 +87,7 @@ function harness(over: Partial<Deps> = {}, importRow: ImportRow | null = row()):
     getProposalSnapshot: () => Promise.resolve(proposalSnapshot()),
     extract: (args): Promise<Extraction> => {
       h.extractCalls++;
-      h.extractArgs.push({ deadlineAt: args.deadlineAt });
+      h.extractArgs.push({ deadlineAt: args.deadlineAt, model: args.model, detail: args.detail, reasoningEffort: args.reasoningEffort, maxOutputTokens: args.maxOutputTokens });
       return Promise.resolve(matchingExtraction());
     },
     finishReady: (r, patch) => {
@@ -197,7 +197,7 @@ Deno.test('202 + modo new: guarda extracted con warnings, sin diff', async () =>
   assertEquals(h.failed.length, 0);
   assertEquals(h.ready[0].diff, null);
   assertEquals(h.ready[0].extracted.warnings, []);
-  assertEquals(h.ready[0].extracted.meta.model, 'claude-sonnet-5-5');
+  assertEquals(h.ready[0].extracted.meta.model, 'gpt-6.1-sol');
 });
 
 Deno.test('modo merge: calcula el diff con código y guarda base_updated_at', async () => {
@@ -245,7 +245,7 @@ Deno.test('falta la API key → failed con mensaje para la asesora; el detalle t
   const h = harness({ env: () => undefined });
   await call(h);
   assertStringIncludes(h.failed[0].message, 'Avisa al administrador');
-  assert(h.logs.some((l) => l.includes('falta ANTHROPIC_API_KEY')));
+  assert(h.logs.some((l) => l.includes('falta OPENAI_API_KEY')));
 });
 
 Deno.test('errores inesperados: mensaje genérico, sin detalles técnicos; el log no lleva datos del cliente', async () => {
@@ -304,7 +304,7 @@ Deno.test('processing reciente (menos de 10 min) sigue dando 409', async () => {
 
 // ---------------------------------------------------------------- plazo total
 
-Deno.test('plazo: por defecto 140 s, y se le pasa al cliente de Anthropic como instante límite', async () => {
+Deno.test('plazo: por defecto 140 s, y se le pasa al cliente de OpenAI como instante límite', async () => {
   assertEquals(DEFAULT_PROCESS_DEADLINE_MS, 140_000);
   const h = harness();
   await call(h);
@@ -312,14 +312,14 @@ Deno.test('plazo: por defecto 140 s, y se le pasa al cliente de Anthropic como i
 });
 
 Deno.test('plazo: PROCESS_DEADLINE_MS configurable', async () => {
-  const h = harness({ env: (n) => ({ ANTHROPIC_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '60000' } as Record<string, string>)[n] });
+  const h = harness({ env: (n) => ({ OPENAI_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '60000' } as Record<string, string>)[n] });
   await call(h);
   assertEquals(h.extractArgs[0].deadlineAt, NOW.getTime() + 60_000);
 });
 
 Deno.test('plazo alcanzado antes de llamar al modelo → failed con el mensaje de plazo, sin extraer', async () => {
   const h = harness({
-    env: (n) => ({ ANTHROPIC_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '1' } as Record<string, string>)[n],
+    env: (n) => ({ OPENAI_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '1' } as Record<string, string>)[n],
     now: (() => {
       let calls = 0;
       // La primera lectura es el inicio del proceso; las siguientes ya están pasadas del plazo.
@@ -342,3 +342,29 @@ async function processOnly(h: Harness): Promise<void> {
   const { processImport } = await import('./handler.ts');
   await processImport(h.deps, row({ status: 'processing', processing_started_at: NOW.toISOString() }));
 }
+
+Deno.test('proveedor: la configuración llega a la extracción — valores por defecto', async () => {
+  const h = harness();
+  await call(h);
+  assertEquals(h.extractArgs[0].model, 'gpt-6.1-sol');
+  assertEquals(h.extractArgs[0].detail, 'high');
+  assertEquals(h.extractArgs[0].reasoningEffort, undefined);
+  assertEquals(h.extractArgs[0].maxOutputTokens, 40_000);
+});
+
+Deno.test('proveedor: la configuración llega a la extracción — secrets personalizados', async () => {
+  const env: Record<string, string> = {
+    OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'gpt-6-astra', OPENAI_PDF_DETAIL: 'low', OPENAI_REASONING_EFFORT: 'minimal', OPENAI_MAX_OUTPUT_TOKENS: '64000'
+  };
+  const h = harness({ env: (n) => env[n] });
+  await call(h);
+  assertEquals(h.extractArgs[0], { deadlineAt: h.extractArgs[0].deadlineAt, model: 'gpt-6-astra', detail: 'low', reasoningEffort: 'minimal', maxOutputTokens: 64_000 });
+  assertEquals(h.ready[0].extracted.meta.model, 'gpt-6-astra');
+});
+
+Deno.test('proveedor: sin OPENAI_API_KEY falla con el mensaje para la asesora (aunque exista otra clave)', async () => {
+  const h = harness({ env: (n) => (n === 'ANTHROPIC_API_KEY' ? 'sk-ant' : undefined) });
+  await call(h);
+  assertStringIncludes(h.failed[0].message, 'Avisa al administrador');
+  assert(h.logs.some((l) => l.includes('falta OPENAI_API_KEY')));
+});

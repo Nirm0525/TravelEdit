@@ -1,8 +1,9 @@
-// Validación del PDF antes de gastar una llamada a la API. Límites según la
-// documentación de Anthropic (PDF support): 32 MB por solicitud y 100 páginas
-// por solicitud (600 solo con ventana de 1M), sin PDF cifrados.
+// Validación del PDF antes de gastar una llamada a la API. Límites de OpenAI (archivos PDF): cada
+// archivo menos de 50 MB y 50 MB en total por solicitud; la documentación no da un límite de páginas, así
+// que el tope de páginas (PDF_MAX_PAGES, 100 por defecto) es nuestra propia guarda de costo y tiempo.
+// No se admiten PDF cifrados.
 export const MAX_PDF_BYTES = 20 * 1024 * 1024;
-export const MAX_REQUEST_BYTES = 31 * 1024 * 1024; // el límite es 32 MB; se deja margen para el texto
+export const MAX_REQUEST_BYTES = 49 * 1024 * 1024; // el límite es 50 MB; se deja margen para el texto
 export const DEFAULT_MAX_PAGES = 100;
 
 /** Error con un mensaje apto para la asesora (español, sin detalles técnicos). */

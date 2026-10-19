@@ -2,6 +2,7 @@
 // probarla con dependencias falsas. Los permisos de lectura los decide la base (RLS) con el cliente
 // del usuario; la escritura (propuesta + importación) va en una sola transacción (tx.ts).
 import { corsHeadersFor } from '../_shared/cors.ts';
+import { buildRetentionSummary, type RetentionSummary } from '../_shared/import-summary.ts';
 import { ExtractionSchema } from '../_shared/proposal-extraction.ts';
 import { mapExtractionToProposal, type MappedProposal } from '../_shared/proposal-mapping.ts';
 import { ORIGIN_CHANNELS, type OriginChannel } from './tx.ts';
@@ -32,6 +33,7 @@ export interface Deps {
     originChannel: OriginChannel;
     leadId: string | null;
     mapped: MappedProposal;
+    retained: RetentionSummary;
   }): Promise<string | 'conflict'>;
   /** Borra el PDF del bucket (API de Storage). */
   deleteFile(path: string): Promise<void>;
@@ -106,6 +108,8 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       return json({ error: 'Los datos extraídos no son válidos. Vuelve a procesar el PDF.' }, 422);
     }
     const mapped = mapExtractionToProposal(parsed.data);
+    // Al aplicar, `extracted` se reemplaza por un resumen sin datos personales (la propuesta ya lleva los datos).
+    const retained = buildRetentionSummary(parsed.data, row.extracted);
 
     // 4) Una sola transacción.
     const result = await deps.applyImport({
@@ -113,7 +117,8 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       userId: user.id,
       originChannel,
       leadId: leadId as string | null,
-      mapped
+      mapped,
+      retained
     });
     if (result === 'conflict') {
       return json({ error: 'Esta importación ya se aplicó en otra pestaña.' }, 409);

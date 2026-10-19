@@ -1,6 +1,7 @@
 // Transacción que aplica una importación (modo "new"): marca la importación como aplicada, crea la
 // propuesta en borrador y enlaza ambas — todo o nada. Parámetros siempre de la plantilla; nunca
 // sql.unsafe ni texto del PDF concatenado en el SQL.
+import type { RetentionSummary } from '../_shared/import-summary.ts';
 import type { MappedProposal } from '../_shared/proposal-mapping.ts';
 
 /** Forma mínima de postgres.js que usa este módulo (permite probarlo con otro cliente). */
@@ -19,6 +20,8 @@ export interface ApplyArgs {
   originChannel: OriginChannel;
   leadId: string | null;
   mapped: MappedProposal;
+  /** Resumen sin datos personales que reemplaza a `extracted` al aplicar (y `diff` pasa a null). */
+  retained: RetentionSummary;
 }
 
 class ConflictError extends Error {}
@@ -29,7 +32,7 @@ class ConflictError extends Error {}
  * la importación sigue en 'ready'.
  */
 export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<string | 'conflict'> {
-  const { importId, userId, originChannel, leadId, mapped } = args;
+  const { importId, userId, originChannel, leadId, mapped, retained } = args;
   try {
     return await sql.begin(async (tx) => {
       // Que auth.uid() sea la asesora dentro de la transacción: así la auditoría y los triggers
@@ -39,7 +42,8 @@ export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<stri
 
       const applied = await tx`
         update public.proposal_imports
-           set status = 'applied', applied_at = now()
+           set status = 'applied', applied_at = now(),
+               extracted = ${JSON.stringify(retained)}::jsonb, diff = null
          where id = ${importId}::uuid and mode = 'new' and status = 'ready'
         returning id`;
       if (applied.length === 0) {

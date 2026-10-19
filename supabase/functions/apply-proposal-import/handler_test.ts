@@ -17,20 +17,25 @@ const readyRow = (over: Partial<ImportRow> = {}): ImportRow => ({
   status: 'ready',
   file_path: PATH,
   created_by: USER,
-  extracted: postProcessExtraction(rawVoucherExtraction()).extraction,
+  extracted: {
+    ...postProcessExtraction(rawVoucherExtraction()).extraction,
+    warnings: [{ code: 'days_merged', message: 'Se unieron 1 día repetido.' }],
+    meta: { model: 'gpt-6.1-sol', extracted_at: '2027-01-01T00:00:00Z', usage: { calls: 1, inputTokens: 1200, outputTokens: 800, reasoningTokens: 100, costUsd: 0.0104, totalMs: 4200 } }
+  },
   ...over
 });
 
 interface Harness {
   deps: Deps;
   applied: { importId: string; userId: string; originChannel: OriginChannel; leadId: string | null; clientName: string; days: number }[];
+  retained: unknown[];
   deleted: string[];
   order: string[];
   logs: string[];
 }
 
 function harness(over: Partial<Deps> = {}, row: ImportRow | null = readyRow()): Harness {
-  const h: Harness = { deps: undefined as unknown as Deps, applied: [], deleted: [], order: [], logs: [] };
+  const h: Harness = { deps: undefined as unknown as Deps, applied: [], retained: [], deleted: [], order: [], logs: [] };
   h.deps = {
     env: () => undefined,
     getUser: (token) => Promise.resolve(token === 'good' ? { id: USER } : null),
@@ -39,6 +44,7 @@ function harness(over: Partial<Deps> = {}, row: ImportRow | null = readyRow()): 
     canSeeLead: () => Promise.resolve(true),
     applyImport: (args) => {
       h.order.push('apply');
+      h.retained.push(args.retained);
       h.applied.push({
         importId: args.importId,
         userId: args.userId,
@@ -213,4 +219,19 @@ Deno.test('CORS: solo los dominios de ALLOWED_ORIGINS; nunca *', async () => {
 Deno.test('GET no está permitido', async () => {
   const h = harness();
   assertEquals((await handleRequest(new Request('https://x.test/', { method: 'GET' }), h.deps)).status, 405);
+});
+
+Deno.test('al aplicar se pasa a la transacción un resumen SIN datos personales que conserva meta.usage', async () => {
+  const h = harness();
+  assertEquals((await handleRequest(req(), h.deps)).status, 200);
+  const retained = h.retained[0] as { redacted: boolean; summary: Record<string, unknown>; meta: { usage: Record<string, unknown> } };
+  assertEquals(retained.redacted, true);
+  assertEquals(retained.summary.days, 4);
+  assertEquals(retained.summary.services_by_type, { flight: 2, other: 1, hotel: 1, transfer: 1, activity: 1 });
+  assertEquals([retained.summary.had_pricing, retained.summary.price_lines, retained.summary.warning_codes], [true, 1, ['days_merged']]);
+  assertEquals(retained.meta.usage, { calls: 1, inputTokens: 1200, outputTokens: 800, reasoningTokens: 100, costUsd: 0.0104, totalMs: 4200 });
+  const text = JSON.stringify(retained);
+  for (const secret of ['Persona Ejemplo', 'persona@ejemplo.test', 'Hotel Faro', 'Isla Central', 'Paquete']) {
+    assert(!text.includes(secret), 'no debe aparecer ' + secret);
+  }
 });

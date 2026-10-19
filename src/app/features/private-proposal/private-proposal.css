@@ -486,10 +486,10 @@
   left: 0;
   bottom: 0;
   z-index: 30;
-  width: 17rem;
+  width: 22rem;
   display: flex;
   flex-direction: column;
-  padding: var(--space-xl) var(--space-md) var(--space-md);
+  padding: var(--space-xl) var(--space-lg) var(--space-md);
   background: var(--color-wine);
   color: var(--color-cream);
 }
@@ -545,7 +545,7 @@
   width: 100%;
   padding: 0.65rem 0 0.65rem var(--space-sm);
   text-align: left;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -583,7 +583,7 @@
 /* El wordmark es oscuro (pensado para fondo claro) — se invierte a blanco
    sobre el fondo vino. */
 .proposal__sidebar-logo {
-  width: 8rem;
+  width: 10rem;
   filter: brightness(0) invert(1);
 }
 
@@ -651,12 +651,12 @@
      borde izquierdo es el del sidebar, así que ancho y desplazamiento se
      calculan sobre lo que queda. */
   .proposal.has-sidebar {
-    margin-left: 17rem;
+    margin-left: 22rem;
   }
 
   .proposal.has-sidebar .proposal__band {
-    width: calc(100vw - 17rem);
-    margin-left: calc(-50vw + 8.5rem);
+    width: calc(100vw - 22rem);
+    margin-left: calc(-50vw + 11rem);
   }
 }
 
@@ -788,8 +788,8 @@
 
 @media (min-width: 64.01rem) {
   .proposal.has-sidebar .proposal__bleed {
-    width: calc(100vw - 17rem);
-    margin-left: calc(-50vw + 8.5rem);
+    width: calc(100vw - 22rem);
+    margin-left: calc(-50vw + 11rem);
   }
 }
 
@@ -2020,4 +2020,205 @@
   margin: 0;
   font-weight: 700;
   color: var(--color-burgundy);
+}
+
+/* Logo único de la propuesta (thetraveleditlogo1.png, texto vino sobre
+   transparente). Sobre fondos rojos/oscuros se reversa a blanco. */
+.private-proposal__gate-logo,
+.private-proposal__wordmark-img--topbar,
+.proposal__sidebar-logo {
+  filter: brightness(0) invert(1);
+}
+
+.private-proposal__center--loading .private-proposal__wordmark-img {
+  filter: brightness(0) invert(1);
+}
+
+/* --- Mobile-first: ajustes para que la propuesta se vea igual de ordenada en
+   cualquier teléfono (pantallas de 320px a 430px, barras del navegador que
+   cambian el alto, notch). Los tokens de espaciado globales son de escritorio
+   (hasta 10rem), así que acá se reducen solo dentro de la propuesta. --- */
+
+.private-proposal {
+  overflow-x: clip;
+}
+
+.private-proposal img,
+.private-proposal svg {
+  max-width: 100%;
+}
+
+.proposal {
+  overflow-wrap: break-word;
+}
+
+/* Alto real de la ventana en móvil (100vh ignora la barra de direcciones). */
+@supports (height: 100svh) {
+  .private-proposal,
+  .private-proposal__center,
+  .private-proposal__gate {
+    min-height: 100svh;
+  }
+
+  .proposal__hero {
+    min-height: 92svh;
+  }
+}
+
+@media (max-width: 64rem) {
+  .proposal__menu-button {
+    top: max(var(--space-sm), env(safe-area-inset-top));
+    left: max(var(--space-sm), env(safe-area-inset-left));
+    min-height: 2.75rem;
+  }
+
+  .proposal__sidebar {
+    padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  }
+
+  .proposal__sidebar-list button {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .private-proposal,
+  .proposal {
+    --space-md: 1.25rem;
+    --space-lg: 2rem;
+    --space-xl: 3.5rem;
+    --space-2xl: 4.5rem;
+  }
+
+  @supports (height: 100svh) {
+    .proposal__hero {
+      min-height: 100svh;
+    }
+  }
+
+  .proposal__topbar {
+    padding-top: max(var(--space-sm), env(safe-area-inset-top));
+    padding-left: var(--space-md);
+    /* El botón "Menú" es fixed arriba a la izquierda: se deja su sitio. */
+    padding-left: max(var(--space-md), 6.5rem);
+  }
+
+  .proposal__topbar-tag {
+    text-align: right;
+  }
+
+  .proposal__hero-content {
+    padding-bottom: max(var(--space-xl), env(safe-area-inset-bottom));
+  }
+
+  .proposal__hero-title {
+    overflow-wrap: anywhere;
+  }
+
+  .proposal__section {
+    scroll-margin-top: 4rem;
+  }
+
+  .proposal__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+  }
+
+  .proposal__service-facts > div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  /* Tarjeta de precio y desglose: una sola columna, sin anchos mínimos. */
+  .proposal__pricing-overview,
+  .proposal__pricing-overview.has-mix {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .proposal__pricing-mix-row {
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  }
+
+  .proposal__pricing-mix-bar {
+    grid-column: 1 / -1;
+  }
+
+  .proposal__pricing-total {
+    flex-wrap: wrap;
+  }
+
+  /* Tabla del itinerario: fecha arriba, detalle abajo — sin scroll lateral. */
+  .proposal__itinerary-table,
+  .proposal__itinerary-table tbody,
+  .proposal__itinerary-row {
+    display: block;
+    width: 100%;
+  }
+
+  .proposal__itinerary-row th,
+  .proposal__itinerary-row td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-right: 0;
+  }
+
+  .proposal__itinerary-row--segment th,
+  .proposal__itinerary-row--segment td {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+
+  /* Botones y campos: objetivo táctil de 44px y 16px para que iOS no haga zoom. */
+  .private-proposal button,
+  .private-proposal__field input,
+  .proposal__accept-form input {
+    min-height: 2.75rem;
+  }
+
+  .private-proposal__field input,
+  .proposal__accept-form input,
+  .proposal__accept-form textarea {
+    font-size: 1rem;
+  }
+
+  .proposal__terms-link {
+    gap: var(--space-sm);
+  }
+
+  .proposal__terms-link-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .proposal__logo-band-img,
+  .proposal__closing-logo {
+    width: 8.5rem;
+  }
+
+  .private-proposal__gate-panel-inner {
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+
+  .private-proposal__gate-proposal-title {
+    font-size: clamp(2.5rem, 1.5rem + 8vw, 3.5rem);
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Teléfonos pequeños (≤ 360px): iPhone SE, Android compactos. */
+@media (max-width: 23.5rem) {
+  .private-proposal,
+  .proposal {
+    --space-md: 1rem;
+  }
+
+  .proposal__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .proposal__topbar-tag {
+    font-size: 0.65rem;
+  }
 }

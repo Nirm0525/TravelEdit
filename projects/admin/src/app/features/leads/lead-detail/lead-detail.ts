@@ -290,6 +290,7 @@ export class LeadDetail {
     return {
       clientName: lead.name,
       leadId: lead.id,
+      originChannel: 'web',
       destinationText: lead.destinationInterestText ?? undefined,
       travelersCount,
       startDate: this.parseLeadDate(details.departureDate),

@@ -21,6 +21,8 @@ export interface ProposalListParams {
 export interface CreateProposalPayload {
   clientName: string;
   leadId?: string;
+  /** Canal de origen; si falta, la base usa 'other'. */
+  originChannel?: 'web' | 'whatsapp' | 'email' | 'phone' | 'referral' | 'other';
   destinationText?: string;
   /** Solo se pasan cuando vienen de datos reales y estructurados (ej. el
    *  prellenado desde una solicitud) — nunca inventados en el momento de
@@ -130,6 +132,7 @@ export class ProposalsService {
       .insert({
         client_name: payload.clientName,
         lead_id: payload.leadId ?? null,
+        ...(payload.originChannel ? { origin_channel: payload.originChannel } : {}),
         destination_text: payload.destinationText ?? null,
         travelers_count: payload.travelersCount ?? null,
         start_date: payload.startDate ?? null,

@@ -21,7 +21,7 @@ function extraction(over: Partial<StoredExtraction> = {}): StoredExtraction {
       }
     ],
     pricing: { currency: 'USD', total: 2000, other_currencies: [], lines: [{ concept: 'Paquete', detail: null, amount: 2000, quantity: 1, unit_price: 2000, per_person: false, kind: 'service' }] },
-    inclusions: ['Desayunos'], exclusions: [], notes: [], missing: ['Teléfono del cliente'],
+    inclusions: ['Desayunos'], exclusions: [], notes: ['Lleve abrigo.'], missing: ['Teléfono del cliente'],
     warnings: [{ code: 'x', message: 'Un aviso de prueba.' }],
     meta: { model: 'm', extracted_at: '2027-01-01T00:00:00Z' },
     ...over
@@ -133,7 +133,10 @@ describe('ProposalImport (pantalla "Nueva desde PDF")', () => {
     expect(text()).toContain('Paquete');
     expect(text()).toContain('Un aviso de prueba.');
     expect(text()).toContain('Teléfono del cliente');
-    expect(text()).toContain('esto no se copia a la propuesta');
+    // Las notas se copian como consejos de viaje; las inclusiones generales son solo lectura.
+    expect(text()).toContain('Se copian a la propuesta como consejos generales de viaje');
+    expect(text()).toContain('Lleve abrigo.');
+    expect(text()).toContain('no se copian a la propuesta');
 
     button('Crear propuesta en borrador')!.click();
     await settle();

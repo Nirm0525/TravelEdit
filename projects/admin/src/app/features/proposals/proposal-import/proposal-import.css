@@ -295,6 +295,49 @@
   overflow-wrap: anywhere;
 }
 
+/* Descripción y datos del servicio, debajo de su fila: compacto, para comparar con el PDF. */
+.proposal-import__service-detail {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin-bottom: var(--space-xs);
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.proposal-import__service-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__service-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+  margin: 0;
+}
+
+.proposal-import__service-facts div {
+  display: flex;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.proposal-import__service-facts dt {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.proposal-import__service-facts dt::after {
+  content: ':';
+}
+
+.proposal-import__service-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .proposal-import__chip {
   padding: 0.05rem 0.55rem;
   border-radius: 999px;

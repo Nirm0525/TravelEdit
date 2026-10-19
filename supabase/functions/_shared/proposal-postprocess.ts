@@ -5,9 +5,12 @@
 //  3) red de seguridad de precios: se descartan de `pricing` las líneas que son claramente
 //     coberturas de seguro, políticas de equipaje o penalidades (el prompt ya lo prohíbe);
 //  4) sin precios → `pricing` en null y se anota en `missing`.
+// Además: clasificación de servicios (una experiencia con comida no es "comida"; la asistencia al viajero
+// lleva un nombre descriptivo y nunca un precio) y `missing` solo con lo que de verdad falta (un dato
+// personal que se descarta por privacidad no es un dato faltante).
 // Cada intervención deja un warning (sin valores sensibles).
 import type { Extraction, ExtractedDay, ExtractedService, ExtractionWarning } from './proposal-extraction.ts';
-import { scrubSensitive } from './proposal-sanitize.ts';
+import { PRIVACY_NOTICE, scrubSensitive } from './proposal-sanitize.ts';
 import { normalizeName } from './proposal-text.ts';
 
 // ---------------------------------------------------------------- días repetidos
@@ -78,11 +81,54 @@ export function mergeDuplicateDays(days: ExtractedDay[]): { days: ExtractedDay[]
   return { days: groups.map(mergeGroup).sort((a, b) => a.number - b.number), merged };
 }
 
+// ---------------------------------------------------------------- clasificación de servicios
+
+/** Experiencias: aunque incluyan comida o bebida, son una actividad, no una comida suelta. */
+const EXPERIENCE =
+  /\b(?:show|espect[aá]culo|tango|folcl|flamenco|concierto|degustaci[oó]n|cata\b|tours?\b|excursi[oó]n|clase\b|taller|experiencia)/i;
+
+/** Asistencia al viajero / seguro de viaje (no hay un tipo propio en ProposalContent: va como `other`). */
+const TRAVEL_ASSISTANCE = /asistencia\s+(?:al\s+viajero|m[eé]dica|en\s+viaje)|seguro\s+de\s+viaje|travel\s+(?:insurance|assistance)/i;
+export const ASSISTANCE_NAME_PREFIX = 'Asistencia al viajero';
+
+export function isTravelAssistance(s: ExtractedService): boolean {
+  return s.type === 'other' && TRAVEL_ASSISTANCE.test(`${s.name} ${s.description ?? ''}`);
+}
+
+/**
+ * - 'meal' que en realidad es una experiencia (cena show, degustación, tour…) → actividad normal (sin subtype).
+ * - Asistencia al viajero: nombre descriptivo ("Asistencia al viajero · <plan>") y sin `price`: los montos de
+ *   cobertura no son precios del viaje. Devuelve los nombres de los servicios a los que se les quitó el precio.
+ */
+function normalizeServices(days: ExtractedDay[]): { days: ExtractedDay[]; priceDropped: string[] } {
+  const priceDropped: string[] = [];
+  const out = days.map((day) => ({
+    ...day,
+    services: day.services.map((service) => {
+      let next = service;
+      if (next.type === 'activity' && next.subtype === 'meal' && EXPERIENCE.test(`${next.name} ${next.description ?? ''}`)) {
+        next = { ...next, subtype: null };
+      }
+      if (isTravelAssistance(next)) {
+        if (!/asistencia|seguro/i.test(next.name)) {
+          next = { ...next, name: `${ASSISTANCE_NAME_PREFIX} · ${next.name}` };
+        }
+        if (next.price) {
+          priceDropped.push(next.name);
+          next = { ...next, price: null };
+        }
+      }
+      return next;
+    })
+  }));
+  return { days: out, priceDropped };
+}
+
 // ---------------------------------------------------------------- precios
 
 /** Montos que NO son precios del viaje: coberturas de seguro, equipaje, penalidades. */
 const NOT_A_TRIP_PRICE =
-  /cobertura|asistencia\s+m[eé]dica|gastos\s+m[eé]dicos|repatriaci[oó]n|penalidad|penalizaci[oó]n|cargo\s+por\s+(?:cambio|cancelaci[oó]n)|pol[ií]tica\s+de\s+equipaje|equipaje\s+(?:extraviado|demorado|perdido|de\s+bodega|de\s+mano|adicional)/i;
+  /cobertura|asistencia\s+m[eé]dica|gastos\s+m[eé]dicos|repatriaci[oó]n|penalidad|penalizaci[oó]n|cargo\s+por\s+(?:cambio|cancelaci[oó]n)|pol[ií]tica\s+de\s+equipaje|equipaje\s+(?:extraviado|demorado|perdido|de\s+bodega|de\s+mano|adicional)|l[ií]mite\s+de|deducible|preexistencia|medicamentos|odontol[oó]gic|interrupci[oó]n\s+de\s+viaje|cancelaci[oó]n\s+de\s+viaje|asistencia\s+(?:al\s+viajero|en\s+viaje)/i;
 
 function dropNonTripPriceLines(data: Extraction): { data: Extraction; dropped: string[] } {
   if (!data.pricing) {
@@ -97,6 +143,25 @@ function dropNonTripPriceLines(data: Extraction): { data: Extraction; dropped: s
     return true;
   });
   return dropped.length === 0 ? { data, dropped } : { data: { ...data, pricing: { ...data.pricing, lines } }, dropped };
+}
+
+// ---------------------------------------------------------------- missing vs privacidad
+
+/**
+ * Entradas de `missing` sobre datos personales que NO se importan a propósito (pasaporte, nacimiento, boleto,
+ * localizador, asiento, tarjeta). Que el documento los traiga y se descarten no es un dato que falte.
+ */
+const PRIVACY_TOPIC =
+  /nacimiento|pasaporte|localizador|asientos?\b|tarjeta|(?:n[úu]meros?|c[óo]digos?)\s+de\s+(?:boletos?|tickets?|reservas?|documentos?)|boletos?\s+electr[óo]nicos?|e-?tickets?|documentos?\s+de\s+identidad|datos\s+(?:personales|sensibles)/i;
+const AGES = /edad(?:es)?/i;
+
+/** Quita de `missing` lo que se descarta por privacidad; devuelve cuántas entradas quitó. */
+function dropPrivacyMissing(data: Extraction): { data: Extraction; dropped: number } {
+  // Las edades de los adultos nunca se importan; las de los niños sí (children_ages), y si faltan, falta de verdad.
+  const hasChildren = (data.travelers.children ?? 0) > 0;
+  const missing = data.missing.filter((m) => !(PRIVACY_TOPIC.test(m) || (!hasChildren && AGES.test(m))));
+  const dropped = data.missing.length - missing.length;
+  return dropped === 0 ? { data, dropped } : { data: { ...data, missing }, dropped };
 }
 
 const PRICING_MISSING = 'Precios: el PDF no trae una sección explícita de precios, tarifas o cotización.';
@@ -119,7 +184,11 @@ export function postProcessExtraction(input: Extraction): { extraction: Extracti
   }
   data = { ...data, days };
 
-  const { data: withoutCoverages, dropped } = dropNonTripPriceLines(data);
+  const normalized = normalizeServices(data.days);
+  data = { ...data, days: normalized.days };
+
+  const { data: withoutCoverages, dropped: droppedLines } = dropNonTripPriceLines(data);
+  const dropped = [...droppedLines, ...normalized.priceDropped];
   if (dropped.length > 0) {
     warnings.push({
       code: 'pricing_lines_dropped',
@@ -127,6 +196,13 @@ export function postProcessExtraction(input: Extraction): { extraction: Extracti
     });
   }
   data = withoutCoverages;
+
+  // `missing` solo con lo que de verdad falta; si el modelo anotó un dato personal que se descarta, se avisa en genérico.
+  const privacy = dropPrivacyMissing(data);
+  data = privacy.data;
+  if (privacy.dropped > 0 && !warnings.some((w) => w.code === 'sensitive_data_removed')) {
+    warnings.push({ code: 'sensitive_data_removed', message: PRIVACY_NOTICE });
+  }
 
   if (data.pricing && data.pricing.lines.length === 0 && data.pricing.total == null) {
     data = { ...data, pricing: null };

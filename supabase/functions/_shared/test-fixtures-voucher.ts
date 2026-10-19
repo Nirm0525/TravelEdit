@@ -96,3 +96,91 @@ export function rawVoucherExtraction(): Extraction {
     }
   });
 }
+
+// ---------------------------------------------------------------- viaje de 13 días (cierre de calidad)
+// Reproduce, con nombres inventados, el comportamiento de un voucher real de 13 días: actividades con
+// inclusiones, un vuelo, una cena con show que el modelo tipó como comida, una asistencia al viajero con
+// montos de cobertura, un documento que trae fechas de nacimiento y pasaportes (que no se importan), y
+// recomendaciones generales del viaje. No trae precios del viaje.
+export const FAKE_PASSPORT_2 = 'CD7654321';
+
+export function rawThirteenDayExtraction(): Extraction {
+  const winery = service({
+    type: 'activity',
+    name: 'Bodega Valle Azul',
+    date: '2027-06-03',
+    time: '14:00',
+    modality: 'shared',
+    description: 'Visita a la bodega con degustación.',
+    activity: { duration: '3 horas', meeting_point: null, participants: null, included: 'Degustación de 3 vinos y guía', language: null }
+  });
+  const coastTour = service({ type: 'activity', name: 'Viña y Puerto Costa', date: '2027-06-04', time: '08:30', modality: 'shared' });
+  const domestic = flight('Vuelo Ciudad Norte – Puerto Lago', 'ZX 1627', {
+    airline: 'Aerolínea Ficticia',
+    origin: 'Ciudad Norte',
+    destination: 'Puerto Lago',
+    departure_time: '08:52',
+    arrival_time: '10:40'
+  });
+  domestic.date = '2027-06-05';
+  const lakeCrossing = service({
+    type: 'activity',
+    name: 'Cruce de los Lagos',
+    date: '2027-06-06',
+    time: '08:00',
+    modality: 'shared',
+    activity: { duration: null, meeting_point: null, participants: null, included: 'Traslados y guía bilingüe', language: 'Español e inglés' }
+  });
+  // El modelo la tipó como comida, pero es una experiencia que incluye cena.
+  const tangoDinner = service({
+    type: 'activity',
+    subtype: 'meal',
+    name: 'Casa del Tango · cena show de tango',
+    date: '2027-06-11',
+    time: '19:30',
+    modality: 'shared',
+    description: 'Cena show en una casa de tango.',
+    activity: { duration: null, meeting_point: null, participants: null, included: 'Cena con entrada, plato principal, postre, vino y agua', language: null }
+  });
+  // Asistencia al viajero: nombre sin descriptor y un monto de cobertura en `price`.
+  const assistance = service({
+    type: 'other',
+    name: 'Titanium Plus',
+    date: '2027-06-13',
+    description: `Plan de asistencia al viajero con cobertura médica. Titular con pasaporte N° ${FAKE_PASSPORT_2}.`,
+    price: { amount: 150000, per_person: false }
+  });
+
+  return extraction({
+    client: { name: 'Persona Ejemplo', email: null, phone: null },
+    travelers: { adults: 2, children: 0, children_ages: [] },
+    trip: { title: null, start_date: '2027-06-01', end_date: '2027-06-13', destinations: ['Ciudad Norte', 'Puerto Lago'] },
+    days: [
+      { number: 3, date: '2027-06-03', base_city: 'Ciudad Norte', title: null, summary: null, services: [winery] },
+      { number: 4, date: '2027-06-04', base_city: 'Ciudad Norte', title: null, summary: null, services: [coastTour] },
+      { number: 5, date: '2027-06-05', base_city: 'Puerto Lago', title: null, summary: null, services: [domestic] },
+      { number: 6, date: '2027-06-06', base_city: 'Puerto Lago', title: null, summary: null, services: [lakeCrossing] },
+      { number: 11, date: '2027-06-11', base_city: 'Ciudad Sur', title: null, summary: null, services: [tangoDinner] },
+      { number: 13, date: '2027-06-13', base_city: 'Ciudad Sur', title: null, summary: null, services: [assistance] }
+    ],
+    // Montos de la asistencia al viajero: NO son precios del viaje.
+    pricing: {
+      currency: 'USD',
+      total: null,
+      other_currencies: [],
+      lines: [
+        { concept: 'Cobertura de asistencia médica', detail: 'hasta USD 150.000', amount: 150000, quantity: null, unit_price: null, per_person: false, kind: 'service' },
+        { concept: 'Gastos médicos por preexistencias', detail: 'hasta USD 15.000', amount: 15000, quantity: null, unit_price: null, per_person: false, kind: 'service' },
+        { concept: 'Límite de equipaje extraviado', detail: 'hasta USD 2.000', amount: 2000, quantity: null, unit_price: null, per_person: false, kind: 'service' }
+      ]
+    },
+    inclusions: ['Traslados indicados en el itinerario'],
+    exclusions: ['Vuelos internacionales'],
+    notes: [`Lleve su pasaporte durante todo el viaje. Pasaporte N° ${FAKE_PASSPORT_2}.`, 'El clima es variable: lleve abrigo y calzado cómodo.'],
+    missing: [
+      'No se especifican edades de los viajeros.',
+      'Fecha de nacimiento de los pasajeros.',
+      'Datos de contacto del cliente (correo y teléfono).'
+    ]
+  });
+}

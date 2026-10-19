@@ -488,3 +488,21 @@ Deno.test('summarizeUsage: suma las llamadas, estima el costo y no inventa preci
   assertEquals(summarizeUsage('gpt-6.1-sol', [], 5), { calls: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, costUsd: 0, totalMs: 5 });
   assertEquals(summarizeUsage('otro-modelo', usages, 1, (n) => ({ OPENAI_PRICE_INPUT_PER_M: '1', OPENAI_PRICE_OUTPUT_PER_M: '2' } as Record<string, string>)[n]).costUsd, 0.0265);
 });
+
+Deno.test('prompt: reglas de clasificación, asistencia al viajero, inclusiones y `missing` (sin nombres de planes ni lugares)', () => {
+  for (const fragment of [
+    'una cena con show es una actividad, no una comida',
+    'Usa `subtype` "meal" solo cuando la comida es el servicio en sí',
+    '"Asistencia al viajero · <nombre del plan>"',
+    'Los montos de cobertura y los límites del plan nunca son precios',
+    'va en `included` si es una actividad',
+    '`missing` solo lista lo que REALMENTE no aparece en el documento',
+    'no es un dato faltante'
+  ]) {
+    assert(SYSTEM_PROMPT.includes(fragment), 'falta: ' + fragment);
+  }
+  // La regla es semántica: no se hardcodea ningún servicio concreto.
+  for (const hardcoded of ['La Ventana', 'Titanium', 'Santa Rita']) {
+    assert(!SYSTEM_PROMPT.includes(hardcoded), `no debe nombrar «${hardcoded}»`);
+  }
+});

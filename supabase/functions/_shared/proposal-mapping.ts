@@ -8,7 +8,11 @@
 //  - Ningún texto del PDF va a campos de HTML enriquecido. En la propuesta pública solo se
 //    renderizan como HTML welcome.body, intro.body y terms.body: aquí quedan vacíos (los términos
 //    conservan su título de partida). Descripciones, notas y títulos son texto plano.
-//  - Inclusiones, exclusiones y notas generales NO se aplican (solo se muestran en la vista previa).
+//  - Las notas generales del viaje (clima, equipaje, qué documentos llevar…) van a Travel Tips, el único lugar de
+//    ProposalContent pensado para consejos: un grupo "General" con un consejo por nota, en texto plano.
+//    Lo específico de un servicio ya viaja con él (activity.included → details.included, "No incluye" → notes,
+//    y description). Las inclusiones y exclusiones generales del viaje NO se aplican: ProposalContent no tiene un
+//    campo para ellas (los términos son HTML y ningún texto del PDF va a HTML); solo se ven en la vista previa.
 //  - Lo que falte queda vacío para completarlo en el constructor; nada se inventa.
 //  - Precios: pricing.lines es la fuente principal; el price de un servicio solo crea una línea si el
 //    PDF no trae pricing.lines (incomingPriceLines), y la línea de un servicio lleva su serviceId.
@@ -49,13 +53,27 @@ export interface MappedPricingLine {
   serviceId?: string;
 }
 
+export interface MappedTravelTip {
+  id: string;
+  title: string;
+  body: string;
+  /** Una de PROPOSAL_TIP_CATEGORIES del admin; '' = «Consejos generales». */
+  category: string;
+}
+
+export interface MappedTravelTipGroup {
+  id: string;
+  destination: string;
+  tips: MappedTravelTip[];
+}
+
 export interface MappedContent {
   cover: { title: string; subtitle: string; imagePath: null };
   welcome: { body: string };
   intro: { headline: string; body: string };
   days: MappedDay[];
   pricing: { lines: MappedPricingLine[]; feesLines: MappedPricingLine[] };
-  travelTips: never[];
+  travelTips: MappedTravelTipGroup[];
   terms: { title: string; body: string };
 }
 
@@ -74,6 +92,11 @@ export interface MappedProposal {
 /** Mismo título de partida que usan las propuestas nuevas del constructor (DEFAULT_TERMS_TITLE). */
 export const DEFAULT_TERMS_TITLE = 'Términos y condiciones';
 const DEFAULT_CURRENCY = 'USD';
+/** Nombre del grupo de consejos que recibe las notas generales del PDF. */
+export const GENERAL_TIPS_DESTINATION = 'General';
+const WEATHER_TIP = /clima|temperatura|equipaje|abrigo|ropa|lluvia|calzado|maleta/i;
+// El constructor muestra «Sin título» si el consejo no lo tiene, así que cada uno lleva uno corto y genérico.
+const TIP_TITLE = { weather: 'Clima y equipaje', general: 'Recomendación' } as const;
 // Mismo formato que la restricción proposals_client_email_format (0045).
 const EMAIL_FORMAT = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
 
@@ -109,6 +132,23 @@ function mapService(service: ExtractedService, newId: () => string): MappedServi
     mapped.subtype = service.subtype;
   }
   return mapped;
+}
+
+/** Notas generales → un grupo de Travel Tips (sin duplicados). Sin notas, ningún grupo. */
+function mapTravelTips(notes: string[], newId: () => string): MappedTravelTipGroup[] {
+  const seen = new Set<string>();
+  const tips: MappedTravelTip[] = [];
+  for (const raw of notes) {
+    const body = raw.trim();
+    const key = body.toLowerCase();
+    if (body === '' || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const weather = WEATHER_TIP.test(body);
+    tips.push({ id: newId(), title: weather ? TIP_TITLE.weather : TIP_TITLE.general, body, category: weather ? 'weather' : '' });
+  }
+  return tips.length > 0 ? [{ id: newId(), destination: GENERAL_TIPS_DESTINATION, tips }] : [];
 }
 
 export function mapExtractionToProposal(data: Extraction, newId: () => string = () => crypto.randomUUID()): MappedProposal {
@@ -175,7 +215,7 @@ export function mapExtractionToProposal(data: Extraction, newId: () => string = 
       intro: { headline: '', body: '' },
       days,
       pricing: { lines, feesLines },
-      travelTips: [],
+      travelTips: mapTravelTips(data.notes, newId),
       terms: { title: DEFAULT_TERMS_TITLE, body: '' }
     }
   };

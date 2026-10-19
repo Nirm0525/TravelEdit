@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1';
+import { assert, assertEquals, assertFalse, assertStringIncludes } from 'jsr:@std/assert@1';
 import { handleRequest, type Deps, type ImportRow } from './handler.ts';
 import type { OriginChannel } from './tx.ts';
 import { extraction } from '../_shared/test-fixtures.ts';
@@ -27,7 +27,7 @@ const readyRow = (over: Partial<ImportRow> = {}): ImportRow => ({
 
 interface Harness {
   deps: Deps;
-  applied: { importId: string; userId: string; originChannel: OriginChannel; leadId: string | null; clientName: string; days: number }[];
+  applied: { importId: string; userId: string; originChannel: OriginChannel; leadId: string | null; clientName: string; days: number; tips: string[] }[];
   retained: unknown[];
   deleted: string[];
   order: string[];
@@ -51,7 +51,8 @@ function harness(over: Partial<Deps> = {}, row: ImportRow | null = readyRow()): 
         originChannel: args.originChannel,
         leadId: args.leadId,
         clientName: args.mapped.clientName,
-        days: args.mapped.content.days.length
+        days: args.mapped.content.days.length,
+        tips: args.mapped.content.travelTips.flatMap((g) => g.tips.map((t) => t.body))
       });
       return Promise.resolve(PROPOSAL_ID);
     },
@@ -234,4 +235,19 @@ Deno.test('al aplicar se pasa a la transacción un resumen SIN datos personales 
   for (const secret of ['Persona Ejemplo', 'persona@ejemplo.test', 'Hotel Faro', 'Isla Central', 'Paquete']) {
     assert(!text.includes(secret), 'no debe aparecer ' + secret);
   }
+});
+
+Deno.test('apply: las notas del PDF llegan a Travel Tips; las inclusiones y exclusiones generales no se copian', async () => {
+  const extracted = {
+    ...postProcessExtraction(rawVoucherExtraction()).extraction,
+    notes: ['Lleve su pasaporte durante el viaje.', 'El clima es variable: lleve abrigo.'],
+    inclusions: ['Traslados indicados'],
+    exclusions: ['Vuelos internacionales'],
+    warnings: [],
+    meta: { model: 'gpt-6-luna', extracted_at: '2027-01-01T00:00:00Z' }
+  };
+  const h = harness({}, readyRow({ extracted }));
+  assertEquals((await handleRequest(req(), h.deps)).status, 200);
+  assertEquals(h.applied[0].tips, ['Lleve su pasaporte durante el viaje.', 'El clima es variable: lleve abrigo.']);
+  assertFalse(JSON.stringify(h.applied[0]).includes('Traslados indicados'));
 });

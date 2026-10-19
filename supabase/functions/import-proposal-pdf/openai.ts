@@ -36,7 +36,22 @@ export const SYSTEM_PROMPT = [
     'null si no lo indica.',
 
   'Seguro de viaje: un servicio `other` en el primer día, con el nombre del plan, la vigencia y un resumen de una línea. ' +
-    'No copies la tabla de coberturas. Lo que el documento marque como "No incluye" en un servicio va en `notes` de ese servicio.'
+    'No copies la tabla de coberturas. Lo que el documento marque como "No incluye" en un servicio va en `notes` de ese servicio.',
+
+  'Asistencia al viajero o seguro de viaje: el `name` del servicio es "Asistencia al viajero · <nombre del plan>". ' +
+    'Los montos de cobertura y los límites del plan nunca son precios: no los pongas en `price` ni en `pricing`.',
+
+  'Clasificación: una experiencia (show, espectáculo, degustación, tour, clase, taller) es siempre `activity`, aunque ' +
+    'incluya comida o bebida; por ejemplo, una cena con show es una actividad, no una comida. Usa `subtype` "meal" solo ' +
+    'cuando la comida es el servicio en sí (un desayuno, almuerzo o cena en un restaurante, sin otra experiencia).',
+
+  'Lo que el documento marca como incluido en un servicio va en `included` si es una actividad, y en `description` en los ' +
+    'demás tipos. Los consejos y recomendaciones generales del viaje (clima, equipaje, qué documentos llevar) van en `notes` ' +
+    'del viaje, redactados como consejos generales y sin ningún número de documento.',
+
+  '`missing` solo lista lo que REALMENTE no aparece en el documento. Un dato personal que sí aparece pero que debes omitir ' +
+    '(pasaporte, fecha de nacimiento, boleto, localizador, asiento, tarjeta) no es un dato faltante: no lo anotes en ' +
+    '`missing` ni escribas que faltan edades o documentos.'
 ].join('\n\n');
 
 const USER_PROMPT =

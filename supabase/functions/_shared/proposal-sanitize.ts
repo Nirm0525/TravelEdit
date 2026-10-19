@@ -3,7 +3,7 @@
 // Red de seguridad para el prompt de sistema (que ya prohíbe extraerlos): si el modelo
 // deja pasar un número de boleto, un pasaporte o documento, una fecha de nacimiento,
 // un localizador, un asiento o datos de tarjeta, aquí se elimina del texto y se registra
-// un warning — nunca con el valor, solo con la categoría y la ruta del campo.
+// un warning genérico (PRIVACY_NOTICE) — sin el valor, sin la categoría y sin la ruta del campo.
 //
 // Alcance y límites (heurísticas, no una garantía):
 //  - boletos: 13 dígitos (con o sin guion/espacio tras los 3 primeros).
@@ -19,14 +19,12 @@ import type { Extraction, ExtractionWarning } from './proposal-extraction.ts';
 
 export type SensitiveCategory = 'tickets' | 'documents' | 'birthdates' | 'bookings' | 'seats' | 'cards';
 
-const CATEGORY_LABEL: Record<SensitiveCategory, string> = {
-  tickets: 'boletos',
-  documents: 'pasaportes o documentos',
-  birthdates: 'fechas de nacimiento',
-  bookings: 'localizadores',
-  seats: 'asientos',
-  cards: 'tarjetas'
-};
+/**
+ * Aviso para la asesora cuando el documento traía datos personales que no se incorporan a la propuesta.
+ * Deliberadamente genérico: no dice qué dato se encontró (pasaporte, nacimiento, boleto…), solo que hubo.
+ * Lo usan también el posprocesado (datos que el modelo omitió) y la vista previa.
+ */
+export const PRIVACY_NOTICE = 'Algunos datos personales del documento no se incorporan a la propuesta.';
 
 const SEP = String.raw`[\s:#\-–]*`;
 const NO = String.raw`(?:n(?:ro|[°º]|o)?\.?\s*)?`; // "N°", "No.", "nro"
@@ -149,54 +147,39 @@ const EMPTY_PLACEHOLDER = '(sin nombre)';
 
 export function scrubSensitive(input: Extraction): { data: Extraction; warnings: ExtractionWarning[] } {
   const data = structuredClone(input);
-  const totals: Partial<Record<SensitiveCategory, number>> = {};
-  const paths = new Set<string>();
+  let removedAny = false;
 
-  const visit = (node: unknown, path: string, key: string): unknown => {
+  const visit = (node: unknown, key: string): unknown => {
     if (typeof node === 'string') {
       if (SKIP_KEYS.has(key)) {
         return node;
       }
       const { text, removed } = scrubText(node);
-      const categories = Object.keys(removed) as SensitiveCategory[];
-      if (categories.length === 0) {
+      if (Object.keys(removed).length === 0) {
         return node;
       }
-      for (const c of categories) {
-        totals[c] = (totals[c] ?? 0) + (removed[c] ?? 0);
-      }
-      paths.add(path);
+      removedAny = true;
       return text === '' && REQUIRED_TEXT_KEYS.has(key) ? EMPTY_PLACEHOLDER : text;
     }
     if (Array.isArray(node)) {
-      const items = node.map((item, i) => visit(item, `${path}.${i}`, key));
+      const items = node.map((item) => visit(item, key));
       // Un elemento de texto que queda vacío ya no aporta nada.
       return items.filter((item) => item !== '');
     }
     if (node && typeof node === 'object') {
       const out: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(node)) {
-        out[k] = visit(v, path ? `${path}.${k}` : k, k);
+        out[k] = visit(v, k);
       }
       return out;
     }
     return node;
   };
 
-  const cleaned = visit(data, '', '') as Extraction;
-  const categories = Object.keys(totals) as SensitiveCategory[];
-  if (categories.length === 0) {
-    return { data: cleaned, warnings: [] };
-  }
-  const summary = categories.map((c) => `${CATEGORY_LABEL[c]}: ${totals[c]}`).join(', ');
-  const where = [...paths].slice(0, 8).join(', ');
+  const cleaned = visit(data, '') as Extraction;
+  // El aviso no revela qué dato ni dónde estaba: solo que algo personal no se incorpora.
   return {
     data: cleaned,
-    warnings: [
-      {
-        code: 'sensitive_data_removed',
-        message: `Se eliminaron datos sensibles del texto extraído (${summary}). Revisa que no falte contexto en: ${where}${paths.size > 8 ? '…' : ''}.`
-      }
-    ]
+    warnings: removedAny ? [{ code: 'sensitive_data_removed', message: PRIVACY_NOTICE }] : []
   };
 }

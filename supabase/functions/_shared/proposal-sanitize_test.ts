@@ -1,5 +1,5 @@
-import { assert, assertEquals, assertFalse } from 'jsr:@std/assert@1';
-import { scrubSensitive, scrubText } from './proposal-sanitize.ts';
+import { assertEquals, assertFalse } from 'jsr:@std/assert@1';
+import { PRIVACY_NOTICE, scrubSensitive, scrubText } from './proposal-sanitize.ts';
 import { extraction, service } from './test-fixtures.ts';
 import { FAKE_BIRTHDATE, FAKE_BOOKING, FAKE_CARD, FAKE_PASSPORT, FAKE_PHONE, FAKE_TICKET } from './test-fixtures-voucher.ts';
 
@@ -69,7 +69,11 @@ Deno.test('sensibles: scrubSensitive limpia todos los campos de texto y avisa si
   for (const secret of [FAKE_PASSPORT, FAKE_TICKET, FAKE_BOOKING, FAKE_BIRTHDATE]) {
     assertFalse(warnings[0].message.includes(secret), 'el warning no puede llevar el valor');
   }
-  assert(warnings[0].message.includes('days.0.services.0.description'));
+  // El aviso es genérico: no dice qué dato era (pasaporte, nacimiento, boleto…) ni en qué campo estaba.
+  assertEquals(warnings[0].message, PRIVACY_NOTICE);
+  for (const word of ['pasaporte', 'nacimiento', 'boleto', 'localizador', 'asiento', 'tarjeta', 'days.0']) {
+    assertFalse(warnings[0].message.toLowerCase().includes(word), `el aviso no debe mencionar «${word}»`);
+  }
 });
 
 Deno.test('sensibles: no muta la entrada y un texto limpio no genera warning', () => {

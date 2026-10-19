@@ -15,7 +15,8 @@ export type ProposalStatus = 'draft' | 'published' | 'viewed' | 'accepted' | 'ex
 // backend NUNCA lanza una excepción de Postgres para estos casos, son
 // estados normales de UI que este servicio expone tal cual, sin
 // reinterpretarlos como errores.
-export type ProposalAccessResult = 'ok' | 'not_found' | 'access_not_configured' | 'locked' | 'invalid_code';
+/** 'expired': pasada la fecha de expiración el enlace sigue abriendo, pero el código ya no sirve (migración 0051). */
+export type ProposalAccessResult = 'ok' | 'not_found' | 'access_not_configured' | 'locked' | 'invalid_code' | 'expired';
 
 export interface ProposalGateResponse {
   accessRequired: boolean;

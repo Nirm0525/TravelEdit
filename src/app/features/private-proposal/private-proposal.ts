@@ -576,6 +576,15 @@ export class PrivateProposal implements OnDestroy {
     }
     this.gate.set(gate);
 
+    // Pasada la fecha de expiración el enlace sigue abriendo, pero el acceso venció: se avisa que
+    // pida a su asesora que lo renueve (la sesión guardada ya no sirve y no se pide ningún código).
+    if (gate.status === 'expired') {
+      this.clearStoredSession(token);
+      this.accessError.set('expired');
+      this.phase.set('gate');
+      return;
+    }
+
     const stored = this.readStoredSession(token);
     if (stored && (await this.loadContent(token, stored.sessionToken))) {
       return;

@@ -35,29 +35,32 @@
               <h1 class="private-proposal__gate-headline">Ingresa para ver tu propuesta de viaje</h1>
 
               <form class="private-proposal__gate-form" (submit)="$event.preventDefault(); submitCode()">
-                <label class="private-proposal__field" for="gate-access-code">
-                  <span>Código de acceso</span>
-                  <input
-                    #gateCodeInput
-                    id="gate-access-code"
-                    type="text"
-                    inputmode="text"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    placeholder="Ingresa tu código de acceso"
-                    [value]="codeInput()"
-                    (input)="onCodeInput($event)"
-                    [disabled]="verifying()"
-                    aria-describedby="gate-error"
-                    [attr.aria-invalid]="accessError() ? 'true' : null"
-                  />
-                </label>
+                @if (accessError() !== 'expired') {
+                  <label class="private-proposal__field" for="gate-access-code">
+                    <span>Código de acceso</span>
+                    <input
+                      #gateCodeInput
+                      id="gate-access-code"
+                      type="text"
+                      inputmode="text"
+                      autocomplete="off"
+                      autocapitalize="characters"
+                      placeholder="Ingresa tu código de acceso"
+                      [value]="codeInput()"
+                      (input)="onCodeInput($event)"
+                      [disabled]="verifying()"
+                      aria-describedby="gate-error"
+                      [attr.aria-invalid]="accessError() ? 'true' : null"
+                    />
+                  </label>
+                }
 
                 @if (accessError(); as err) {
                   <p id="gate-error" class="private-proposal__gate-error" role="alert" aria-live="assertive">
                     @switch (err) {
                       @case ('invalid_code') { Código incorrecto. Inténtalo nuevamente. }
                       @case ('locked') { El acceso está temporalmente bloqueado. Intenta más tarde. }
+                      @case ('expired') { Tu acceso a esta propuesta venció. Pide a tu asesora que lo renueve. }
                       @case ('not_found') { Esta propuesta no está disponible. }
                       @case ('access_not_configured') { Esta propuesta no está disponible. }
                       @default { No pudimos validar el acceso en este momento. }
@@ -65,9 +68,11 @@
                   </p>
                 }
 
-                <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
-                  {{ verifying() ? 'Verificando…' : 'Ver mi propuesta' }}
-                </button>
+                @if (accessError() !== 'expired') {
+                  <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
+                    {{ verifying() ? 'Verificando…' : 'Ver mi propuesta' }}
+                  </button>
+                }
               </form>
 
               <p class="private-proposal__gate-footnote">Esta propuesta es privada y personal.</p>

@@ -6,7 +6,7 @@
     <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
   </div>
 } @else {
-  <div class="pricing-step">
+  <div class="pricing-step" id="pricing-lines">
     <section class="pricing-step__section">
       <div class="pricing-step__section-header">
         <h2 class="section-title">Precios del itinerario</h2>
@@ -42,7 +42,7 @@
                 </thead>
                 <tbody>
                   @for (service of day.services; track service.id) {
-                    <tr>
+                    <tr [attr.id]="'service-' + service.id">
                       <td>
                         <span class="pricing-step__service-type">{{ serviceTypeLabel[service.type] }}</span>
                         <span class="pricing-step__service-name">{{ service.title || 'Sin título' }}</span>
@@ -101,7 +101,7 @@
           </thead>
           <tbody>
             @for (line of otherLines(); track line.id) {
-              <tr>
+              <tr [attr.id]="'line-' + line.id">
                 <td>
                   <input
                     type="text"
@@ -166,7 +166,7 @@
           </thead>
           <tbody>
             @for (line of feesLines(); track line.id) {
-              <tr>
+              <tr [attr.id]="'line-' + line.id">
                 <td>
                   <input
                     type="text"

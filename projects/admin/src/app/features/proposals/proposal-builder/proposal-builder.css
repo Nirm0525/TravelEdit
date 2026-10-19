@@ -452,3 +452,11 @@
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+/* Publicar con pendientes: no llama a la base, lleva a la lista de lo que falta. */
+.proposal-builder__actions .btn.is-blocked {
+  background: var(--canvas-100);
+  color: var(--text-secondary);
+  border: 1px solid var(--line-200);
+  cursor: help;
+}

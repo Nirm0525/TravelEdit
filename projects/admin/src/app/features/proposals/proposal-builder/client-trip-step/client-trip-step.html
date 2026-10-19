@@ -75,7 +75,7 @@
         </div>
       </section>
 
-      <section class="client-trip-step__section">
+      <section class="client-trip-step__section" id="access-section">
         <h2 class="section-title">Acceso privado</h2>
         <label class="client-trip-step__toggle">
           <input type="checkbox" formControlName="accessRequired" (change)="onAccessRequiredChange($event)" />
@@ -164,7 +164,7 @@
             Título principal
             <button type="button" class="client-trip-step__ai-trigger" (click)="openAssistant.emit('cover_title')" title="Mejorar con The Edit Assistant">✨</button>
           </span>
-          <input type="text" formControlName="coverTitle" (blur)="saveCover()" />
+          <input type="text" id="cover-title" formControlName="coverTitle" (blur)="saveCover()" />
           <span class="client-trip-step__char-count">{{ form.controls.coverTitle.value.length }}/80</span>
         </label>
 

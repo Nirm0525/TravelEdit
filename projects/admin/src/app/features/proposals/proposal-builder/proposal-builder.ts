@@ -6,6 +6,7 @@ import { LeadsService } from '../../../core/services/leads';
 import { AuthService } from '../../../core/services/auth';
 import { Proposal } from '../../../core/models/proposal.model';
 import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
+import { PublishProblem, isPublishTab, pendingLabel, problemAnchorId, scrollToAnchor } from '../../../core/models/publish-readiness';
 import { environment } from '../../../../environments/environment';
 import { ClientTripStep } from './client-trip-step/client-trip-step';
 import { BuildJourneyStep } from './build-journey-step/build-journey-step';
@@ -13,6 +14,7 @@ import { PricingStep } from './pricing-step/pricing-step';
 import { TravelTipsStep } from './travel-tips-step/travel-tips-step';
 import { AiPolishStep } from './ai-polish-step/ai-polish-step';
 import { PreviewStep } from './preview-step/preview-step';
+import { PublishChecklist } from './publish-checklist/publish-checklist';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
 
@@ -62,7 +64,7 @@ function publishErrorMessage(error: unknown): string {
 
 @Component({
   selector: 'app-proposal-builder',
-  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, ConfirmDialog, AdminModal],
+  imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, PublishChecklist, ConfirmDialog, AdminModal],
   templateUrl: './proposal-builder.html',
   styleUrl: './proposal-builder.css'
 })
@@ -83,6 +85,15 @@ export class ProposalBuilder {
   readonly loadError = signal<string | null>(null);
   readonly publishing = signal(false);
   readonly publishError = signal<string | null>(null);
+
+  // --- Pendientes para publicar: los calcula la base (get_publish_readiness), la misma función que usa
+  // publish_proposal. null = no se pudo saber (p. ej. migración sin aplicar): entonces no se bloquea nada
+  // y la base sigue decidiendo al publicar.
+  readonly readiness = signal<PublishProblem[] | null>(null);
+  readonly pendingCount = computed(() => this.readiness()?.length ?? 0);
+  readonly publishBlocked = computed(() => this.pendingCount() > 0);
+  readonly pendingLabel = computed(() => pendingLabel(this.pendingCount()));
+  private readinessSeq = 0;
   readonly linkCopied = signal(false);
 
   // --- Envio por WhatsApp: el enlace y el codigo salen del navegador de la
@@ -96,6 +107,8 @@ export class ProposalBuilder {
 
   onCodeGenerated(code: string): void {
     this.lastGeneratedCode = code;
+    // Generar el código no emite «guardado»: se vuelve a calcular qué falta.
+    void this.refreshReadiness();
   }
 
   readonly whatsappNeedsCode = computed(() => this.proposal()?.accessRequired === true);
@@ -237,6 +250,7 @@ export class ProposalBuilder {
     this.loadError.set(null);
     try {
       this.proposal.set(await this.proposalsService.getById(this.proposalId));
+      void this.refreshReadiness();
     } catch (error) {
       console.error('No se pudo cargar la propuesta.', error);
       this.loadError.set('No se pudo cargar la propuesta. Inténtalo nuevamente.');
@@ -261,6 +275,34 @@ export class ProposalBuilder {
   async onSaved(): Promise<void> {
     await this.refreshProposal();
     this.refreshTick.update((n) => n + 1);
+    await this.refreshReadiness();
+  }
+
+  /** Vuelve a pedir a la base qué falta para publicar. Solo la última respuesta cuenta. */
+  async refreshReadiness(): Promise<void> {
+    const seq = ++this.readinessSeq;
+    if (this.proposal()?.status !== 'draft') {
+      this.readiness.set(null);
+      return;
+    }
+    const problems = await this.proposalsService.getPublishReadiness(this.proposalId);
+    if (seq === this.readinessSeq) {
+      this.readiness.set(problems);
+    }
+  }
+
+  /** Abre la pestaña del pendiente y, si se sabe, lleva al campo, día, servicio o línea exacta. */
+  goToProblem(problem: PublishProblem): void {
+    this.goToStep(isPublishTab(problem.tab) ? problem.tab : 'client-trip');
+    scrollToAnchor(problemAnchorId(problem));
+  }
+
+  /** Con pendientes, publicar no llama a la base: se lleva la atención a la lista. */
+  private showChecklist(): void {
+    this.menuOpen.set(false);
+    const list = document.getElementById('publish-checklist');
+    list?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    list?.focus({ preventScroll: true });
   }
 
   private async refreshProposal(): Promise<void> {
@@ -369,6 +411,10 @@ export class ProposalBuilder {
     if (this.publishing()) {
       return;
     }
+    if (this.publishBlocked()) {
+      this.showChecklist();
+      return;
+    }
     this.publishing.set(true);
     this.publishError.set(null);
     try {
@@ -387,6 +433,11 @@ export class ProposalBuilder {
    *  el error se muestra con "Reintentar envío". */
   async publishAndSend(): Promise<void> {
     if (this.publishing() || this.sendingToClient()) {
+      return;
+    }
+    if (this.publishBlocked()) {
+      // Importante: sin esto, publish() volvería sin error y se enviaría el correo de una propuesta sin publicar.
+      this.showChecklist();
       return;
     }
     this.menuOpen.set(false);

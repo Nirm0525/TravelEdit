@@ -1,3 +1,4 @@
+import { PublishProblem } from '../models/publish-readiness';
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
@@ -228,6 +229,20 @@ export class ProposalsService {
     if (error) {
       throw error;
     }
+  }
+
+  /**
+   * Lista de pendientes para publicar (migración 0053): la misma función que usa publish_proposal().
+   * Devuelve null si no se pudo saber (p. ej. la migración todavía no está aplicada): quien llama no
+   * debe bloquear la publicación por eso — la base sigue siendo la que decide al publicar.
+   */
+  async getPublishReadiness(id: string): Promise<PublishProblem[] | null> {
+    const { data, error } = await this.supabase.client.rpc('get_publish_readiness', { p_id: id });
+    if (error) {
+      console.error('No se pudo consultar qué falta para publicar.', error);
+      return null;
+    }
+    return ((data ?? []) as unknown as PublishProblem[]).slice().sort((a, b) => a.position - b.position);
   }
 
   async unpublish(id: string): Promise<void> {

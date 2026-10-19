@@ -387,6 +387,19 @@ export interface Database {
         Args: { p_destination_id: string; p_ordered_ids: string[] };
         Returns: undefined;
       };
+      /** Pendientes para publicar (migración 0053), de solo lectura. */
+      get_publish_readiness: {
+        Args: { p_id: string };
+        Returns: {
+          position: number;
+          code: string;
+          message: string;
+          tab: string;
+          day_id: string | null;
+          service_id: string | null;
+          line_id: string | null;
+        }[];
+      };
       publish_proposal: {
         Args: { p_id: string };
         Returns: undefined;

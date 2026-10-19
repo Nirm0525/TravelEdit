@@ -27,8 +27,16 @@
 
         <div class="proposal-builder__actions">
           @if (p.status === 'draft') {
-            <button type="button" class="btn btn--primary" [disabled]="publishing() || sendingToClient()" (click)="publishAndSend()">
-              {{ publishing() ? 'Publicando…' : sendingToClient() ? 'Enviando…' : 'Publicar y enviar al cliente' }}
+            <button
+              type="button"
+              class="btn btn--primary"
+              [class.is-blocked]="publishBlocked()"
+              [attr.aria-disabled]="publishBlocked() ? 'true' : null"
+              [attr.aria-describedby]="publishBlocked() ? 'publish-checklist' : null"
+              [disabled]="publishing() || sendingToClient()"
+              (click)="publishAndSend()"
+            >
+              {{ publishBlocked() ? pendingLabel() : publishing() ? 'Publicando…' : sendingToClient() ? 'Enviando…' : 'Publicar y enviar al cliente' }}
             </button>
           } @else if (p.status === 'published' || p.status === 'viewed') {
             <button type="button" class="btn btn--primary" [disabled]="sendingToClient()" (click)="sendToClient()">
@@ -59,7 +67,7 @@
                 }
                 @if (p.status === 'draft') {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="publishing()" (click)="publish()">
-                    {{ publishing() ? 'Publicando…' : 'Publicar propuesta' }}
+                    {{ publishBlocked() ? pendingLabel() : publishing() ? 'Publicando…' : 'Publicar propuesta' }}
                   </button>
                 }
                 @if (p.status === 'published' || p.status === 'viewed' || p.status === 'accepted') {
@@ -84,6 +92,9 @@
         </div>
       </header>
 
+      @if (p.status === 'draft' && readiness(); as pending) {
+        <app-publish-checklist [problems]="pending" (selected)="goToProblem($event)" />
+      }
       @if (publishError(); as message) {
         <p class="proposal-builder__inline-error" role="alert">{{ message }}</p>
       }

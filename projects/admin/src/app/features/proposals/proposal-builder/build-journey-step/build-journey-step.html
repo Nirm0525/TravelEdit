@@ -8,7 +8,7 @@
 } @else {
   <div class="journey">
     <div class="journey__toolbar">
-      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="addDay()">+ Agregar día</button>
+      <button type="button" id="journey-add-day" class="btn btn--primary" [disabled]="saving()" (click)="addDay()">+ Agregar día</button>
       <span class="journey__status" role="status" aria-live="polite">{{ saving() ? 'Guardando…' : '' }}</span>
     </div>
 
@@ -21,7 +21,7 @@
     } @else {
       <div cdkDropList class="journey__days" (cdkDropListDropped)="dropDay($event)">
         @for (day of days(); track day.id) {
-          <article cdkDrag class="day-card">
+          <article cdkDrag class="day-card" [attr.id]="'day-' + day.id">
             <header class="day-card__header">
               <span cdkDragHandle class="day-card__handle" aria-label="Reordenar día" tabindex="0">⠿</span>
               <span class="day-card__number">DAY {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</span>
@@ -69,7 +69,7 @@
               @if (day.services.length > 0) {
                 <div cdkDropList class="day-card__service-list" (cdkDropListDropped)="dropService(day, $event)">
                   @for (service of day.services; track service.id) {
-                    <div cdkDrag class="service-card">
+                    <div cdkDrag class="service-card" [attr.id]="'service-' + service.id">
                       <div class="service-card__row">
                         <span cdkDragHandle class="service-card__handle" aria-label="Reordenar servicio" tabindex="0">⠿</span>
                         <span class="service-card__type">{{ serviceTypeLabel[service.type] }}</span>

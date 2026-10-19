@@ -38,6 +38,8 @@ export interface PreviewPriceLine {
 }
 
 export interface ImportPreview {
+  /** Servicios que valen para todo el viaje (p. ej. la asistencia al viajero): no pertenecen a ningún día. */
+  generalServices: PreviewService[];
   clientName: string | null;
   clientEmail: string | null;
   clientPhone: string | null;
@@ -138,6 +140,25 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+// Misma expresión que TRAVEL_ASSISTANCE en supabase/functions/_shared/proposal-postprocess.ts (un test las compara).
+const TRAVEL_ASSISTANCE = /asistencia\s+(?:al\s+viajero|m[eé]dica|en\s+viaje)|seguro\s+de\s+viaje|travel\s+(?:insurance|assistance)/i;
+
+/** Servicio general del viaje (no ocurre en un día concreto): hoy, la asistencia al viajero o el seguro de viaje. */
+export function isGeneralService(s: { type: string; name: string }): boolean {
+  return s.type === 'other' && TRAVEL_ASSISTANCE.test(s.name);
+}
+
+function toPreviewService(s: StoredExtraction['days'][number]['services'][number]): PreviewService {
+  return {
+    typeLabel: s.subtype === 'meal' ? 'Comida' : s.subtype === 'train' ? 'Tren' : (PROPOSAL_SERVICE_TYPE_LABEL[s.type as ProposalServiceType] ?? s.type),
+    name: safe(s.name, 160) ?? '(sin nombre)',
+    time: s.type === 'flight' ? (s.flight?.departure_time ?? s.time) : s.time,
+    modality: s.modality ? MODALITY_LABEL[s.modality] : null,
+    description: safe(s.description, 220),
+    facts: serviceFacts(s)
+  };
+}
+
 function cleanList(items: string[]): string[] {
   return items.map((item) => safe(item, 240)).filter((item): item is string => !!item);
 }
@@ -228,15 +249,9 @@ export function buildPreview(data: StoredExtraction): ImportPreview {
     title: safe(day.title ?? day.base_city ?? '', 120) ?? '',
     city: day.base_city,
     date: formatDate(day.date),
-    services: day.services.map((s) => ({
-      typeLabel: s.subtype === 'meal' ? 'Comida' : s.subtype === 'train' ? 'Tren' : (PROPOSAL_SERVICE_TYPE_LABEL[s.type as ProposalServiceType] ?? s.type),
-      name: safe(s.name, 160) ?? '(sin nombre)',
-      time: s.type === 'flight' ? (s.flight?.departure_time ?? s.time) : s.time,
-      modality: s.modality ? MODALITY_LABEL[s.modality] : null,
-      description: safe(s.description, 220),
-      facts: serviceFacts(s)
-    }))
+    services: day.services.filter((s) => !isGeneralService(s)).map(toPreviewService)
   }));
+  const generalServices = data.days.flatMap((day) => day.services.filter(isGeneralService)).map(toPreviewService);
 
   // Líneas: pricing.lines es la fuente; el price de un servicio solo cuenta si el PDF no trae pricing.lines.
   let lines: PreviewPriceLine[] = [];
@@ -275,6 +290,7 @@ export function buildPreview(data: StoredExtraction): ImportPreview {
     dates: start && end ? `${start} → ${end}` : (start ?? end),
     destinations: data.trip.destinations.length > 0 ? data.trip.destinations.join(', ') : null,
     days,
+    generalServices,
     serviceCount: days.reduce((n, d) => n + d.services.length, 0),
     pricing: hasPricing ? { currency: data.pricing?.currency ?? null, total: data.pricing?.total ?? null, lines } : null,
     warnings: data.warnings.map((w) => w.message),

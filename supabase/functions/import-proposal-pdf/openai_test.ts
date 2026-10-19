@@ -506,3 +506,7 @@ Deno.test('prompt: reglas de clasificación, asistencia al viajero, inclusiones 
     assert(!SYSTEM_PROMPT.includes(hardcoded), `no debe nombrar «${hardcoded}»`);
   }
 });
+
+Deno.test('prompt: si omite datos personales, pide UNA entrada genérica en `missing` (sin decir cuáles)', () => {
+  assert(SYSTEM_PROMPT.includes('agrega UNA sola entrada a `missing` con el texto exacto "Datos personales del documento", sin decir cuáles.'));
+});

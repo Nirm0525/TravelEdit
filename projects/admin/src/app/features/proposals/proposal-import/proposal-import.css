@@ -105,17 +105,33 @@
 
 /* --- Procesando / error --- */
 
+/* Mientras se lee el PDF (o si falla), la tarjeta de estado va en el centro de la pantalla. */
+.proposal-import--centered {
+  max-width: none;
+  min-height: 62vh;
+  align-items: center;
+  justify-content: center;
+}
+
 .proposal-import__status {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-2xl) var(--space-md);
+  width: min(100%, 27rem);
+  padding: var(--space-2xl) var(--space-xl, 2rem);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-lg, 1rem);
+  background: var(--surface-000);
+  box-shadow: 0 18px 40px -22px rgb(60 40 30 / 28%);
   text-align: center;
 }
 
 .proposal-import__status-title {
-  font-size: var(--size-section-title);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.6rem);
+  letter-spacing: -0.01em;
 }
 
 .proposal-import__status-text {
@@ -124,10 +140,20 @@
   line-height: 1.55;
 }
 
+/* Línea corta que separa el mensaje del nombre del archivo. */
 .proposal-import__status-file {
-  font-size: var(--size-small);
+  font-size: var(--size-body);
   color: var(--text-secondary);
   overflow-wrap: anywhere;
+}
+
+.proposal-import__status-file::before {
+  content: '';
+  display: block;
+  width: 4rem;
+  height: 1px;
+  margin: var(--space-sm) auto var(--space-md);
+  background: var(--line-200);
 }
 
 .proposal-import__spinner {
@@ -441,6 +467,6 @@
   }
 
   .proposal-import__status {
-    padding-inline: 0;
+    padding-inline: var(--space-md);
   }
 }

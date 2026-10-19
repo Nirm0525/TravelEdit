@@ -248,6 +248,7 @@ Deno.test('apply: las notas del PDF llegan a Travel Tips; las inclusiones y excl
   };
   const h = harness({}, readyRow({ extracted }));
   assertEquals((await handleRequest(req(), h.deps)).status, 200);
+  // Solo las notas: la asistencia al viajero del voucher (servicio general) no se convierte en consejo ni va a un día.
   assertEquals(h.applied[0].tips, ['Lleve su pasaporte durante el viaje.', 'El clima es variable: lleve abrigo.']);
   assertFalse(JSON.stringify(h.applied[0]).includes('Traslados indicados'));
 });

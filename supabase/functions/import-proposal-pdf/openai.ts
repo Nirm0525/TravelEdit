@@ -50,8 +50,9 @@ export const SYSTEM_PROMPT = [
     'del viaje, redactados como consejos generales y sin ningún número de documento.',
 
   '`missing` solo lista lo que REALMENTE no aparece en el documento. Un dato personal que sí aparece pero que debes omitir ' +
-    '(pasaporte, fecha de nacimiento, boleto, localizador, asiento, tarjeta) no es un dato faltante: no lo anotes en ' +
-    '`missing` ni escribas que faltan edades o documentos.'
+    '(pasaporte, fecha de nacimiento, boleto, localizador, asiento, tarjeta) no es un dato faltante: no lo anotes por tipo en ' +
+    '`missing` ni escribas que faltan edades o documentos. Si el documento trae alguno de esos datos personales y lo omitiste, ' +
+    'agrega UNA sola entrada a `missing` con el texto exacto "Datos personales del documento", sin decir cuáles.'
 ].join('\n\n');
 
 const USER_PROMPT =

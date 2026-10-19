@@ -3,7 +3,7 @@
   title="Nueva propuesta desde PDF"
 />
 
-<div class="proposal-import">
+<div class="proposal-import" [class.proposal-import--centered]="stage() === 'working' || stage() === 'failed'">
   @switch (stage()) {
     <!-- ------------------------------------------------------------ 1. Formulario -->
     @case ('form') {
@@ -193,6 +193,38 @@
           </ol>
         </section>
 
+        @if (p.generalServices.length > 0) {
+          <section class="proposal-import__section">
+            <h2 class="proposal-import__section-title">Servicios generales</h2>
+            <p class="proposal-import__hint">
+              Información detectada en el PDF. Revísala antes de crear la propuesta; actualmente no se incorpora automáticamente al
+              borrador.
+            </p>
+            <ul class="proposal-import__services">
+              @for (service of p.generalServices; track $index) {
+                <li>
+                  <span class="proposal-import__chip">{{ service.typeLabel }}</span>
+                  <span class="proposal-import__service-name">{{ service.name }}</span>
+                  @if (service.description || service.facts.length > 0) {
+                    <div class="proposal-import__service-detail">
+                      @if (service.description) {
+                        <p class="proposal-import__service-text">{{ service.description }}</p>
+                      }
+                      @if (service.facts.length > 0) {
+                        <dl class="proposal-import__service-facts">
+                          @for (fact of service.facts; track $index) {
+                            <div><dt>{{ fact.label }}</dt><dd>{{ fact.value }}</dd></div>
+                          }
+                        </dl>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
         <section class="proposal-import__section">
           <h2 class="proposal-import__section-title">Inversión</h2>
           @if (p.pricing; as pricing) {
@@ -231,7 +263,7 @@
         @if (p.notes.length > 0) {
           <section class="proposal-import__section">
             <h2 class="proposal-import__section-title">Notas del viaje</h2>
-            <p class="proposal-import__hint">Se copian a la propuesta como consejos generales de viaje.</p>
+            <p class="proposal-import__hint">Estas notas se agregarán como consejos de viaje en la propuesta.</p>
             <ul class="proposal-import__plain">
               @for (item of p.notes; track $index) {
                 <li>{{ item }}</li>
@@ -243,9 +275,7 @@
         @if (p.inclusions.length > 0 || p.exclusions.length > 0) {
           <section class="proposal-import__section">
             <h2 class="proposal-import__section-title">Inclusiones y exclusiones generales</h2>
-            <p class="proposal-import__hint">
-              Solo lectura: no se copian a la propuesta (lo que incluye o no incluye cada servicio sí viaja con ese servicio).
-            </p>
+            <p class="proposal-import__hint">Solo lectura: esto no se copia automáticamente a la propuesta.</p>
             @if (p.inclusions.length > 0) {
               <h3 class="proposal-import__subtitle">Incluye</h3>
               <ul class="proposal-import__plain">

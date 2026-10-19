@@ -26,12 +26,12 @@ Deno.test('mapeo: días con número, título (o ciudad base), ubicación y resum
   assertEquals(days[0].location, 'Puerto Azul'); // ciudad donde se duerme
   assertEquals(days[1].title, 'Puerto Azul'); // sin título en el PDF → ciudad base
   assert(days.every((d) => d.imagePath === null));
-  assertEquals(days[0].services.length, 5); // el día repartido en dos secciones quedó unido
+  assertEquals(days[0].services.length, 4); // el día repartido en dos secciones quedó unido; la asistencia (general) ya no está en el día
 });
 
 Deno.test('mapeo: servicios con ficha por tipo, modalidad y subtype', () => {
   const services = voucher().content.days[0].services;
-  const [leg1, insurance, leg2, hotel, transfer] = services;
+  const [leg1, leg2, hotel, transfer] = services;
 
   assertEquals(leg1.type, 'flight');
   assertEquals(leg1.time, '08:00'); // salida
@@ -41,9 +41,6 @@ Deno.test('mapeo: servicios con ficha por tipo, modalidad y subtype', () => {
 
   assertEquals(leg2.time, '22:30');
   assertEquals([leg2.details.arrivalTime, leg2.details.arrivalDate], ['01:10', '2027-05-05']); // llega al día siguiente
-
-  assertEquals(insurance.type, 'other');
-  assert(insurance.notes.startsWith('No incluye deportes extremos'));
 
   assertEquals(hotel.type, 'hotel');
   assertEquals([hotel.details.checkInDate, hotel.details.checkOutDate], ['2027-05-04', '2027-05-06']);
@@ -166,7 +163,7 @@ Deno.test('mapeo: ningún texto del PDF llega a los campos de HTML enriquecido',
   // Las inclusiones y exclusiones generales no se aplican; las notas van a Travel Tips (texto plano que el
   // constructor y el sitio público muestran escapado, nunca como HTML).
   assertFalse(JSON.stringify(content).includes('incluye</b>'));
-  assertEquals(content.travelTips[0].tips[0].body, '<script>alert(1)</script> nota general');
+  assert(content.travelTips[0].tips.some((t) => t.body === '<script>alert(1)</script> nota general'));
 });
 
 Deno.test('mapeo: ids únicos y números de día sin repetir', () => {
@@ -197,7 +194,8 @@ Deno.test('mapeo: las notas generales van a Travel Tips (un grupo «General», u
   const { travelTips } = thirteen().content;
   assertEquals(travelTips.length, 1);
   assertEquals(travelTips[0].destination, GENERAL_TIPS_DESTINATION);
-  assertEquals(travelTips[0].tips.map((t) => t.body), [
+  const notes = travelTips[0].tips.filter((t) => t.category !== 'safety');
+  assertEquals(notes.map((t) => t.body), [
     'Lleve su pasaporte durante todo el viaje.', // el consejo general se conserva, sin el número
     'El clima es variable: lleve abrigo y calzado cómodo.'
   ]);
@@ -211,7 +209,7 @@ Deno.test('mapeo: las notas generales van a Travel Tips (un grupo «General», u
     }
   }
   // Clima y equipaje se clasifica; el resto queda como consejo general (categoría vacía).
-  assertEquals(travelTips[0].tips.map((t) => t.category), ['', 'weather']);
+  assertEquals(notes.map((t) => t.category), ['', 'weather']);
 });
 
 Deno.test('mapeo: sin notas no se crea ningún grupo de consejos, y las notas repetidas no se duplican', () => {
@@ -243,8 +241,12 @@ Deno.test('mapeo: la cena show queda como actividad (sin subtype) y la asistenci
   const tango = serviceNamed(p, 'tango');
   assertEquals([tango.type, tango.subtype, tango.time], ['activity', undefined, '19:30']);
   assertEquals(tango.details.modality, 'Compartido');
-  const plan = serviceNamed(p, 'Titanium');
-  assertEquals([plan.type, plan.title], ['other', 'Asistencia al viajero · Titanium Plus']);
+  // La asistencia al viajero vale para todo el viaje: no queda dentro de ningún día…
+  assertEquals(p.content.days.flatMap((d) => d.services).filter((s) => s.title.includes('Titanium')).length, 0);
+  // …tampoco se convierte en Travel Tips (una asistencia contratada no es un consejo) ni llega a ProposalContent:
+  // ProposalContent no tiene un lugar para servicios generales.
+  assertEquals(p.content.travelTips[0].tips.some((t) => t.title.includes('Titanium') || t.category === 'safety'), false);
+  assertFalse(JSON.stringify(p.content).includes('Titanium'));
 });
 
 Deno.test('mapeo: los límites de cobertura de la asistencia NO se convierten en líneas de precio', () => {
@@ -281,9 +283,9 @@ Deno.test('revisión con el voucher de referencia: los seis casos del viaje de 1
   const tango = day(11);
   assertEquals([tango.type, tango.subtype, tango.time, tango.details.modality], ['activity', undefined, '19:30', 'Compartido']);
   assert(tango.details.included.startsWith('Cena con entrada'));
-  // Día 13 — asistencia al viajero: «Otro» con nombre descriptivo y sin precio.
-  const asistencia = day(13);
-  assertEquals([asistencia.type, asistencia.title], ['other', 'Asistencia al viajero · Titanium Plus']);
+  // Día 13 — la asistencia al viajero es general: no está en el día, no es un consejo y no lleva precio.
+  assertEquals(p.content.days.find((d) => d.dayNumber === 13)!.services, []);
+  assertFalse(JSON.stringify(p.content).includes('Titanium'));
   assertEquals(p.content.pricing, { lines: [], feesLines: [] });
 });
 
@@ -291,4 +293,42 @@ Deno.test('mapeo: ningún dato sensible del viaje de 13 días llega a proposals.
   const text = JSON.stringify(thirteen());
   assertFalse(text.includes(FAKE_PASSPORT_2));
   assertFalse(/nacimiento/i.test(text));
+});
+
+Deno.test('servicio general: la asistencia al viajero no queda en ningún día y los precios por servicio siguen alineados', () => {
+  const data = rawThirteenDayExtraction();
+  // Un servicio con precio explícito después de la asistencia, para comprobar que los índices no se corren.
+  const hotelDay = data.days[0];
+  hotelDay.services.unshift(data.days[5].services[0]); // la asistencia, primero en ese día
+  hotelDay.services.push(service({ type: 'hotel', name: 'Hotel Faro', price: { amount: 500, per_person: false } }));
+  data.pricing = null;
+  const p = mapExtractionToProposal(postProcessExtraction(data).extraction);
+  const day = p.content.days.find((d) => d.dayNumber === 3)!;
+  assertEquals(day.services.some((s) => s.title.includes('Asistencia')), false);
+  const hotel = day.services.find((s) => s.title === 'Hotel Faro')!;
+  assertEquals(p.content.pricing.lines.map((l) => l.serviceId), [hotel.id]);
+});
+
+Deno.test('servicio general: con o sin resumen, la asistencia no llega a ProposalContent (ni día, ni consejo); las notas sí siguen siendo consejos', () => {
+  const mapped = (description: string | null) =>
+    mapExtractionToProposal(
+      postProcessExtraction(
+        extraction({
+          days: [
+            { number: 1, date: null, base_city: null, title: null, summary: null, services: [service({ type: 'other', name: 'Seguro de viaje Global', description, notes: 'Deportes extremos' })] }
+          ],
+          notes: ['El clima es variable: lleve abrigo.']
+        })
+      ).extraction
+    );
+  for (const description of [null, 'Vigencia todo el viaje.']) {
+    const p = mapped(description);
+    assertEquals(p.content.days[0].services, []);
+    const text = JSON.stringify(p.content);
+    assertFalse(text.includes('Seguro de viaje Global'));
+    assertFalse(text.includes('Deportes extremos'));
+    assertFalse(text.includes('Vigencia todo el viaje'));
+    // Las notas generales del viaje siguen convirtiéndose en consejos.
+    assertEquals(p.content.travelTips[0].tips.map((t) => [t.body, t.category]), [['El clima es variable: lleve abrigo.', 'weather']]);
+  }
 });

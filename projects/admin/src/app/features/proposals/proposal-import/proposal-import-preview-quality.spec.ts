@@ -104,12 +104,24 @@ describe('vista previa: datos útiles para comparar con el PDF', () => {
   });
 
   it('cena show (actividad) y asistencia al viajero («Otro») se ven con su tipo', () => {
-    const [tango, plan] = previewOf(
-      svc('Casa del Tango · cena show de tango', 'activity', { time: '19:30', modality: 'shared' }),
-      svc('Asistencia al viajero · Titanium Plus', 'other')
+    const preview = buildPreview(
+      extraction({
+        days: [
+          {
+            number: 1, date: null, base_city: null, title: null, summary: null,
+            services: [
+              svc('Casa del Tango · cena show de tango', 'activity', { time: '19:30', modality: 'shared' }),
+              svc('Asistencia al viajero · Titanium Plus', 'other')
+            ]
+          }
+        ]
+      })
     );
+    const [tango] = preview.days[0].services;
     expect(tango.typeLabel).toBe('Actividad');
     expect([tango.time, tango.modality]).toEqual(['19:30', 'Compartido']);
+    // La asistencia es un servicio general: «Otro», con nombre descriptivo, fuera de los días.
+    const [plan] = preview.generalServices;
     expect(plan.typeLabel).toBe('Otro');
     expect(plan.name).toBe('Asistencia al viajero · Titanium Plus');
   });
@@ -123,6 +135,51 @@ describe('vista previa: datos útiles para comparar con el PDF', () => {
     );
     expect(p.warnings).toEqual(['Algunos datos personales del documento no se incorporan a la propuesta.']);
     expect(p.missing).toEqual(['Datos de contacto del cliente (correo y teléfono).']);
+  });
+});
+
+describe('vista previa: servicios generales y aviso de privacidad', () => {
+  const generic = 'Algunos datos personales del documento no se incorporan a la propuesta.';
+
+  it('la asistencia al viajero sale de los días y va a «servicios generales» (no cuenta como servicio de un día)', () => {
+    const p = buildPreview(
+      extraction({
+        days: [
+          {
+            number: 1, date: null, base_city: null, title: null, summary: null,
+            services: [svc('Hotel Faro', 'hotel', { hotel: HOTEL }), svc('Asistencia al viajero · Plan Oro', 'other', { description: 'Vigencia durante todo el viaje.' })]
+          }
+        ]
+      })
+    );
+    expect(p.days[0].services.map((s) => s.name)).toEqual(['Hotel Faro']);
+    expect(p.generalServices.map((s) => [s.typeLabel, s.name, s.description])).toEqual([
+      ['Otro', 'Asistencia al viajero · Plan Oro', 'Vigencia durante todo el viaje.']
+    ]);
+    expect(p.serviceCount).toBe(1);
+  });
+
+  it('solo es general lo que es asistencia/seguro de viaje de tipo «otro»: un servicio de un día sigue en su día', () => {
+    const p = buildPreview(
+      extraction({
+        days: [
+          {
+            number: 1, date: null, base_city: null, title: null, summary: null,
+            services: [svc('Asistencia en el aeropuerto', 'other'), svc('Seguro de viaje', 'activity'), svc('Cena libre', 'other')]
+          }
+        ]
+      })
+    );
+    expect(p.days[0].services.length).toBe(3);
+    expect(p.generalServices).toEqual([]);
+  });
+
+  it('el aviso de privacidad llega a la vista previa una sola vez y sin revelar el tipo de dato', () => {
+    const p = buildPreview(extraction({ warnings: [{ code: 'sensitive_data_removed', message: generic }] }));
+    expect(p.warnings).toEqual([generic]);
+    for (const word of ['pasaporte', 'nacimiento', 'boleto', 'localizador', 'asiento', 'tarjeta']) {
+      expect(p.warnings.join(' ').toLowerCase()).not.toContain(word);
+    }
   });
 });
 

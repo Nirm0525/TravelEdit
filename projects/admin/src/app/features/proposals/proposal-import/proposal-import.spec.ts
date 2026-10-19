@@ -134,9 +134,9 @@ describe('ProposalImport (pantalla "Nueva desde PDF")', () => {
     expect(text()).toContain('Un aviso de prueba.');
     expect(text()).toContain('Teléfono del cliente');
     // Las notas se copian como consejos de viaje; las inclusiones generales son solo lectura.
-    expect(text()).toContain('Se copian a la propuesta como consejos generales de viaje');
+    expect(text()).toContain('Estas notas se agregarán como consejos de viaje en la propuesta');
     expect(text()).toContain('Lleve abrigo.');
-    expect(text()).toContain('no se copian a la propuesta');
+    expect(text()).toContain('Solo lectura: esto no se copia automáticamente a la propuesta.');
 
     button('Crear propuesta en borrador')!.click();
     await settle();
@@ -166,6 +166,94 @@ describe('ProposalImport (pantalla "Nueva desde PDF")', () => {
     button('Continuar')!.click();
     await settle();
     expect(text()).toContain('El PDF no trae precios: agrégalos en el constructor.');
+  });
+
+  // ---------------------------------------------------------------- ajuste final de la vista previa
+
+  async function openPreview(extracted: StoredExtraction): Promise<void> {
+    service.getStatus.mockResolvedValue(row({ extracted }));
+    pick(pdf());
+    choose('select', 'other');
+    await settle();
+    button('Continuar')!.click();
+    await settle();
+  }
+  const section = (title: string) =>
+    Array.from(el().querySelectorAll('.proposal-import__section')).find((s) => s.querySelector('h2')?.textContent?.includes(title));
+  const sectionText = (title: string) => section(title)?.textContent?.replace(/\s+/g, ' ') ?? '';
+
+  it('mientras lee el PDF, la tarjeta de estado va centrada (como en el diseño aprobado) y desaparece con la vista previa', async () => {
+    service.start.mockReturnValue(new Promise(() => {})); // la lectura no termina
+    pick(pdf('Voucher de prueba.pdf'));
+    choose('select', 'other');
+    await settle();
+    button('Continuar')!.click();
+    await settle();
+    expect(el().querySelector('.proposal-import--centered .proposal-import__status')).not.toBeNull();
+    expect(text()).toContain('The Edit Assistant está leyendo el PDF');
+    expect(text()).toContain('Voucher de prueba.pdf');
+  });
+
+  it('notas del viaje: dicen que se agregarán como consejos de viaje; las inclusiones, que no se copian automáticamente — sin mezclar', async () => {
+    await openPreview(extraction({ notes: ['Lleve abrigo.'], inclusions: ['Desayunos'], exclusions: ['Vuelos internacionales'] }));
+    expect(el().querySelector('.proposal-import--centered')).toBeNull();
+    const notes = sectionText('Notas del viaje');
+    expect(notes).toContain('Estas notas se agregarán como consejos de viaje en la propuesta.');
+    expect(notes).toContain('Lleve abrigo.');
+    expect(notes).not.toContain('Solo lectura');
+    const inclusions = sectionText('Inclusiones y exclusiones generales');
+    expect(inclusions).toContain('Solo lectura: esto no se copia automáticamente a la propuesta.');
+    expect(inclusions).toContain('Desayunos');
+    expect(inclusions).toContain('Vuelos internacionales');
+    expect(inclusions).not.toContain('consejos de viaje');
+    expect(text()).not.toContain('esto no se copia a la propuesta.'); // el texto viejo ya no existe
+  });
+
+  it('solo notas: no aparece ningún mensaje de solo lectura; solo inclusiones: no aparece el de consejos', async () => {
+    await openPreview(extraction({ notes: ['Lleve abrigo.'], inclusions: [], exclusions: [] }));
+    expect(text()).toContain('Estas notas se agregarán como consejos de viaje');
+    expect(text()).not.toContain('Solo lectura');
+    expect(section('Inclusiones y exclusiones generales')).toBeUndefined();
+  });
+
+  it('solo inclusiones: se ve el aviso de solo lectura y no el de consejos', async () => {
+    await openPreview(extraction({ notes: [], inclusions: ['Desayunos'], exclusions: [] }));
+    expect(text()).toContain('Solo lectura: esto no se copia automáticamente a la propuesta.');
+    expect(text()).not.toContain('consejos de viaje');
+    expect(section('Notas del viaje')).toBeUndefined();
+  });
+
+  it('servicios generales: la asistencia al viajero va en su propia sección y no dentro de un día', async () => {
+    const data = extraction();
+    data.days[0].services.push({
+      type: 'other', subtype: null, name: 'Asistencia al viajero · Plan Oro', date: null, time: null, location: null,
+      description: 'Vigencia durante todo el viaje.', notes: null, modality: null, price: null, source_page: null,
+      flight: null, hotel: null, transfer: null, activity: null
+    });
+    await openPreview(data);
+    expect(sectionText('Servicios generales')).toContain('Asistencia al viajero · Plan Oro');
+    expect(sectionText('Servicios generales')).toContain('Vigencia durante todo el viaje.');
+    expect(sectionText('Servicios generales')).toContain(
+      'Información detectada en el PDF. Revísala antes de crear la propuesta; actualmente no se incorpora automáticamente al borrador.'
+    );
+    expect(sectionText('Servicios generales')).not.toContain('consejo'); // no se convierte en Travel Tips
+    expect(sectionText('Itinerario')).not.toContain('Asistencia al viajero');
+    expect(sectionText('Itinerario')).toContain('2 servicios'); // solo los de los días
+  });
+
+  it('sin servicios generales no aparece esa sección', async () => {
+    await openPreview(extraction());
+    expect(section('Servicios generales')).toBeUndefined();
+  });
+
+  it('el aviso genérico de privacidad se cuenta como aviso y no revela qué dato era', async () => {
+    const generic = 'Algunos datos personales del documento no se incorporan a la propuesta.';
+    await openPreview(extraction({ warnings: [{ code: 'sensitive_data_removed', message: generic }], missing: ['Teléfono del cliente'] }));
+    expect(text()).toContain('1 aviso y 1 dato que falta');
+    expect(text()).toContain(generic);
+    for (const word of ['pasaporte', 'nacimiento', 'boleto', 'localizador', 'asiento', 'tarjeta']) {
+      expect(text().toLowerCase()).not.toContain(word);
+    }
   });
 
   it('si la lectura falla muestra el mensaje de la fila y "Intentar de nuevo" vuelve a pedirla', async () => {

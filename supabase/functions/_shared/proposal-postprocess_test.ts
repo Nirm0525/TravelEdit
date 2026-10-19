@@ -1,10 +1,28 @@
 import { assert, assertEquals, assertFalse } from 'jsr:@std/assert@1';
-import { mergeDuplicateDays, postProcessExtraction } from './proposal-postprocess.ts';
+import {
+  ASSISTANCE_NAME_PREFIX,
+  isGeneralService,
+  isTravelAssistance,
+  mergeDuplicateDays,
+  postProcessExtraction,
+  TRAVEL_ASSISTANCE
+} from './proposal-postprocess.ts';
+import { PRIVACY_NOTICE } from './proposal-sanitize.ts';
 import { runCoherenceChecks } from './proposal-checks.ts';
 import { computeDiff, incomingServiceFields } from './proposal-diff.ts';
 import { ExtractionSchema } from './proposal-extraction.ts';
 import { extraction, flight, proposalSnapshot, service } from './test-fixtures.ts';
-import { FAKE_BIRTHDATE, FAKE_BOOKING, FAKE_CARD, FAKE_PASSPORT, FAKE_PHONE, FAKE_TICKET, rawVoucherExtraction } from './test-fixtures-voucher.ts';
+import {
+  FAKE_BIRTHDATE,
+  FAKE_BOOKING,
+  FAKE_CARD,
+  FAKE_PASSPORT,
+  FAKE_PASSPORT_2,
+  FAKE_PHONE,
+  FAKE_TICKET,
+  rawThirteenDayExtraction,
+  rawVoucherExtraction
+} from './test-fixtures-voucher.ts';
 
 Deno.test('voucher: el fixture inventado es una extracción válida para el schema', () => {
   assert(ExtractionSchema.safeParse(rawVoucherExtraction()).success);
@@ -32,7 +50,7 @@ Deno.test('voucher: el día repartido en dos secciones queda en un solo día, si
   assertEquals(day1.title, 'Salida');
   assertEquals(day1.services.map((s) => s.name), [
     'Vuelo Ciudad Norte – Isla Central',
-    'Plan Viaje Seguro Plus',
+    'Asistencia al viajero · Plan Viaje Seguro Plus', // nombre descriptivo; sigue en el día (el mapeo lo saca)
     'Vuelo Isla Central – Puerto Azul', // el tramo repetido aparece una sola vez
     'Hotel Faro',
     'Traslado aeropuerto – hotel'
@@ -167,7 +185,7 @@ Deno.test('modalidad: un traslado actual "Van 8 pax" no se marca distinto por a�
 
 Deno.test('seguro y notas: el servicio de seguro es un "other" del primer día con "No incluye" en sus notes', () => {
   const { extraction: clean } = postProcessExtraction(rawVoucherExtraction());
-  const insurance = clean.days[0].services.find((s) => s.name === 'Plan Viaje Seguro Plus')!;
+  const insurance = clean.days[0].services.find((s) => s.name === 'Asistencia al viajero · Plan Viaje Seguro Plus')!;
   assertEquals(insurance.type, 'other');
   assert(insurance.notes!.startsWith('No incluye deportes extremos'));
   assertFalse(insurance.description!.includes('Pasaporte'));
@@ -185,4 +203,168 @@ Deno.test('postproceso: hoteles del fixture conservan sus noches tras unir días
   const { extraction: clean } = postProcessExtraction(rawVoucherExtraction());
   const stay = clean.days[0].services.find((s) => s.type === 'hotel')!;
   assertEquals([stay.hotel?.check_in_date, stay.hotel?.check_out_date], ['2027-05-04', '2027-05-06']);
+});
+
+// ---------------------------------------------------------------- aviso de privacidad y servicios generales
+
+const MARKER = 'Datos personales del documento';
+const TYPE_WORDS = ['pasaporte', 'nacimiento', 'boleto', 'localizador', 'asiento', 'tarjeta', 'documento de identidad'];
+
+Deno.test('privacidad: si el modelo omitió datos personales y lo señala en `missing`, hay UN aviso genérico y la entrada desaparece', () => {
+  const data = extraction({
+    travelers: { adults: 2, children: 0, children_ages: [] },
+    days: [{ number: 1, date: null, base_city: null, title: null, summary: null, services: [service({ type: 'activity', name: 'Paseo' })] }],
+    missing: ['Datos de contacto del cliente.', MARKER]
+  });
+  const { extraction: clean, warnings } = postProcessExtraction(data);
+  assertFalse(clean.missing.some((m) => m.includes('personales')));
+  assertEquals(clean.missing.includes('Datos de contacto del cliente.'), true);
+  const notices = warnings.filter((w) => w.code === 'sensitive_data_removed');
+  assertEquals(notices.length, 1);
+  assertEquals(notices[0].message, 'Algunos datos personales del documento no se incorporan a la propuesta.');
+});
+
+Deno.test('privacidad: varias coincidencias sensibles (distintas reglas y campos) + la señal del modelo siguen siendo UN solo aviso', () => {
+  const data = rawThirteenDayExtraction();
+  data.missing = [MARKER, 'Fecha de nacimiento de los pasajeros.', 'No se especifican edades de los viajeros.'];
+  data.days[0].services[0].description = `Pasaporte ${FAKE_PASSPORT} y boleto ${FAKE_TICKET}. Localizador ${FAKE_BOOKING}. Nacimiento: ${FAKE_BIRTHDATE}. Asiento 12A.`;
+  data.notes.push(`Tarjeta ${FAKE_CARD}`);
+  const { extraction: clean, warnings } = postProcessExtraction(data);
+  const notices = warnings.filter((w) => w.code === 'sensitive_data_removed');
+  assertEquals(notices.length, 1);
+  const text = notices[0].message.toLowerCase();
+  for (const word of TYPE_WORDS) {
+    assertFalse(text.includes(word), `el aviso no debe mencionar «${word}»`);
+  }
+  assertFalse(JSON.stringify(clean).includes(FAKE_TICKET));
+  assertFalse(clean.missing.some((m) => /nacimiento|personales|edades/i.test(m)));
+});
+
+Deno.test('privacidad: sin señal del modelo ni datos filtrados no hay aviso (no se inventa)', () => {
+  const data = rawThirteenDayExtraction();
+  data.missing = ['Datos de contacto del cliente.'];
+  data.days = data.days.map((d) => ({ ...d, services: d.services.filter((s) => s.type !== 'other') }));
+  data.notes = ['El clima es variable.'];
+  assertEquals(postProcessExtraction(data).warnings.filter((w) => w.code === 'sensitive_data_removed'), []);
+});
+
+Deno.test('servicio general: la asistencia al viajero (por nombre o por descripción) es general; un servicio de un día, no', () => {
+  const { extraction: clean } = postProcessExtraction(rawThirteenDayExtraction());
+  const all = clean.days.flatMap((d) => d.services);
+  assertEquals(all.filter(isGeneralService).map((s) => s.name), ['Asistencia al viajero · Titanium Plus']);
+  assertFalse(isGeneralService(service({ type: 'other', name: 'Asistencia en el aeropuerto' })));
+  assertFalse(isGeneralService(service({ type: 'activity', name: 'Seguro de viaje' }))); // solo `other`
+  // Detectada solo por la descripción: el posprocesado le da nombre descriptivo y, por eso, también es general.
+  const viaDescription = postProcessExtraction(
+    extraction({
+      days: [{ number: 1, date: null, base_city: null, title: null, summary: null, services: [service({ type: 'other', name: 'Plan Oro', description: 'Asistencia al viajero con cobertura.' })] }]
+    })
+  ).extraction.days[0].services[0];
+  assertEquals(viaDescription.name, 'Asistencia al viajero · Plan Oro');
+  assert(isGeneralService(viaDescription));
+});
+
+Deno.test('servicio general: la vista previa del admin usa EXACTAMENTE la misma expresión (no se desfasan)', () => {
+  const client = Deno.readTextFileSync(
+    new URL('../../../projects/admin/src/app/features/proposals/proposal-import/proposal-import-preview.ts', import.meta.url)
+  );
+  assert(client.includes(TRAVEL_ASSISTANCE.source), 'la expresión del cliente difiere de la del servidor');
+});
+
+// ---------------------------------------------------------------- missing, clasificación y asistencia (viaje de 13 días)
+
+const byName = (data: ReturnType<typeof rawThirteenDayExtraction>, fragment: string) =>
+  data.days.flatMap((d) => d.services).find((s) => s.name.includes(fragment))!;
+
+Deno.test('13 días: el fixture es una extracción válida para el schema', () => {
+  assert(ExtractionSchema.safeParse(rawThirteenDayExtraction()).success);
+});
+
+Deno.test('missing: «no se especifican edades» y «fecha de nacimiento» (datos descartados por privacidad) no son datos faltantes', () => {
+  const { extraction: clean, warnings } = postProcessExtraction(rawThirteenDayExtraction());
+  const text = clean.missing.join(' | ').toLowerCase();
+  assertFalse(text.includes('edades'));
+  assertFalse(text.includes('nacimiento'));
+  // Se avisa una sola vez y en genérico: algo personal no se incorpora.
+  const notices = warnings.filter((w) => w.code === 'sensitive_data_removed');
+  assertEquals(notices.length, 1);
+  assertEquals(notices[0].message, PRIVACY_NOTICE);
+});
+
+Deno.test('missing: un dato que de verdad no está en el PDF sí se conserva', () => {
+  const { extraction: clean } = postProcessExtraction(rawThirteenDayExtraction());
+  assert(clean.missing.includes('Datos de contacto del cliente (correo y teléfono).'));
+  // …y el precio ausente se sigue anotando.
+  assert(clean.missing.some((m) => /precio/i.test(m)));
+});
+
+Deno.test('missing: las edades de los NIÑOS sí faltan si hay niños y el PDF no las trae', () => {
+  const data = rawThirteenDayExtraction();
+  data.travelers = { adults: 2, children: 1, children_ages: [] };
+  data.missing = ['No se especifican las edades de los niños.'];
+  assertEquals(postProcessExtraction(data).extraction.missing.includes('No se especifican las edades de los niños.'), true);
+});
+
+Deno.test('clasificación: una cena show de tango tipada como comida queda como actividad (sin subtype)', () => {
+  const { extraction: clean } = postProcessExtraction(rawThirteenDayExtraction());
+  const tango = byName(clean, 'tango');
+  assertEquals([tango.type, tango.subtype], ['activity', null]);
+  assertEquals([tango.time, tango.modality], ['19:30', 'shared']);
+  assertEquals(tango.activity?.included, 'Cena con entrada, plato principal, postre, vino y agua');
+});
+
+Deno.test('clasificación: una comida de verdad (restaurante, sin experiencia) sigue siendo comida', () => {
+  const data = extraction({
+    days: [
+      {
+        number: 1, date: null, base_city: null, title: null, summary: null,
+        services: [service({ type: 'activity', subtype: 'meal', name: 'Almuerzo en restaurante del puerto', description: 'Menú de tres tiempos.' })]
+      }
+    ]
+  });
+  assertEquals(postProcessExtraction(data).extraction.days[0].services[0].subtype, 'meal');
+});
+
+Deno.test('asistencia: se reconoce por semántica y no depende del nombre de un plan concreto', () => {
+  assert(isTravelAssistance(service({ type: 'other', name: 'Plan Cualquiera', description: 'Asistencia al viajero con cobertura médica.' })));
+  assert(isTravelAssistance(service({ type: 'other', name: 'Seguro de viaje Global' })));
+  assertFalse(isTravelAssistance(service({ type: 'other', name: 'Cena de gala', description: 'Con baile.' })));
+  assertFalse(isTravelAssistance(service({ type: 'activity', name: 'Asistencia al viajero' }))); // solo `other`
+});
+
+Deno.test('asistencia: nombre descriptivo «Asistencia al viajero · Plan», tipo other, y los montos de cobertura no se vuelven precio', () => {
+  const { extraction: clean, warnings } = postProcessExtraction(rawThirteenDayExtraction());
+  const plan = byName(clean, 'Titanium Plus');
+  assertEquals(plan.type, 'other');
+  assertEquals(plan.name, `${ASSISTANCE_NAME_PREFIX} · Titanium Plus`);
+  assertEquals(plan.price, null); // el monto de cobertura no es el precio del servicio
+  assertEquals(clean.pricing, null); // ni líneas de precio: 150.000, 15.000 y 2.000 son límites del plan
+  assert(warnings.some((w) => w.code === 'pricing_lines_dropped'));
+  assert(clean.missing.some((m) => /precio/i.test(m))); // se mantiene «no hay precios del viaje»
+});
+
+Deno.test('asistencia: un nombre que ya la describe no se duplica', () => {
+  const data = extraction({
+    days: [{ number: 1, date: null, base_city: null, title: null, summary: null, services: [service({ type: 'other', name: 'Seguro de viaje Plus' })] }]
+  });
+  assertEquals(postProcessExtraction(data).extraction.days[0].services[0].name, 'Seguro de viaje Plus');
+});
+
+Deno.test('asistencia: un precio REAL del viaje en una sección de tarifas no se descarta', () => {
+  const data = rawThirteenDayExtraction();
+  data.pricing = {
+    currency: 'USD',
+    total: 4200,
+    other_currencies: [],
+    lines: [{ concept: 'Paquete completo', detail: null, amount: 4200, quantity: 1, unit_price: 4200, per_person: false, kind: 'service' }]
+  };
+  const { extraction: clean } = postProcessExtraction(data);
+  assertEquals(clean.pricing?.lines.map((l) => l.concept), ['Paquete completo']);
+});
+
+Deno.test('seguridad: ni el pasaporte ni su número sobreviven en ningún texto del viaje de 13 días', () => {
+  const { extraction: clean } = postProcessExtraction(rawThirteenDayExtraction());
+  assertFalse(JSON.stringify(clean).includes(FAKE_PASSPORT_2));
+  // El consejo general «lleve su pasaporte» SÍ se conserva (sin el número).
+  assert(clean.notes.some((n) => /lleve su pasaporte/i.test(n)));
 });

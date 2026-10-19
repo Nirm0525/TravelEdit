@@ -10,6 +10,9 @@
 //    conservan su título de partida). Descripciones, notas y títulos son texto plano.
 //  - Las notas generales del viaje (clima, equipaje, qué documentos llevar…) van a Travel Tips, el único lugar de
 //    ProposalContent pensado para consejos: un grupo "General" con un consejo por nota, en texto plano.
+//  - Los servicios GENERALES del viaje (la asistencia al viajero, cuya vigencia cubre todo el viaje) no se ponen en
+//    ningún día ni en Travel Tips (una asistencia contratada no es un consejo): ProposalContent no tiene un lugar
+//    para servicios generales, así que NO se incorporan al borrador. La vista previa los muestra aparte y lo avisa.
 //    Lo específico de un servicio ya viaja con él (activity.included → details.included, "No incluye" → notes,
 //    y description). Las inclusiones y exclusiones generales del viaje NO se aplican: ProposalContent no tiene un
 //    campo para ellas (los términos son HTML y ningún texto del PDF va a HTML); solo se ven en la vista previa.
@@ -17,6 +20,7 @@
 //  - Precios: pricing.lines es la fuente principal; el price de un servicio solo crea una línea si el
 //    PDF no trae pricing.lines (incomingPriceLines), y la línea de un servicio lleva su serviceId.
 import type { Extraction, ExtractedService } from './proposal-extraction.ts';
+import { isGeneralService } from './proposal-postprocess.ts';
 import { incomingPriceLines, incomingServiceFields } from './proposal-diff.ts';
 import { resolvePriceLine, travelersTotal } from './proposal-pricing.ts';
 
@@ -151,7 +155,11 @@ function mapTravelTips(notes: string[], newId: () => string): MappedTravelTipGro
   return tips.length > 0 ? [{ id: newId(), destination: GENERAL_TIPS_DESTINATION, tips }] : [];
 }
 
-export function mapExtractionToProposal(data: Extraction, newId: () => string = () => crypto.randomUUID()): MappedProposal {
+export function mapExtractionToProposal(input: Extraction, newId: () => string = () => crypto.randomUUID()): MappedProposal {
+  // Los servicios generales salen de los días ANTES de mapear (así los índices de servicio de los precios siguen alineados).
+  // No van a ninguna otra parte: ProposalContent no tiene dónde ponerlos (ver la cabecera).
+  const data: Extraction = { ...input, days: input.days.map((day) => ({ ...day, services: day.services.filter((s) => !isGeneralService(s)) })) };
+
   // --- días y servicios ---
   const usedNumbers = new Set<number>();
   const serviceIds: string[][] = [];

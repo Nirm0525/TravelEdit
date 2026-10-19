@@ -88,11 +88,22 @@ const EXPERIENCE =
   /\b(?:show|espect[aá]culo|tango|folcl|flamenco|concierto|degustaci[oó]n|cata\b|tours?\b|excursi[oó]n|clase\b|taller|experiencia)/i;
 
 /** Asistencia al viajero / seguro de viaje (no hay un tipo propio en ProposalContent: va como `other`). */
-const TRAVEL_ASSISTANCE = /asistencia\s+(?:al\s+viajero|m[eé]dica|en\s+viaje)|seguro\s+de\s+viaje|travel\s+(?:insurance|assistance)/i;
+// OJO: la vista previa del admin (proposal-import-preview.ts) usa la misma expresión para ubicar estos servicios
+// fuera de los días; un test compara ambas para que no se desfasen.
+export const TRAVEL_ASSISTANCE = /asistencia\s+(?:al\s+viajero|m[eé]dica|en\s+viaje)|seguro\s+de\s+viaje|travel\s+(?:insurance|assistance)/i;
 export const ASSISTANCE_NAME_PREFIX = 'Asistencia al viajero';
 
 export function isTravelAssistance(s: ExtractedService): boolean {
   return s.type === 'other' && TRAVEL_ASSISTANCE.test(`${s.name} ${s.description ?? ''}`);
+}
+
+/**
+ * Servicio general del viaje: no ocurre en un día concreto. Hoy, la asistencia al viajero o el seguro de viaje (su
+ * vigencia cubre todo el viaje). Se decide por el NOMBRE, que el posprocesado ya dejó descriptivo, para que el
+ * servidor y la vista previa coincidan. ProposalContent no tiene un lugar para servicios generales: ver el mapeo.
+ */
+export function isGeneralService(s: ExtractedService): boolean {
+  return s.type === 'other' && TRAVEL_ASSISTANCE.test(s.name);
 }
 
 /**
@@ -110,7 +121,7 @@ function normalizeServices(days: ExtractedDay[]): { days: ExtractedDay[]; priceD
         next = { ...next, subtype: null };
       }
       if (isTravelAssistance(next)) {
-        if (!/asistencia|seguro/i.test(next.name)) {
+        if (!TRAVEL_ASSISTANCE.test(next.name)) {
           next = { ...next, name: `${ASSISTANCE_NAME_PREFIX} · ${next.name}` };
         }
         if (next.price) {

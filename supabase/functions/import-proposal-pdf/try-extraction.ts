@@ -13,6 +13,7 @@
 // los campos de la propuesta: client_name, client_email, client_phone, start_date, end_date,
 // travelers_count, currency, pricing_total, updated_at.
 import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
+import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type StoredExtraction } from '../_shared/proposal-extraction.ts';
 import { extractTrip } from './anthropic.ts';
@@ -97,9 +98,12 @@ function printSummary(stored: StoredExtraction, outputPath: string, pages: numbe
   console.log(
     `Servicios:  ${Object.entries(byType).map(([k, v]) => `${k}: ${v}`).join(', ') || 'ninguno'}`
   );
+  const pricing = stored.pricing;
   console.log(
-    `Precio:     ${stored.pricing.total ?? '—'} ${stored.pricing.currency ?? ''} · ${stored.pricing.lines.length} líneas` +
-      (stored.pricing.other_currencies.length ? ` · otras monedas: ${stored.pricing.other_currencies.join(', ')}` : '')
+    pricing
+      ? `Precio:     ${pricing.total ?? '—'} ${pricing.currency ?? ''} · ${pricing.lines.length} líneas` +
+          (pricing.other_currencies.length ? ` · otras monedas: ${pricing.other_currencies.join(', ')}` : '')
+      : 'Precio:     (el PDF no trae precios)'
   );
   console.log(`Warnings:   ${stored.warnings.length}`);
   for (const w of stored.warnings) {
@@ -134,7 +138,7 @@ try {
   const { pages } = validatePdf(bytes, maxPages);
   console.log(`PDF válido (${(bytes.byteLength / 1024 / 1024).toFixed(1)} MB, ${pages ?? '?'} páginas). Llamando a ${model}…`);
 
-  const extraction = await extractTrip(
+  const raw = await extractTrip(
     {
       apiKey,
       model,
@@ -143,13 +147,14 @@ try {
     },
     toBase64(bytes)
   );
+  const { extraction, warnings: postWarnings } = postProcessExtraction(raw);
   if (!hasUsefulContent(extraction)) {
     fail('El modelo no encontró información del viaje en el PDF.');
   }
 
   const stored: StoredExtraction = {
     ...extraction,
-    warnings: runCoherenceChecks(extraction),
+    warnings: [...postWarnings, ...runCoherenceChecks(extraction)],
     meta: { model, extracted_at: new Date().toISOString() }
   };
 

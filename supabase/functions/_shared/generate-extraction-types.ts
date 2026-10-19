@@ -66,7 +66,7 @@ export type TripExtraction = ${toTs(extractionToolInputSchema(), '')};
 
 export type ExtractedDay = TripExtraction['days'][number];
 export type ExtractedService = ExtractedDay['services'][number];
-export type ExtractedPriceLine = TripExtraction['pricing']['lines'][number];
+export type ExtractedPriceLine = NonNullable<TripExtraction['pricing']>['lines'][number];
 
 export interface ExtractionWarning {
   code: string;

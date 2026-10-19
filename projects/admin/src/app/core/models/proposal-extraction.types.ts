@@ -37,7 +37,11 @@ export type TripExtraction = {
       time: string | null;
       location: string | null;
       description: string | null;
-      /** Precio del servicio solo si el PDF lo trae por servicio. */
+      /** Lo que el documento marca como 'No incluye' en este servicio. */
+      notes: string | null;
+      /** 'private' si dice PRIVADO; 'shared' si dice REGULAR o COMPARTIDO; null si no lo indica. */
+      modality: "private" | "shared" | null;
+      /** Precio del servicio solo si aparece en una sección explícita de precios, tarifas o cotización. */
       price: {
         amount: number;
         per_person: boolean;
@@ -52,6 +56,8 @@ export type TripExtraction = {
         destination: string | null;
         departure_time: string | null;
         arrival_time: string | null;
+        /** Fecha de llegada, sobre todo si es al día siguiente. */
+        arrival_date: string | null;
         cabin: string | null;
         baggage: string | null;
       } | null;
@@ -85,6 +91,7 @@ export type TripExtraction = {
       } | null;
     }[];
   }[];
+  /** Solo desde una sección explícita de precios, tarifas o cotización; null si el PDF no la trae. */
   pricing: {
     currency: string | null;
     total: number | null;
@@ -103,7 +110,7 @@ export type TripExtraction = {
       /** 'fee' para impuestos, tasas y cargos; 'service' para el resto. */
       kind: "service" | "fee";
     }[];
-  };
+  } | null;
   inclusions: string[];
   exclusions: string[];
   notes: string[];
@@ -113,7 +120,7 @@ export type TripExtraction = {
 
 export type ExtractedDay = TripExtraction['days'][number];
 export type ExtractedService = ExtractedDay['services'][number];
-export type ExtractedPriceLine = TripExtraction['pricing']['lines'][number];
+export type ExtractedPriceLine = NonNullable<TripExtraction['pricing']>['lines'][number];
 
 export interface ExtractionWarning {
   code: string;

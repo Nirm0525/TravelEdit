@@ -28,8 +28,9 @@ export function runCoherenceChecks(data: Extraction): ExtractionWarning[] {
   const { start_date: start, end_date: end } = data.trip;
 
   // --- Precios ---
-  const currencies = [...new Set([data.pricing.currency, ...data.pricing.other_currencies].filter(Boolean))];
-  if (data.pricing.other_currencies.length > 0) {
+  const pricing = data.pricing;
+  const currencies = [...new Set([pricing?.currency, ...(pricing?.other_currencies ?? [])].filter(Boolean))];
+  if (pricing && pricing.other_currencies.length > 0) {
     warnings.push({
       code: 'multiple_currencies',
       message: `El PDF trae más de una moneda (${currencies.join(', ')}). No se convirtió nada: revisa los montos.`
@@ -37,11 +38,11 @@ export function runCoherenceChecks(data: Extraction): ExtractionWarning[] {
   }
 
   const travelers = travelersTotal(data.travelers.adults, data.travelers.children);
-  if (data.pricing.lines.length > 0) {
+  if (pricing && pricing.lines.length > 0) {
     let unknownTravelers = false;
     let missingAmount = false;
     let sum = 0;
-    for (const line of data.pricing.lines) {
+    for (const line of pricing.lines) {
       const resolved = resolvePriceLine(line, travelers);
       sum += resolved.quantity * resolved.unitPrice;
       unknownTravelers ||= resolved.assumption === 'unknown_travelers';
@@ -56,10 +57,25 @@ export function runCoherenceChecks(data: Extraction): ExtractionWarning[] {
     if (missingAmount) {
       warnings.push({ code: 'price_line_without_amount', message: 'Hay líneas de precio sin monto en el PDF.' });
     }
-    if (data.pricing.total != null && Math.abs(sum - data.pricing.total) > PRICE_TOLERANCE) {
+    if (pricing.total != null && Math.abs(sum - pricing.total) > PRICE_TOLERANCE) {
       warnings.push({
         code: 'price_total_mismatch',
-        message: `La suma de las líneas de precio (${sum}) no coincide con el total del PDF (${data.pricing.total}).`
+        message: `La suma de las líneas de precio (${sum}) no coincide con el total del PDF (${pricing.total}).`
+      });
+    }
+  }
+
+  // --- Vuelos: un servicio por tramo ---
+  const FLIGHT_CODE = /\b[A-Z0-9]{2}\s?\d{2,4}\b/g;
+  for (const service of data.days.flatMap((d) => d.services)) {
+    if (service.type !== 'flight') {
+      continue;
+    }
+    const codes = [...new Set((`${service.flight?.flight_number ?? ''} ${service.name}`.match(FLIGHT_CODE) ?? []).map((c) => c.replace(/\s/g, '')))];
+    if (codes.length > 1) {
+      warnings.push({
+        code: 'flight_multiple_legs',
+        message: `"${service.name}" parece agrupar varios tramos (${codes.join(', ')}). Debe haber un servicio por tramo.`
       });
     }
   }

@@ -13,7 +13,7 @@
 //  - Dos o más candidatos, o un candidato ya emparejado → 'new'.
 // Solo se comparan campos estructurados (hora y ficha); la descripción no, porque
 // es texto redactado por la asesora y siempre sería "distinta".
-import type { Extraction, ExtractedDay, ExtractedPriceLine, ExtractedService } from './proposal-extraction.ts';
+import { MODALITY_LABEL, type Extraction, type ExtractedDay, type ExtractedPriceLine, type ExtractedService } from './proposal-extraction.ts';
 import { resolvePriceLine, travelersTotal } from './proposal-pricing.ts';
 import { addDays, normalizeName, parseTimeToHHMM } from './proposal-text.ts';
 
@@ -156,6 +156,7 @@ const TIME_LIKE = new Set(['time', 'checkIn', 'checkOut', 'arrivalTime']);
 export function incomingServiceFields(s: ExtractedService): { time: string | null; details: Record<string, string | null> } {
   const d: Record<string, string | null> = {};
   let time = s.time;
+  const modality = s.modality ? MODALITY_LABEL[s.modality] : null;
   if (s.type === 'flight' && s.flight) {
     time = s.flight.departure_time ?? s.time;
     Object.assign(d, {
@@ -164,6 +165,7 @@ export function incomingServiceFields(s: ExtractedService): { time: string | nul
       origin: s.flight.origin,
       destination: s.flight.destination,
       arrivalTime: s.flight.arrival_time,
+      arrivalDate: s.flight.arrival_date,
       cabin: s.flight.cabin,
       baggage: s.flight.baggage
     });
@@ -181,7 +183,8 @@ export function incomingServiceFields(s: ExtractedService): { time: string | nul
     });
   } else if (s.type === 'transfer' && s.transfer) {
     Object.assign(d, {
-      transferType: s.transfer.vehicle_type,
+      // La modalidad de un traslado va en transferType ("Privado", "Privado · Mini Bus 22 pax").
+      transferType: [modality, s.transfer.vehicle_type].filter(Boolean).join(' · ') || null,
       pickupLocation: s.transfer.from,
       dropoffLocation: s.transfer.to,
       passengers: s.transfer.passengers,
@@ -197,6 +200,10 @@ export function incomingServiceFields(s: ExtractedService): { time: string | nul
     });
   } else if (s.type === 'other') {
     d.location = s.location;
+  }
+  // Los demás tipos guardan la modalidad en details.modality.
+  if (s.type !== 'transfer') {
+    d.modality = modality;
   }
   return { time, details: d };
 }
@@ -268,7 +275,9 @@ function compareService(current: CurrentServiceView, incoming: ExtractedService)
     const currentValue = (current.details[key] ?? '').trim();
     const equal = TIME_LIKE.has(key)
       ? timesEqual(currentValue, value)
-      : key === 'flightNumber'
+      : key === 'transferType'
+        ? containsEither(currentValue, value)
+        : key === 'flightNumber'
         ? sameText(currentValue, value) || normalizeName(currentValue).replace(/ /g, '') === normalizeName(value).replace(/ /g, '')
         : sameText(currentValue, value);
     if (!currentValue || !equal) {
@@ -276,6 +285,13 @@ function compareService(current: CurrentServiceView, incoming: ExtractedService)
     }
   }
   return changes;
+}
+
+/** "Mini Bus 22 pax" y "Privado · Mini Bus 22 pax" describen el mismo traslado. */
+function containsEither(a: string, b: string): boolean {
+  const x = normalizeName(a);
+  const y = normalizeName(b);
+  return x !== '' && y !== '' && (x.includes(y) || y.includes(x));
 }
 
 function nightsOverlap(aFrom: string, aTo: string, bFrom: string, bTo: string): boolean {
@@ -316,7 +332,8 @@ export function incomingPriceLines(data: Extraction): IncomingLine[] {
     })
   );
 
-  if (data.pricing.lines.length === 0) {
+  const pricingLines = data.pricing?.lines ?? [];
+  if (pricingLines.length === 0) {
     return priced.map(({ dayIndex, serviceIndex, service }) => ({
       line: {
         concept: service.name,
@@ -333,7 +350,7 @@ export function incomingPriceLines(data: Extraction): IncomingLine[] {
   }
 
   const usedServices = new Set<string>();
-  return data.pricing.lines.map((line) => {
+  return pricingLines.map((line) => {
     let ref: IncomingLine['serviceRef'] = null;
     if (line.kind === 'service') {
       const free = priced.filter((p) => !usedServices.has(`${p.dayIndex}:${p.serviceIndex}`));
@@ -554,8 +571,8 @@ export function computeDiff(extracted: Extraction, snapshot: ProposalSnapshot): 
       end_date: scalarChange(snapshot.end_date, extracted.trip.end_date, sameExact)
     },
     pricing: {
-      currency: scalarChange(snapshot.currency?.toUpperCase() ?? null, extracted.pricing.currency, sameExact),
-      total: scalarChange(snapshot.pricing_total || null, extracted.pricing.total, (a, b) => Math.abs(a - b) <= PRICE_TOLERANCE),
+      currency: scalarChange(snapshot.currency?.toUpperCase() ?? null, extracted.pricing?.currency ?? null, sameExact),
+      total: scalarChange(snapshot.pricing_total || null, extracted.pricing?.total ?? null, (a, b) => Math.abs(a - b) <= PRICE_TOLERANCE),
       lines,
       only_in_proposal: linesOnlyInProposal
     },

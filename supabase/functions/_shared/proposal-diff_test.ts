@@ -115,8 +115,8 @@ Deno.test('diff: sin fechas, los días se emparejan por dayNumber (respaldo)', (
 
 Deno.test('diff: moneda distinta es changed a nivel de propuesta y el total se compara', () => {
   const data = matchingExtraction();
-  data.pricing.currency = 'EUR';
-  data.pricing.total = 3500;
+  data.pricing!.currency = 'EUR';
+  data.pricing!.total = 3500;
   const diff = computeDiff(data, proposalSnapshot());
   assertEquals(diff.pricing.currency, { status: 'changed', current: 'USD', incoming: 'EUR' });
   assertEquals(diff.pricing.total.status, 'changed');
@@ -124,9 +124,9 @@ Deno.test('diff: moneda distinta es changed a nivel de propuesta y el total se c
 
 Deno.test('diff: líneas de precio — cambia el precio, línea nueva y fee separado', () => {
   const data = matchingExtraction();
-  data.pricing.lines[0] = { concept: 'Hotel Savoy', detail: null, amount: 2400, quantity: 2, unit_price: 1200, per_person: false, kind: 'service' };
-  data.pricing.lines.push({ concept: 'Seguro de viaje', detail: null, amount: 80, quantity: null, unit_price: null, per_person: true, kind: 'service' });
-  data.pricing.lines.push({ concept: 'Impuestos', detail: null, amount: 50, quantity: 1, unit_price: 50, per_person: false, kind: 'fee' });
+  data.pricing!.lines[0] = { concept: 'Hotel Savoy', detail: null, amount: 2400, quantity: 2, unit_price: 1200, per_person: false, kind: 'service' };
+  data.pricing!.lines.push({ concept: 'Seguro de viaje', detail: null, amount: 80, quantity: null, unit_price: null, per_person: true, kind: 'service' });
+  data.pricing!.lines.push({ concept: 'Impuestos', detail: null, amount: 50, quantity: 1, unit_price: 50, per_person: false, kind: 'fee' });
   const lines = computeDiff(data, proposalSnapshot()).pricing.lines;
   assertEquals(lines[0].status, 'changed');
   assertEquals(lines[0].changed_fields.map((f) => f.field), ['unit_price']);
@@ -144,7 +144,7 @@ Deno.test('diff: precio por servicio solo crea línea si el PDF no trae pricing.
   assertEquals(a[1].service_ref, { day_index: 1, service_index: 0 }); // solo asigna el servicio
 
   const withoutLines = matchingExtraction();
-  withoutLines.pricing.lines = [];
+  withoutLines.pricing!.lines = [];
   withoutLines.days[1].services[0] = service({ type: 'activity', name: 'Cata de vinos', price: { amount: 500, per_person: true } });
   const b = computeDiff(withoutLines, proposalSnapshot()).pricing.lines;
   assertEquals(b.length, 1);

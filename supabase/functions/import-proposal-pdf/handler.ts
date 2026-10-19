@@ -3,6 +3,7 @@
 //
 // Esta función SOLO escribe en proposal_imports. Nunca en proposals.
 import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
+import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
 import { DEADLINE_MESSAGE } from './anthropic.ts';
@@ -182,7 +183,9 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     checkDeadline();
 
     // 7) Extracción con el modelo.
-    const extraction = await deps.extract({ pdfBase64: toBase64(bytes), model, apiKey, deadlineAt });
+    const raw = await deps.extract({ pdfBase64: toBase64(bytes), model, apiKey, deadlineAt });
+    // Limpieza de datos sensibles, unión de días repetidos y red de seguridad de precios.
+    const { extraction, warnings: postWarnings } = postProcessExtraction(raw);
     if (!hasUsefulContent(extraction)) {
       throw new UserError(
         'No se encontró información del viaje en el PDF. Si es un escaneo, revisa que se lea con claridad.',
@@ -192,7 +195,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
 
     const stored: StoredExtraction = {
       ...extraction,
-      warnings: runCoherenceChecks(extraction),
+      warnings: [...postWarnings, ...runCoherenceChecks(extraction)],
       meta: { model, extracted_at: deps.now().toISOString() }
     };
 

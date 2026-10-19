@@ -44,6 +44,13 @@ const nTime = time24.nullable();
 export const SERVICE_TYPES = ['flight', 'hotel', 'transfer', 'activity', 'other'] as const;
 export const SERVICE_SUBTYPES = ['meal', 'train'] as const;
 export const PRICE_KINDS = ['service', 'fee'] as const;
+export const MODALITIES = ['private', 'shared'] as const;
+
+/** Texto con el que la modalidad se guarda en service.details (transferType / modality). */
+export const MODALITY_LABEL: Record<(typeof MODALITIES)[number], string> = {
+  private: 'Privado',
+  shared: 'Compartido'
+};
 
 const FlightSchema = z.object({
   airline: nText,
@@ -52,6 +59,7 @@ const FlightSchema = z.object({
   destination: nText,
   departure_time: nTime,
   arrival_time: nTime,
+  arrival_date: nDate.describe('Fecha de llegada, sobre todo si es al día siguiente.'),
   cabin: nText,
   baggage: nText
 });
@@ -92,10 +100,15 @@ const ServiceSchema = z.object({
   time: nTime,
   location: nText,
   description: nText,
+  notes: nText.describe("Lo que el documento marca como 'No incluye' en este servicio."),
+  modality: z
+    .enum(MODALITIES)
+    .nullable()
+    .describe("'private' si dice PRIVADO; 'shared' si dice REGULAR o COMPARTIDO; null si no lo indica."),
   price: z
     .object({ amount: z.number(), per_person: z.boolean() })
     .nullable()
-    .describe('Precio del servicio solo si el PDF lo trae por servicio.'),
+    .describe('Precio del servicio solo si aparece en una sección explícita de precios, tarifas o cotización.'),
   source_page: z.number().int().min(1).nullable().describe('Número de página del PDF de donde salió.'),
   flight: FlightSchema.nullable().describe('Solo si type es flight.'),
   hotel: HotelSchema.nullable().describe('Solo si type es hotel.'),
@@ -136,12 +149,15 @@ export const ExtractionSchema = z.object({
     destinations: z.array(text)
   }),
   days: z.array(DaySchema),
-  pricing: z.object({
+  pricing: z
+    .object({
     currency: currencyCode.nullable(),
     total: z.number().nullable(),
     other_currencies: z.array(currencyCode).describe('Otras monedas que aparezcan en el PDF además de currency.'),
     lines: z.array(PriceLineSchema)
-  }),
+  })
+    .nullable()
+    .describe('Solo desde una sección explícita de precios, tarifas o cotización; null si el PDF no la trae.'),
   inclusions: z.array(text),
   exclusions: z.array(text),
   notes: z.array(text),
@@ -186,8 +202,8 @@ export function formatValidationIssues(error: z.ZodError, max = 25): string[] {
 export function hasUsefulContent(data: Extraction): boolean {
   return (
     data.days.some((d) => d.services.length > 0) ||
-    data.pricing.lines.length > 0 ||
-    data.pricing.total != null ||
+    (data.pricing?.lines.length ?? 0) > 0 ||
+    data.pricing?.total != null ||
     !!data.client.name ||
     !!data.trip.start_date
   );

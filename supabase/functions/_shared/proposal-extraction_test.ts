@@ -20,7 +20,8 @@ Deno.test('schema: los tipos de servicio son los del modelo y source_page es nú
   assertEquals(service.properties.type.enum, ['flight', 'hotel', 'transfer', 'activity', 'other']);
   assertEquals(service.properties.subtype.anyOf.map((s: { enum?: string[]; type?: string }) => s.enum ?? s.type), [['meal', 'train'], 'null']);
   assert(JSON.stringify(service.properties.source_page).includes('"integer"'));
-  const line = schema.properties.pricing.properties.lines.items.properties;
+  const pricingObject = schema.properties.pricing.anyOf.find((s: { type?: string }) => s.type === 'object');
+  const line = pricingObject.properties.lines.items.properties;
   assertEquals(line.kind.enum, ['service', 'fee']);
   assert('quantity' in line && 'unit_price' in line);
 });
@@ -41,7 +42,7 @@ Deno.test('schema: acepta una extracción válida y rechaza formatos incorrectos
   assertFalse(ExtractionSchema.safeParse(badTime).success);
 
   const badCurrency = matchingExtraction();
-  badCurrency.pricing.currency = 'usd';
+  badCurrency.pricing!.currency = 'usd';
   assertFalse(ExtractionSchema.safeParse(badCurrency).success);
 
   const badType = JSON.parse(JSON.stringify(matchingExtraction()));
@@ -71,4 +72,15 @@ Deno.test('tipos de Angular: el archivo generado está al día', async () => {
   const file = new URL('../../../projects/admin/src/app/core/models/proposal-extraction.types.ts', import.meta.url);
   const current = (await Deno.readTextFile(file)).replace(/\r\n/g, '\n');
   assertEquals(current, generated, 'Regenera con: deno run -A supabase/functions/_shared/generate-extraction-types.ts');
+});
+
+Deno.test('schema: campos nuevos (modality, notes, arrival_date) y pricing opcional', () => {
+  const schema = extractionToolInputSchema();
+  const service = schema.properties.days.items.properties.services.items;
+  assertEquals(service.properties.modality.anyOf.map((s: { enum?: string[]; type?: string }) => s.enum ?? s.type), [['private', 'shared'], 'null']);
+  assert('notes' in service.properties);
+  assert('arrival_date' in service.properties.flight.anyOf.find((s: { type?: string }) => s.type === 'object').properties);
+  assertEquals(schema.properties.pricing.anyOf.map((s: { type: string }) => s.type).sort(), ['null', 'object']);
+  assert(ExtractionSchema.safeParse(extraction()).success); // pricing: null es válido
+  assertFalse(JSON.stringify(schema).includes('$ref'));
 });

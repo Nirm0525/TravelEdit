@@ -10,15 +10,15 @@ Deno.test('coherencia: una extracción consistente no genera avisos', () => {
 
 Deno.test('coherencia: la suma de quantity × unit_price no coincide con el total', () => {
   const data = matchingExtraction();
-  data.pricing.total = 3100;
+  data.pricing!.total = 3100;
   assertEquals(codes(data), ['price_total_mismatch']);
 });
 
 Deno.test('coherencia: tolerancia de 1 unidad de la moneda', () => {
   const data = matchingExtraction();
-  data.pricing.total = 3001;
+  data.pricing!.total = 3001;
   assertEquals(codes(data), []);
-  data.pricing.total = 3001.5;
+  data.pricing!.total = 3001.5;
   assertEquals(codes(data), ['price_total_mismatch']);
 });
 
@@ -39,7 +39,7 @@ Deno.test('coherencia: "por persona" usa adultos + niños; sin viajeros conocido
 
 Deno.test('coherencia: más de una moneda va a warnings', () => {
   const data = matchingExtraction();
-  data.pricing.other_currencies = ['EUR'];
+  data.pricing!.other_currencies = ['EUR'];
   assertEquals(codes(data), ['multiple_currencies']);
 });
 

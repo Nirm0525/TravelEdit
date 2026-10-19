@@ -50,13 +50,13 @@ export class ClientTripStep implements OnInit {
   readonly expiryStatus = computed<{ text: string; expired: boolean }>(() => {
     const iso = this.expiresAtSaved();
     if (!iso) {
-      return { text: 'Sin fecha de expiración: el enlace no vence.', expired: false };
+      return { text: 'Sin fecha de expiración: el acceso no vence.', expired: false };
     }
     const date = new Date(iso);
     const label = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeStyle: 'short' }).format(date);
     return date.getTime() > Date.now()
-      ? { text: `Guardado: el enlace funciona hasta el ${label}.`, expired: false }
-      : { text: `Guardado: el enlace venció el ${label}. Elige una fecha futura para reactivarlo.`, expired: true };
+      ? { text: `Guardado: el cliente puede entrar con su código hasta el ${label}.`, expired: false }
+      : { text: `Guardado: el acceso venció el ${label}. Elige una fecha futura (o borra la fecha) para reactivarlo.`, expired: true };
   });
 
   readonly currencyOptions = PROPOSAL_CURRENCY_OPTIONS;

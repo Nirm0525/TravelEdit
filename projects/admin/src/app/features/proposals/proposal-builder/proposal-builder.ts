@@ -48,6 +48,18 @@ const TABS: TabDef[] = [
   { key: 'assistant', label: 'The Edit Assistant' }
 ];
 
+/** Mensajes que publish_proposal() lanza a propósito (en español, pensados para la asesora). */
+const PUBLISH_USER_MESSAGES = ['Faltan datos para publicar', 'Solo se puede publicar', 'No autorizado', 'Propuesta no encontrada'];
+
+/** Supabase devuelve los errores de la base como objetos simples (no `Error`): el motivo está en `.message`. */
+function publishErrorMessage(error: unknown): string {
+  const message = (error as { message?: unknown } | null)?.message;
+  if (typeof message === 'string' && PUBLISH_USER_MESSAGES.some((prefix) => message.startsWith(prefix))) {
+    return message;
+  }
+  return 'No se pudo publicar la propuesta. Inténtalo nuevamente.';
+}
+
 @Component({
   selector: 'app-proposal-builder',
   imports: [RouterLink, DatePipe, ClientTripStep, BuildJourneyStep, PricingStep, TravelTipsStep, AiPolishStep, PreviewStep, ConfirmDialog, AdminModal],
@@ -364,7 +376,7 @@ export class ProposalBuilder {
       await this.onSaved();
     } catch (error) {
       console.error('No se pudo publicar la propuesta.', error);
-      this.publishError.set(error instanceof Error ? error.message : 'No se pudo publicar la propuesta.');
+      this.publishError.set(publishErrorMessage(error));
     } finally {
       this.publishing.set(false);
     }

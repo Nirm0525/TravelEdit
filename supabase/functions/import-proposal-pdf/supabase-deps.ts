@@ -6,6 +6,7 @@ import { extractTrip } from './openai.ts';
 import { claimedRowOrNull } from './claim.ts';
 import type { RealDeps } from './db-lifecycle.ts';
 import type { Deps, ImportRow } from './handler.ts';
+import { closeImportFailed, closeImportReady, type CloseSql } from './import-close.ts';
 import type { ProposalSnapshot } from '../_shared/proposal-diff.ts';
 
 const BUCKET = 'proposal-imports';
@@ -124,29 +125,14 @@ export function createRealDeps(): RealDeps {
     extract: ({ pdfBase64, apiKey, deadlineAt, ...provider }) =>
       extractTrip({ apiKey, deadlineAt, ...provider, log: (m, meta) => console.log(JSON.stringify({ msg: m, ...meta })) }, pdfBase64),
 
-    // Solo escribe quien sigue siendo dueño del bloqueo (mismo processing_started_at, comparado con la
-    // precisión completa de la base): un proceso viejo que termina tarde no pisa el resultado de quien
-    // retomó la importación.
+    // Solo escribe quien sigue siendo dueño del bloqueo (mismo processing_started_at, con la precisión
+    // completa de la base) y exige exactamente 1 fila afectada; ver import-close.ts.
     async finishReady(row, patch) {
-      const sql = db();
-      await sql`
-        update public.proposal_imports
-           set status = 'ready',
-               extracted = ${sql.json(patch.extracted as never)},
-               diff = ${patch.diff ? sql.json(patch.diff as never) : null},
-               error = null
-         where id = ${row.id}::uuid
-           and status = 'processing'
-           and processing_started_at = ${row.processing_started_at!}::timestamptz`;
+      await closeImportReady(db() as unknown as CloseSql, row, patch);
     },
 
     async finishFailed(row, message) {
-      await db()`
-        update public.proposal_imports
-           set status = 'failed', error = ${message}
-         where id = ${row.id}::uuid
-           and status = 'processing'
-           and processing_started_at = ${row.processing_started_at!}::timestamptz`;
+      await closeImportFailed(db() as unknown as CloseSql, row, message);
     },
 
     runInBackground(task) {

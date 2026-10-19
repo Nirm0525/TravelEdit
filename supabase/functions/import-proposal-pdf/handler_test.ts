@@ -7,6 +7,7 @@ import {
   type Deps,
   type ImportRow
 } from './handler.ts';
+import { ImportCloseConflictError } from './import-close.ts';
 import { DEADLINE_MESSAGE } from './openai.ts';
 import { UserError } from './pdf.ts';
 import { extraction, matchingExtraction, proposalSnapshot } from '../_shared/test-fixtures.ts';
@@ -445,4 +446,57 @@ Deno.test('resumen: modelo sin precio conocido → costo null; los precios se pu
   });
   await call(priced);
   assertEquals(summaryLogs(priced)[0].costUsd, 0.002); // 2 000 tokens × US$ 1 / 1 M
+});
+
+// ---------------------------------------------------------------- cierre de la importación (fencing token)
+
+const conflict = (operation: 'finishReady' | 'finishFailed') => new ImportCloseConflictError(operation, IMPORT_ID, 0);
+const logged = (h: Harness, message: string) => h.logs.filter((l) => l.includes(`"message":"${message}"`));
+
+Deno.test('cierre: import.ready se registra solo cuando finishReady confirmó la escritura', async () => {
+  const h = harness();
+  await call(h);
+  assertEquals(h.ready.length, 1);
+  assertEquals(logged(h, 'import.ready').length, 1);
+  assertEquals(logged(h, 'import.finish_failed_error').length, 0);
+});
+
+Deno.test('cierre: si finishReady lanza por conflicto NO se registra import.ready, entra al catch e intenta finishFailed', async () => {
+  const h = harness({ finishReady: () => Promise.reject(conflict('finishReady')) });
+  await call(h);
+  assertEquals(logged(h, 'import.ready').length, 0);
+  assertEquals(logged(h, 'import.failed').length, 1);
+  assertStringIncludes(logged(h, 'import.failed')[0], 'IMPORT_STATE_CLOSE_CONFLICT');
+  assertEquals(h.failed.length, 1); // se intentó finishFailed, con el mensaje genérico para la asesora
+  assertEquals(h.failed[0].message, 'No se pudo procesar el PDF. Inténtalo de nuevo en unos minutos.');
+});
+
+Deno.test('cierre: error original + finishFailed también en conflicto → import.failed e import.finish_failed_error con importId, sin PII, sin rechazo sin observar', async () => {
+  const h = harness({
+    extract: () => Promise.reject(new Error('boom con detalles internos')),
+    finishFailed: () => Promise.reject(conflict('finishFailed'))
+  });
+  const res = await call(h); // call() espera las tareas: si la promesa de fondo rechazara, esta línea lanzaría
+  assertEquals(res.status, 202);
+  assertEquals(logged(h, 'import.failed').length, 1);
+  const [finishErr] = logged(h, 'import.finish_failed_error');
+  assert(finishErr, 'debe registrarse import.finish_failed_error');
+  const meta = JSON.parse(finishErr);
+  assertEquals([meta.importId, meta.code, meta.operation, meta.rowsAffected], [IMPORT_ID, 'IMPORT_STATE_CLOSE_CONFLICT', 'finishFailed', 0]);
+  const logs = h.logs.join('\n');
+  assert(!logs.includes('Familia Ejemplo'));
+  assert(!logs.includes('sk-test'));
+  assertEquals(logged(h, 'import.ready').length, 0);
+});
+
+Deno.test('cierre: finishReady y finishFailed en conflicto → queda import.finish_failed_error y nada se da por cerrado', async () => {
+  const h = harness({
+    finishReady: () => Promise.reject(conflict('finishReady')),
+    finishFailed: () => Promise.reject(conflict('finishFailed'))
+  });
+  await call(h);
+  assertEquals(logged(h, 'import.ready').length, 0);
+  assertEquals(logged(h, 'import.finish_failed_error').length, 1);
+  assertEquals(h.ready.length, 0);
+  assertEquals(h.failed.length, 0);
 });

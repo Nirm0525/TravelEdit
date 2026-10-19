@@ -6,6 +6,7 @@ import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
+import { ImportCloseConflictError } from './import-close.ts';
 import { DEADLINE_MESSAGE, readProviderSettings, summarizeUsage, type ProviderSettings, type Usage } from './openai.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
 
@@ -236,7 +237,13 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     try {
       await deps.finishFailed(row, message);
     } catch (finishErr) {
-      deps.log('import.finish_failed_error', { importId: row.id, error: (finishErr as Error).message });
+      deps.log('import.finish_failed_error', {
+        importId: row.id,
+        error: (finishErr as Error).message,
+        ...(finishErr instanceof ImportCloseConflictError
+          ? { code: finishErr.code, operation: finishErr.operation, rowsAffected: finishErr.rowsAffected }
+          : {})
+      });
     }
   }
 }

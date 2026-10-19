@@ -88,7 +88,7 @@
 
 .private-proposal__gate-logo {
   display: block;
-  width: min(17rem, 100%);
+  width: min(13.5rem, 100%);
   height: auto;
   margin-left: -0.5rem;
 }
@@ -315,6 +315,11 @@
   padding: var(--space-lg);
   text-align: center;
   background: var(--color-cream);
+}
+
+/* El logo es un bloque: sin márgenes automáticos quedaba pegado a la izquierda. */
+.private-proposal__gate-hero-footer .private-proposal__wordmark-img {
+  margin-inline: auto;
 }
 
 .private-proposal__gate-hero-footer-tag {
@@ -615,23 +620,25 @@
   z-index: 25;
   display: none;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-cream);
-  background: var(--color-wine);
-  border-radius: 999px;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  color: #fff;
+  /* Botón redondo, solo con el icono: un tono rosado suave que se lee sobre cualquier foto de portada. */
+  background: color-mix(in srgb, var(--color-wine) 38%, var(--color-cream));
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(22, 17, 15, 0.22);
   cursor: pointer;
 }
 
 .proposal__menu-button-bars,
-.proposal__menu-button-bars::before {
+.proposal__menu-button-bars::before,
+.proposal__menu-button-bars::after {
   display: block;
-  width: 1rem;
-  height: 1.5px;
+  width: 1.15rem;
+  height: 2px;
+  border-radius: 2px;
   background: currentColor;
 }
 
@@ -639,10 +646,19 @@
   position: relative;
 }
 
-.proposal__menu-button-bars::before {
+.proposal__menu-button-bars::before,
+.proposal__menu-button-bars::after {
   content: '';
   position: absolute;
-  top: -5px;
+  left: 0;
+}
+
+.proposal__menu-button-bars::before {
+  top: -6px;
+}
+
+.proposal__menu-button-bars::after {
+  top: 6px;
 }
 
 @media (min-width: 64.01rem) {
@@ -2069,7 +2085,6 @@
   .proposal__menu-button {
     top: max(var(--space-sm), env(safe-area-inset-top));
     left: max(var(--space-sm), env(safe-area-inset-left));
-    min-height: 2.75rem;
   }
 
   .proposal__sidebar {
@@ -2099,8 +2114,8 @@
   .proposal__topbar {
     padding-top: max(var(--space-sm), env(safe-area-inset-top));
     padding-left: var(--space-md);
-    /* El botón "Menú" es fixed arriba a la izquierda: se deja su sitio. */
-    padding-left: max(var(--space-md), 6.5rem);
+    /* El botón de menú (redondo, 2.75rem) es fixed arriba a la izquierda: se deja su sitio y un respiro antes del logo. */
+    padding-left: max(var(--space-md), 5.25rem);
   }
 
   .proposal__topbar-tag {

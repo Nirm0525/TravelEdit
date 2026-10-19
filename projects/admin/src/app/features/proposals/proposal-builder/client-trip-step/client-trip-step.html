@@ -70,6 +70,7 @@
             <span>Expiración (opcional)</span>
             <input type="datetime-local" formControlName="expiresAt" (change)="saveField('expiresAt')" />
             <span class="field__hint">Después de esta fecha, el enlace privado deja de funcionar aunque el código sea correcto.</span>
+            <span class="field__hint" [class.field__hint--error]="expiryStatus().expired" aria-live="polite">{{ expiryStatus().text }}</span>
           </label>
         </div>
       </section>

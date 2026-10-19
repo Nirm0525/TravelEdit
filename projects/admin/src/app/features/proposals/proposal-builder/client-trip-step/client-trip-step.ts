@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
@@ -8,6 +8,7 @@ import { DEFAULT_TERMS_HTML, termsHasPlaceholders } from '../../../../core/data/
 import { PROPOSAL_CURRENCY_OPTIONS } from '../../../../core/data/proposal-options';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
+import { fromDatetimeLocal, isPlausibleDatetimeLocal, toDatetimeLocal } from '../../../../core/utils/datetime-local';
 
 type TopLevelField = 'clientName' | 'clientEmail' | 'destinationText' | 'startDate' | 'endDate' | 'travelersCount' | 'expiresAt';
 export type ClientTripSection = 'client-trip' | 'cover' | 'terms';
@@ -43,6 +44,20 @@ export class ClientTripStep implements OnInit {
   readonly savingField = signal<string | null>(null);
   readonly saveError = signal<string | null>(null);
   readonly savedFlash = signal(false);
+
+  /** Expiración tal como quedó guardada en la base (ISO) — para mostrar si el enlace sigue vigente. */
+  private readonly expiresAtSaved = signal<string | null>(null);
+  readonly expiryStatus = computed<{ text: string; expired: boolean }>(() => {
+    const iso = this.expiresAtSaved();
+    if (!iso) {
+      return { text: 'Sin fecha de expiración: el enlace no vence.', expired: false };
+    }
+    const date = new Date(iso);
+    const label = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeStyle: 'short' }).format(date);
+    return date.getTime() > Date.now()
+      ? { text: `Guardado: el enlace funciona hasta el ${label}.`, expired: false }
+      : { text: `Guardado: el enlace venció el ${label}. Elige una fecha futura para reactivarlo.`, expired: true };
+  });
 
   readonly currencyOptions = PROPOSAL_CURRENCY_OPTIONS;
 
@@ -128,7 +143,8 @@ export class ClientTripStep implements OnInit {
         travelersCount: proposal.travelersCount,
         currency: proposal.currency,
         accessRequired: proposal.accessRequired,
-        expiresAt: proposal.expiresAt ? proposal.expiresAt.slice(0, 16) : '',
+        // Hora LOCAL (no slice(0, 16), que mostraba la hora UTC como si fuera local).
+        expiresAt: toDatetimeLocal(proposal.expiresAt),
         coverTitle: proposal.content.cover.title,
         coverSubtitle: proposal.content.cover.subtitle,
         welcomeBody: proposal.content.welcome.body,
@@ -137,6 +153,7 @@ export class ClientTripStep implements OnInit {
         termsTitle: proposal.content.terms.title,
         termsBody: proposal.content.terms.body
       });
+      this.expiresAtSaved.set(proposal.expiresAt);
       this.coverImageUrl.set(this.proposalImages.publicUrl(proposal.content.cover.imagePath));
       if (proposal.leadId) {
         // Solo informativo: si falla la lectura, el campo funciona igual.
@@ -181,9 +198,18 @@ export class ClientTripStep implements OnInit {
    *  destination-form/itinerario (onFieldBlur): sin botón "Guardar" separado. */
   saveField(field: TopLevelField): Promise<void> {
     return this.enqueueSave(async () => {
+      const raw = this.form.getRawValue();
+      // La expiración solo se envía al editar ESE campo: antes viajaba en cada guardado de
+      // cualquier otro campo, re-escribiendo (y desplazando) una fecha que nadie tocó.
+      let expiresAt: string | null | undefined;
+      if (field === 'expiresAt') {
+        if (raw.expiresAt && !isPlausibleDatetimeLocal(raw.expiresAt)) {
+          return; // valor a medias mientras se escribe el año: no se guarda
+        }
+        expiresAt = fromDatetimeLocal(raw.expiresAt);
+      }
       this.savingField.set(field);
       this.saveError.set(null);
-      const raw = this.form.getRawValue();
       try {
         const updated = await this.proposalsService.update(this.proposalId(), {
           clientName: raw.clientName,
@@ -195,9 +221,10 @@ export class ClientTripStep implements OnInit {
           startDate: raw.startDate || null,
           endDate: raw.endDate || null,
           travelersCount: raw.travelersCount,
-          expiresAt: raw.expiresAt ? new Date(raw.expiresAt).toISOString() : null
+          expiresAt
         });
         this.proposal = updated;
+        this.expiresAtSaved.set(updated.expiresAt);
         this.flashSaved();
       } catch (error) {
         console.error('No se pudo guardar la propuesta.', error);

@@ -177,7 +177,12 @@ export interface ExtractionWarning {
 /** Lo que se guarda en proposal_imports.extracted. */
 export interface StoredExtraction extends Extraction {
   warnings: ExtractionWarning[];
-  meta: { model: string; extracted_at: string };
+  meta: {
+    model: string;
+    extracted_at: string;
+    /** Uso del modelo en esta extracción (sin contenido del PDF ni datos del cliente). */
+    usage?: { calls: number; inputTokens: number; outputTokens: number; reasoningTokens: number; costUsd: number | null; totalMs: number };
+  };
 }
 
 /** input_schema de la herramienta extract_trip: todo en línea, sin $ref/$defs. */

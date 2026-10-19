@@ -87,6 +87,7 @@ function harness(over: Partial<Deps> = {}, importRow: ImportRow | null = row()):
     getProposalSnapshot: () => Promise.resolve(proposalSnapshot()),
     extract: (args): Promise<Extraction> => {
       h.extractCalls++;
+      args.onUsage?.({ attempt: 1, inputTokens: 1200, outputTokens: 800, reasoningTokens: 100 });
       h.extractArgs.push({ deadlineAt: args.deadlineAt, model: args.model, detail: args.detail, reasoningEffort: args.reasoningEffort, maxOutputTokens: args.maxOutputTokens });
       return Promise.resolve(matchingExtraction());
     },
@@ -367,4 +368,81 @@ Deno.test('proveedor: sin OPENAI_API_KEY falla con el mensaje para la asesora (a
   await call(h);
   assertStringIncludes(h.failed[0].message, 'Avisa al administrador');
   assert(h.logs.some((l) => l.includes('falta OPENAI_API_KEY')));
+});
+
+// ---------------------------------------------------------------- resumen de la extracción en el log
+
+const summaryLogs = (h: Harness) => h.logs.map((l) => JSON.parse(l)).filter((l) => l.message === 'extraction.summary');
+
+Deno.test('resumen: una línea por extracción con modelo, llamadas, tokens, costo estimado y tiempo', async () => {
+  const h = harness();
+  await call(h);
+  const lines = summaryLogs(h);
+  assertEquals(lines.length, 1);
+  const line = lines[0];
+  assertEquals(line.model, 'gpt-6.1-sol');
+  assertEquals([line.calls, line.inputTokens, line.outputTokens, line.reasoningTokens], [1, 1200, 800, 100]);
+  assertEquals(line.costUsd, 0.0104); // (1200 × 2 + 800 × 10) / 1 000 000
+  assertEquals(typeof line.totalMs, 'number');
+  assertEquals(line.importId, IMPORT_ID);
+});
+
+Deno.test('resumen: nada del contenido del PDF ni datos del cliente en el log', async () => {
+  const h = harness();
+  await call(h);
+  const all = h.logs.join(String.fromCharCode(10));
+  for (const secret of ['Familia Ejemplo', 'ejemplo@correo.test', '+1 555', 'Hotel Savoy', 'JVBERi']) {
+    assert(!all.includes(secret), 'no debe aparecer ' + secret);
+  }
+});
+
+Deno.test('resumen: el mismo resumen queda en extracted.meta.usage (lo lee el panel y se puede consultar en la base)', async () => {
+  const h = harness();
+  await call(h);
+  const usage = h.ready[0].extracted.meta.usage!;
+  assertEquals([usage.calls, usage.inputTokens, usage.outputTokens, usage.reasoningTokens, usage.costUsd], [1, 1200, 800, 100, 0.0104]);
+});
+
+Deno.test('resumen: con reintento por validación suma las dos llamadas', async () => {
+  const h = harness({
+    extract: (args) => {
+      args.onUsage?.({ attempt: 1, inputTokens: 1000, outputTokens: 500, reasoningTokens: 0 });
+      args.onUsage?.({ attempt: 2, inputTokens: 1000, outputTokens: 600, reasoningTokens: 50 });
+      return Promise.resolve(matchingExtraction());
+    }
+  });
+  await call(h);
+  const line = summaryLogs(h)[0];
+  assertEquals([line.calls, line.inputTokens, line.outputTokens, line.reasoningTokens], [2, 2000, 1100, 50]);
+});
+
+Deno.test('resumen: también se registra si la extracción falla (un intento fallido igual gasta tokens)', async () => {
+  const h = harness({
+    extract: (args) => {
+      args.onUsage?.({ attempt: 1, inputTokens: 900, outputTokens: 40, reasoningTokens: 0 });
+      return Promise.reject(new UserError('No se pudo leer el PDF con suficiente claridad. Inténtalo de nuevo o sube otro archivo.', 'x'));
+    }
+  });
+  await call(h);
+  assertEquals(h.failed.length, 1);
+  const line = summaryLogs(h)[0];
+  assertEquals([line.calls, line.inputTokens, line.outputTokens], [1, 900, 40]);
+});
+
+Deno.test('resumen: no se registra si ni siquiera se llegó a llamar al modelo (p. ej. no es un PDF)', async () => {
+  const h = harness({ download: () => Promise.resolve(new TextEncoder().encode('<html>no</html>')) });
+  await call(h);
+  assertEquals(summaryLogs(h).length, 0);
+});
+
+Deno.test('resumen: modelo sin precio conocido → costo null; los precios se pueden sobrescribir con secrets', async () => {
+  const unknown = harness({ env: (n) => ({ OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'modelo-nuevo' } as Record<string, string>)[n] });
+  await call(unknown);
+  assertEquals(summaryLogs(unknown)[0].costUsd, null);
+
+  const priced = harness({
+    env: (n) => ({ OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'modelo-nuevo', OPENAI_PRICE_INPUT_PER_M: '1', OPENAI_PRICE_OUTPUT_PER_M: '1' } as Record<string, string>)[n]
+  });
+  await call(priced);
+  assertEquals(summaryLogs(priced)[0].costUsd, 0.002); // 2 000 tokens × US$ 1 / 1 M
 });

@@ -22,22 +22,11 @@ import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type StoredExtraction } from '../_shared/proposal-extraction.ts';
-import { extractTrip, readProviderSettings, type Usage } from './openai.ts';
+import { extractTrip, PRICES_USD_PER_M, readProviderSettings, type Usage } from './openai.ts';
 import { DEFAULT_PROCESS_DEADLINE_MS } from './handler.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
 
 const OUTPUT_DIR = new URL('../../../tmp/extractions/', import.meta.url);
-
-/**
- * Precios de referencia en USD por 1 M de tokens (entrada / salida), de la página de modelos de OpenAI.
- * Son estimaciones: edítalos aquí o sobrescríbelos con --price-in / --price-out. Los tokens de
- * razonamiento se cobran como salida y ya vienen incluidos en los de salida.
- */
-const PRICES_USD_PER_M: Record<string, { input: number; output: number }> = {
-  'gpt-6.1-sol': { input: 2, output: 10 },
-  'gpt-6-astra': { input: 10, output: 50 },
-  'gpt-6-luna': { input: 0.1, output: 0.5 }
-};
 
 function fail(message: string): never {
   console.error(`\n✖ ${message}`);

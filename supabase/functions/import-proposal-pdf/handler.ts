@@ -6,7 +6,7 @@ import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
-import { DEADLINE_MESSAGE, readProviderSettings, type ProviderSettings } from './openai.ts';
+import { DEADLINE_MESSAGE, readProviderSettings, summarizeUsage, type ProviderSettings, type Usage } from './openai.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
 
 export const MAX_CONCURRENT_PER_USER = 3;
@@ -49,7 +49,7 @@ export interface Deps {
   download(path: string): Promise<Uint8Array | null>;
   getProposalSnapshot(proposalId: string): Promise<ProposalSnapshot | null>;
   /** deadlineAt: instante (ms epoch) en que el proceso debe haber terminado. */
-  extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number } & ProviderSettings): Promise<Extraction>;
+  extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number; onUsage?: (usage: Usage) => void } & ProviderSettings): Promise<Extraction>;
   /** Solo escribe si la fila sigue en 'processing' con el mismo processing_started_at (dueño del bloqueo). */
   finishReady(row: ImportRow, patch: { extracted: StoredExtraction; diff: ProposalDiff | null }): Promise<void>;
   finishFailed(row: ImportRow, message: string): Promise<void>;
@@ -147,6 +147,11 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
   }
 }
 
+/** Resumen de la extracción en el log: modelo, llamadas, tokens (entrada, salida, razonamiento), costo estimado y tiempo total. */
+function logExtractionSummary(deps: Deps, row: ImportRow, model: string, usages: Usage[], pages: number | null, totalMs: number): void {
+  deps.log('extraction.summary', { importId: row.id, mode: row.mode, pages, model, ...summarizeUsage(model, usages, totalMs, deps.env) });
+}
+
 export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
   const startedAt = deps.now().getTime();
   const deadlineMs = Number(deps.env('PROCESS_DEADLINE_MS')) || DEFAULT_PROCESS_DEADLINE_MS;
@@ -183,7 +188,16 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     checkDeadline();
 
     // 7) Extracción con el modelo.
-    const raw = await deps.extract({ pdfBase64: toBase64(bytes), apiKey, deadlineAt, ...provider });
+    const usages: Usage[] = [];
+    let raw: Extraction;
+    try {
+      raw = await deps.extract({ pdfBase64: toBase64(bytes), apiKey, deadlineAt, ...provider, onUsage: (u) => void usages.push(u) });
+    } finally {
+      // Una línea por extracción, con éxito o sin él (un intento fallido también gasta tokens). Solo cifras:
+      // nada del contenido del PDF ni datos del cliente.
+      logExtractionSummary(deps, row, model, usages, pages, deps.now().getTime() - startedAt);
+    }
+    const usageSummary = summarizeUsage(model, usages, deps.now().getTime() - startedAt, deps.env);
     // Limpieza de datos sensibles, unión de días repetidos y red de seguridad de precios.
     const { extraction, warnings: postWarnings } = postProcessExtraction(raw);
     if (!hasUsefulContent(extraction)) {
@@ -196,7 +210,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     const stored: StoredExtraction = {
       ...extraction,
       warnings: [...postWarnings, ...runCoherenceChecks(extraction)],
-      meta: { model, extracted_at: deps.now().toISOString() }
+      meta: { model, extracted_at: deps.now().toISOString(), usage: usageSummary }
     };
 
     let diff: ProposalDiff | null = null;

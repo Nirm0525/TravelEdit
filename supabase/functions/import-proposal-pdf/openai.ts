@@ -112,6 +112,49 @@ export function strictResponseSchema(): Json {
   return toStrict(extractionToolInputSchema());
 }
 
+// ---------------------------------------------------------------- costo estimado
+
+/**
+ * Precios de referencia en USD por 1 M de tokens (entrada / salida), de la página de modelos de OpenAI.
+ * Son estimaciones: se pueden sobrescribir con los secrets OPENAI_PRICE_INPUT_PER_M y
+ * OPENAI_PRICE_OUTPUT_PER_M. Los tokens de razonamiento se cobran como salida y ya vienen incluidos.
+ */
+export const PRICES_USD_PER_M: Record<string, { input: number; output: number }> = {
+  'gpt-6.1-sol': { input: 2, output: 10 },
+  'gpt-6-astra': { input: 10, output: 50 },
+  'gpt-6-luna': { input: 0.1, output: 0.5 }
+};
+
+export interface UsageSummary {
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  /** null si no hay precio conocido para el modelo. */
+  costUsd: number | null;
+  totalMs: number;
+}
+
+/** Suma el uso de todas las llamadas (la segunda, si la hay, es el reintento por validación) y estima el costo. */
+export function summarizeUsage(
+  model: string,
+  usages: Usage[],
+  totalMs: number,
+  get: (name: string) => string | undefined = () => undefined
+): UsageSummary {
+  const inputTokens = usages.reduce((n, u) => n + u.inputTokens, 0);
+  const outputTokens = usages.reduce((n, u) => n + u.outputTokens, 0);
+  const reasoningTokens = usages.reduce((n, u) => n + u.reasoningTokens, 0);
+  const known = PRICES_USD_PER_M[model];
+  const priceIn = Number(get('OPENAI_PRICE_INPUT_PER_M')) || known?.input;
+  const priceOut = Number(get('OPENAI_PRICE_OUTPUT_PER_M')) || known?.output;
+  const costUsd =
+    priceIn !== undefined && priceOut !== undefined
+      ? Math.round(((inputTokens * priceIn + outputTokens * priceOut) / 1_000_000) * 10_000) / 10_000
+      : null;
+  return { calls: usages.length, inputTokens, outputTokens, reasoningTokens, costUsd, totalMs };
+}
+
 // ---------------------------------------------------------------- secrets del proveedor
 
 export interface ProviderSettings {

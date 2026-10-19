@@ -10,6 +10,7 @@ import {
   REFUSAL_MESSAGE,
   resetEffortCache,
   strictResponseSchema,
+  summarizeUsage,
   SYSTEM_PROMPT,
   type OpenAIOptions,
   type Usage
@@ -469,4 +470,21 @@ Deno.test('prompt: reglas de días, vuelos, modalidad y seguro, y la defensa con
   ]) {
     assert(SYSTEM_PROMPT.includes(fragment), 'falta: ' + fragment);
   }
+});
+
+// ---------------------------------------------------------------- resumen de uso y costo
+
+Deno.test('summarizeUsage: suma las llamadas, estima el costo y no inventa precios', () => {
+  const usages: Usage[] = [
+    { attempt: 1, inputTokens: 10_000, outputTokens: 2_000, reasoningTokens: 300 },
+    { attempt: 2, inputTokens: 10_500, outputTokens: 1_000, reasoningTokens: 0 }
+  ];
+  assertEquals(summarizeUsage('gpt-6.1-sol', usages, 4321), {
+    calls: 2, inputTokens: 20_500, outputTokens: 3_000, reasoningTokens: 300, costUsd: 0.071, totalMs: 4321
+  }); // (20 500 × 2 + 3 000 × 10) / 1 M
+  assertEquals(summarizeUsage('gpt-6-astra', usages, 1).costUsd, 0.355);
+  assertEquals(summarizeUsage('gpt-6-luna', usages, 1).costUsd, 0.0036);
+  assertEquals(summarizeUsage('otro-modelo', usages, 1).costUsd, null);
+  assertEquals(summarizeUsage('gpt-6.1-sol', [], 5), { calls: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: 0, costUsd: 0, totalMs: 5 });
+  assertEquals(summarizeUsage('otro-modelo', usages, 1, (n) => ({ OPENAI_PRICE_INPUT_PER_M: '1', OPENAI_PRICE_OUTPUT_PER_M: '2' } as Record<string, string>)[n]).costUsd, 0.0265);
 });

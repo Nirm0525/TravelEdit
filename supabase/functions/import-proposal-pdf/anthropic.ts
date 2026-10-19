@@ -20,10 +20,18 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
 const TOOL_NAME = 'extract_trip';
 const TIMEOUT_MS = 120_000;
 
+/** Si al procesar se alcanza el plazo total, la importación falla con este mensaje. */
+export const DEADLINE_MESSAGE = 'El PDF tardó demasiado en procesarse. Intenta de nuevo o divide el documento.';
+/** Con menos tiempo restante que esto no se hace ningún reintento (no daría tiempo). */
+export const MIN_RETRY_REMAINING_MS = 30_000;
+
 export interface AnthropicOptions {
   apiKey: string;
   model: string;
   maxTokens?: number;
+  /** Instante (ms epoch) en que el proceso entero debe haber terminado. Sin él, no hay plazo total. */
+  deadlineAt?: number;
+  nowMs?: () => number;
   fetchImpl?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   log?: (message: string, meta?: Record<string, unknown>) => void;
@@ -37,7 +45,20 @@ interface ApiResponse {
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
+function remainingMs(opts: AnthropicOptions): number {
+  return (opts.deadlineAt ?? Infinity) - (opts.nowMs ?? Date.now)();
+}
+
+function deadlineError(technical: string): UserError {
+  return new UserError(DEADLINE_MESSAGE, technical);
+}
+
+/** Una llamada; el timeout es lo que quede del plazo total (máximo 120 s). */
 async function callOnce(opts: AnthropicOptions, messages: Block[]): Promise<Response> {
+  const remaining = remainingMs(opts);
+  if (remaining <= 0) {
+    throw deadlineError('plazo agotado antes de llamar a Anthropic');
+  }
   const fetchImpl = opts.fetchImpl ?? fetch;
   return await fetchImpl(API_URL, {
     method: 'POST',
@@ -56,8 +77,20 @@ async function callOnce(opts: AnthropicOptions, messages: Block[]): Promise<Resp
       tool_choice: { type: 'tool', name: TOOL_NAME },
       messages
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
+    signal: AbortSignal.timeout(Math.min(TIMEOUT_MS, remaining))
   });
+}
+
+function asNetworkError(opts: AnthropicOptions, err: unknown): UserError {
+  if (err instanceof UserError) {
+    return err;
+  }
+  const name = (err as Error).name;
+  opts.log?.('anthropic.network_error', { error: name });
+  if (name === 'TimeoutError' || name === 'AbortError') {
+    return deadlineError(name);
+  }
+  return new UserError('No se pudo conectar con el asistente. Inténtalo de nuevo.', name);
 }
 
 /** Una llamada con un reintento (con espera) ante 429 o 5xx. */
@@ -67,20 +100,22 @@ async function callWithRetry(opts: AnthropicOptions, messages: Block[]): Promise
   try {
     response = await callOnce(opts, messages);
   } catch (err) {
-    opts.log?.('anthropic.network_error', { error: (err as Error).name });
-    throw new UserError('El asistente tardó demasiado en responder. Inténtalo de nuevo.', (err as Error).name);
+    throw asNetworkError(opts, err);
   }
 
   if (response.status === 429 || response.status >= 500) {
     const retryAfter = Number(response.headers.get('retry-after'));
     const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 30) * 1000 : 5000;
-    opts.log?.('anthropic.retry', { status: response.status, waitMs });
     await response.body?.cancel();
+    if (remainingMs(opts) - waitMs < MIN_RETRY_REMAINING_MS) {
+      throw deadlineError('sin tiempo para reintentar tras status ' + response.status);
+    }
+    opts.log?.('anthropic.retry', { status: response.status, waitMs });
     await sleep(waitMs);
     try {
       response = await callOnce(opts, messages);
     } catch (err) {
-      throw new UserError('El asistente tardó demasiado en responder. Inténtalo de nuevo.', (err as Error).name);
+      throw asNetworkError(opts, err);
     }
   }
 
@@ -141,6 +176,9 @@ export async function extractTrip(opts: AnthropicOptions, pdfBase64: string): Pr
 
   const issues = formatValidationIssues(parsed.error);
   opts.log?.('extraction.validation_failed', { attempt: 1, issues });
+  if (remainingMs(opts) < MIN_RETRY_REMAINING_MS) {
+    throw deadlineError('sin tiempo para el reintento por validación');
+  }
   const retryMessages: Block[] = [
     ...messages,
     { role: 'assistant', content: first.content },

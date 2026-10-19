@@ -1,9 +1,19 @@
 import { assert, assertEquals, assertStringIncludes } from 'jsr:@std/assert@1';
-import { handleRequest, MAX_CONCURRENT_PER_USER, MAX_PER_DAY_PER_USER, type Deps, type ImportRow } from './handler.ts';
+import {
+  DEFAULT_PROCESS_DEADLINE_MS,
+  handleRequest,
+  MAX_CONCURRENT_PER_USER,
+  MAX_PER_DAY_PER_USER,
+  type Deps,
+  type ImportRow
+} from './handler.ts';
+import { DEADLINE_MESSAGE } from './anthropic.ts';
+import { UserError } from './pdf.ts';
 import { extraction, matchingExtraction, proposalSnapshot } from '../_shared/test-fixtures.ts';
 import type { Extraction, StoredExtraction } from '../_shared/proposal-extraction.ts';
 import type { ProposalDiff } from '../_shared/proposal-diff.ts';
 
+const NOW = new Date('2027-01-10T12:00:00Z');
 const USER = '11111111-1111-1111-1111-111111111111';
 const IMPORT_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const PROPOSAL = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -16,6 +26,7 @@ const row = (over: Partial<ImportRow> = {}): ImportRow => ({
   mode: 'new',
   status: 'uploaded',
   created_by: USER,
+  processing_started_at: null,
   ...over
 });
 
@@ -26,46 +37,69 @@ function validPdf(): Uint8Array {
 interface Harness {
   deps: Deps;
   tasks: Promise<unknown>[];
-  ready: { id: string; extracted: StoredExtraction; diff: ProposalDiff | null }[];
-  failed: { id: string; message: string }[];
+  ready: { id: string; startedAt: string | null | undefined; extracted: StoredExtraction; diff: ProposalDiff | null }[];
+  failed: { id: string; startedAt: string | null | undefined; message: string }[];
   logs: string[];
   extractCalls: number;
+  extractArgs: { deadlineAt: number }[];
+  countProcessingCalls: string[];
+  lockCalls: string[];
 }
 
 function harness(over: Partial<Deps> = {}, importRow: ImportRow | null = row()): Harness {
   let locked = false;
-  const h: Harness = { tasks: [], ready: [], failed: [], logs: [], extractCalls: 0, deps: undefined as unknown as Deps };
+  const h: Harness = {
+    tasks: [],
+    ready: [],
+    failed: [],
+    logs: [],
+    extractCalls: 0,
+    extractArgs: [],
+    countProcessingCalls: [],
+    lockCalls: [],
+    deps: undefined as unknown as Deps
+  };
   h.deps = {
     env: (name) => ({ ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'claude-sonnet-5-5' } as Record<string, string>)[name],
     getUser: (token) => Promise.resolve(token === 'good' ? { id: USER } : null),
     getImportAsUser: () => Promise.resolve(importRow),
     canEditProposal: () => Promise.resolve(true),
-    countProcessing: () => Promise.resolve(0),
+    countProcessing: (userId) => {
+      h.countProcessingCalls.push(userId);
+      return Promise.resolve(0);
+    },
     countSince: () => Promise.resolve(1),
-    lockImport: () => {
-      if (locked || !importRow || !['uploaded', 'failed'].includes(importRow.status)) {
+    // Simula private.claim_proposal_import: la base decide con su reloj (aquí, el mismo NOW de los tests).
+    lockImport: (id) => {
+      h.lockCalls.push(id);
+      const staleBefore = new Date(NOW.getTime() - 10 * 60_000).toISOString();
+      const stale =
+        importRow?.status === 'processing' &&
+        (importRow.processing_started_at == null || importRow.processing_started_at < staleBefore);
+      if (locked || !importRow || !(['uploaded', 'failed'].includes(importRow.status) || stale)) {
         return Promise.resolve(null);
       }
       locked = true;
-      return Promise.resolve({ ...importRow, status: 'processing' });
+      return Promise.resolve({ ...importRow, status: 'processing', processing_started_at: NOW.toISOString() });
     },
     objectOwner: () => Promise.resolve({ ownerId: USER }),
     download: () => Promise.resolve(validPdf()),
     getProposalSnapshot: () => Promise.resolve(proposalSnapshot()),
-    extract: (): Promise<Extraction> => {
+    extract: (args): Promise<Extraction> => {
       h.extractCalls++;
+      h.extractArgs.push({ deadlineAt: args.deadlineAt });
       return Promise.resolve(matchingExtraction());
     },
-    finishReady: (id, patch) => {
-      h.ready.push({ id, ...patch });
+    finishReady: (r, patch) => {
+      h.ready.push({ id: r.id, startedAt: r.processing_started_at, ...patch });
       return Promise.resolve();
     },
-    finishFailed: (id, message) => {
-      h.failed.push({ id, message });
+    finishFailed: (r, message) => {
+      h.failed.push({ id: r.id, startedAt: r.processing_started_at, message });
       return Promise.resolve();
     },
     runInBackground: (task) => void h.tasks.push(task),
-    now: () => new Date('2027-01-10T12:00:00Z'),
+    now: () => NOW,
     log: (message, meta) => void h.logs.push(JSON.stringify({ message, ...meta })),
     ...over
   };
@@ -124,7 +158,8 @@ Deno.test('409: doble llamada — la segunda no procesa de nuevo', async () => {
 
 Deno.test('409: ya aplicada o ya en proceso', async () => {
   for (const status of ['processing', 'applied', 'ready']) {
-    const h = harness({}, row({ status }));
+    // 'processing' reciente: un proceso sin inicio o de más de 10 min se retoma (ver más abajo).
+    const h = harness({}, row({ status, processing_started_at: status === 'processing' ? '2027-01-10T11:59:00Z' : null }));
     assertEquals((await call(h)).status, 409, status);
   }
 });
@@ -237,3 +272,73 @@ Deno.test('CORS: solo el dominio permitido recibe Access-Control-Allow-Origin', 
   assertEquals(bad.headers.get('Access-Control-Allow-Origin'), null);
   assert(bad.headers.get('Access-Control-Allow-Origin') !== '*');
 });
+
+// ---------------------------------------------------------------- 0050: procesos atascados
+
+const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();
+
+Deno.test('límite de en curso y bloqueo: la función solo pasa ids; el tiempo lo decide la base', async () => {
+  const h = harness();
+  await call(h);
+  assertEquals(h.countProcessingCalls, [USER]);
+  assertEquals(h.lockCalls, [IMPORT_ID]);
+  assertEquals(h.ready[0].startedAt, NOW.toISOString()); // el resultado se escribe con el token que devolvió el bloqueo
+});
+
+Deno.test('proceso atascado (processing con más de 10 min) se puede retomar', async () => {
+  const h = harness({}, row({ status: 'processing', processing_started_at: minutesAgo(11) }));
+  assertEquals((await call(h)).status, 202);
+  assertEquals(h.ready.length, 1);
+});
+
+Deno.test('processing sin inicio registrado también se retoma', async () => {
+  const h = harness({}, row({ status: 'processing', processing_started_at: null }));
+  assertEquals((await call(h)).status, 202);
+});
+
+Deno.test('processing reciente (menos de 10 min) sigue dando 409', async () => {
+  const h = harness({}, row({ status: 'processing', processing_started_at: minutesAgo(2) }));
+  assertEquals((await call(h)).status, 409);
+  assertEquals(h.extractCalls, 0);
+});
+
+// ---------------------------------------------------------------- plazo total
+
+Deno.test('plazo: por defecto 140 s, y se le pasa al cliente de Anthropic como instante límite', async () => {
+  assertEquals(DEFAULT_PROCESS_DEADLINE_MS, 140_000);
+  const h = harness();
+  await call(h);
+  assertEquals(h.extractArgs[0].deadlineAt, NOW.getTime() + 140_000);
+});
+
+Deno.test('plazo: PROCESS_DEADLINE_MS configurable', async () => {
+  const h = harness({ env: (n) => ({ ANTHROPIC_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '60000' } as Record<string, string>)[n] });
+  await call(h);
+  assertEquals(h.extractArgs[0].deadlineAt, NOW.getTime() + 60_000);
+});
+
+Deno.test('plazo alcanzado antes de llamar al modelo → failed con el mensaje de plazo, sin extraer', async () => {
+  const h = harness({
+    env: (n) => ({ ANTHROPIC_API_KEY: 'sk-test', PROCESS_DEADLINE_MS: '1' } as Record<string, string>)[n],
+    now: (() => {
+      let calls = 0;
+      // La primera lectura es el inicio del proceso; las siguientes ya están pasadas del plazo.
+      return () => new Date(NOW.getTime() + (calls++ === 0 ? 0 : 5_000));
+    })()
+  });
+  await processOnly(h);
+  assertEquals(h.failed[0].message, DEADLINE_MESSAGE);
+  assertEquals(h.extractCalls, 0);
+});
+
+Deno.test('plazo alcanzado durante la extracción → failed con el mismo mensaje', async () => {
+  const h = harness({ extract: () => Promise.reject(new UserError(DEADLINE_MESSAGE, 'plazo')) });
+  await call(h);
+  assertEquals(h.failed[0].message, DEADLINE_MESSAGE);
+  assertEquals(h.ready.length, 0);
+});
+
+async function processOnly(h: Harness): Promise<void> {
+  const { processImport } = await import('./handler.ts');
+  await processImport(h.deps, row({ status: 'processing', processing_started_at: NOW.toISOString() }));
+}

@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert@1';
-import { extractTrip } from './anthropic.ts';
+import { DEADLINE_MESSAGE, extractTrip, MIN_RETRY_REMAINING_MS } from './anthropic.ts';
 import { UserError } from './pdf.ts';
 import { matchingExtraction } from '../_shared/test-fixtures.ts';
 
@@ -112,4 +112,66 @@ Deno.test('anthropic: 400 (PDF dañado) y 401 (clave) dan mensajes distintos y s
   const e2 = await assertRejects(() => extractTrip(opts(auth.fetchImpl), 'QUJD'), UserError);
   assert(e2.message.includes('Avisa al administrador'));
   assert(!e2.message.includes('401'));
+});
+
+// ---------------------------------------------------------------- plazo total
+
+const T0 = 1_000_000;
+const withDeadline = (fetchImpl: typeof fetch, remainingMs: number, sleeps: number[] = []) => ({
+  ...opts(fetchImpl, sleeps),
+  deadlineAt: T0 + remainingMs,
+  nowMs: () => T0
+});
+
+Deno.test('plazo: sin tiempo restante no se llama a la API', async () => {
+  const { fetchImpl, calls } = makeFetch([apiResponse(matchingExtraction())]);
+  const error = await assertRejects(() => extractTrip(withDeadline(fetchImpl, 0), 'QUJD'), UserError);
+  assertEquals(error.message, DEADLINE_MESSAGE);
+  assertEquals(calls.length, 0);
+});
+
+Deno.test('plazo: con tiempo suficiente la llamada se hace normalmente', async () => {
+  const { fetchImpl, calls } = makeFetch([apiResponse(matchingExtraction())]);
+  await extractTrip(withDeadline(fetchImpl, 140_000), 'QUJD');
+  assertEquals(calls.length, 1);
+});
+
+Deno.test('plazo: un timeout del fetch se traduce al mensaje de plazo', async () => {
+  const fetchImpl = (() => Promise.reject(new DOMException('timeout', 'TimeoutError'))) as unknown as typeof fetch;
+  const error = await assertRejects(() => extractTrip(withDeadline(fetchImpl, 50_000), 'QUJD'), UserError);
+  assertEquals(error.message, DEADLINE_MESSAGE);
+});
+
+Deno.test('plazo: si quedan menos de 30 s no se reintenta tras un 429/5xx', async () => {
+  assertEquals(MIN_RETRY_REMAINING_MS, 30_000);
+  const { fetchImpl, calls } = makeFetch([new Response('{}', { status: 529 }), apiResponse(matchingExtraction())]);
+  // Quedan 33 s; la espera por defecto es 5 s → quedarían 28 s: no se reintenta.
+  const error = await assertRejects(() => extractTrip(withDeadline(fetchImpl, 33_000), 'QUJD'), UserError);
+  assertEquals(error.message, DEADLINE_MESSAGE);
+  assertEquals(calls.length, 1);
+});
+
+Deno.test('plazo: con tiempo de sobra el reintento por 5xx sí se hace', async () => {
+  const sleeps: number[] = [];
+  const { fetchImpl, calls } = makeFetch([new Response('{}', { status: 529 }), apiResponse(matchingExtraction())]);
+  await extractTrip(withDeadline(fetchImpl, 100_000, sleeps), 'QUJD');
+  assertEquals(calls.length, 2);
+  assertEquals(sleeps, [5000]);
+});
+
+Deno.test('plazo: si quedan menos de 30 s no se hace el reintento por validación', async () => {
+  const invalid = JSON.parse(JSON.stringify(matchingExtraction()));
+  invalid.trip.start_date = 'mañana';
+  const { fetchImpl, calls } = makeFetch([apiResponse(invalid), apiResponse(matchingExtraction())]);
+  const error = await assertRejects(() => extractTrip(withDeadline(fetchImpl, 29_000), 'QUJD'), UserError);
+  assertEquals(error.message, DEADLINE_MESSAGE);
+  assertEquals(calls.length, 1);
+});
+
+Deno.test('plazo: con 30 s o más sí se hace el reintento por validación', async () => {
+  const invalid = JSON.parse(JSON.stringify(matchingExtraction()));
+  invalid.trip.start_date = 'mañana';
+  const { fetchImpl, calls } = makeFetch([apiResponse(invalid), apiResponse(matchingExtraction())]);
+  await extractTrip(withDeadline(fetchImpl, 30_000), 'QUJD');
+  assertEquals(calls.length, 2);
 });

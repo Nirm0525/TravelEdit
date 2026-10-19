@@ -5,10 +5,14 @@
 import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
+import { DEADLINE_MESSAGE } from './anthropic.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
 
 export const MAX_CONCURRENT_PER_USER = 3;
 export const MAX_PER_DAY_PER_USER = 30;
+
+/** Plazo total por defecto de un proceso (cabe en el plan gratuito de Supabase). */
+export const DEFAULT_PROCESS_DEADLINE_MS = 140_000;
 const DEFAULT_MODEL = 'claude-sonnet-5-5';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,6 +23,8 @@ export interface ImportRow {
   mode: 'new' | 'merge';
   status: string;
   created_by: string;
+  /** Inicio del proceso actual (texto con la precisión de la base); identifica a quién puede escribir el resultado. */
+  processing_started_at?: string | null;
 }
 
 export interface Deps {
@@ -29,17 +35,24 @@ export interface Deps {
   getImportAsUser(token: string, importId: string): Promise<ImportRow | null>;
   /** Mismo criterio que proposals_update (can_manage_proposals + is_own_or_full). */
   canEditProposal(token: string, proposalId: string): Promise<boolean>;
+  /** Importaciones 'processing' del usuario iniciadas en los últimos 10 min (reloj de la base: private.count_active_proposal_imports). */
   countProcessing(userId: string): Promise<number>;
   countSince(userId: string, sinceIso: string): Promise<number>;
-  /** Update atómico a 'processing' si estaba en 'uploaded' o 'failed'; null si no. */
+  /**
+   * Bloqueo atómico en la base (private.claim_proposal_import): pasa a 'processing' si la fila está
+   * en 'uploaded' o 'failed', o en 'processing' atascada (sin inicio o de hace más de 10 min), y fija
+   * processing_started_at con el reloj de la base. null si no se pudo tomar.
+   */
   lockImport(importId: string): Promise<ImportRow | null>;
   /** Dueño del objeto en storage.objects; null si el objeto no existe. */
   objectOwner(path: string): Promise<{ ownerId: string | null } | null>;
   download(path: string): Promise<Uint8Array | null>;
   getProposalSnapshot(proposalId: string): Promise<ProposalSnapshot | null>;
-  extract(args: { pdfBase64: string; model: string; apiKey: string }): Promise<Extraction>;
-  finishReady(importId: string, patch: { extracted: StoredExtraction; diff: ProposalDiff | null }): Promise<void>;
-  finishFailed(importId: string, message: string): Promise<void>;
+  /** deadlineAt: instante (ms epoch) en que el proceso debe haber terminado. */
+  extract(args: { pdfBase64: string; model: string; apiKey: string; deadlineAt: number }): Promise<Extraction>;
+  /** Solo escribe si la fila sigue en 'processing' con el mismo processing_started_at (dueño del bloqueo). */
+  finishReady(row: ImportRow, patch: { extracted: StoredExtraction; diff: ProposalDiff | null }): Promise<void>;
+  finishFailed(row: ImportRow, message: string): Promise<void>;
   runInBackground(task: Promise<unknown>): void;
   now(): Date;
   log(message: string, meta?: Record<string, unknown>): void;
@@ -119,7 +132,7 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       return json({ error: `Llegaste al límite de ${MAX_PER_DAY_PER_USER} importaciones por día. Inténtalo mañana.` }, 429);
     }
 
-    // 3) Bloqueo atómico contra doble proceso ('failed' permite reintentar).
+    // 3) Bloqueo atómico contra doble proceso ('failed' y los procesos atascados permiten reintentar).
     const locked = await deps.lockImport(row.id);
     if (!locked) {
       return json({ error: 'Esta importación ya se está procesando o ya se aplicó.' }, 409);
@@ -136,6 +149,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
 
 export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
   const startedAt = deps.now().getTime();
+  const deadlineMs = Number(deps.env('PROCESS_DEADLINE_MS')) || DEFAULT_PROCESS_DEADLINE_MS;
+  const deadlineAt = startedAt + deadlineMs;
+  const checkDeadline = () => {
+    if (deps.now().getTime() >= deadlineAt) {
+      throw new UserError(DEADLINE_MESSAGE, 'plazo total del proceso alcanzado');
+    }
+  };
   try {
     const apiKey = deps.env('ANTHROPIC_API_KEY');
     if (!apiKey) {
@@ -159,9 +179,10 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
       throw new UserError('No se pudo descargar el archivo. Vuelve a subirlo.', 'descarga fallida');
     }
     const { pages } = validatePdf(bytes, maxPages);
+    checkDeadline();
 
     // 7) Extracción con el modelo.
-    const extraction = await deps.extract({ pdfBase64: toBase64(bytes), model, apiKey });
+    const extraction = await deps.extract({ pdfBase64: toBase64(bytes), model, apiKey, deadlineAt });
     if (!hasUsefulContent(extraction)) {
       throw new UserError(
         'No se encontró información del viaje en el PDF. Si es un escaneo, revisa que se lea con claridad.',
@@ -184,7 +205,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
       diff = computeDiff(extraction, snapshot);
     }
 
-    await deps.finishReady(row.id, { extracted: stored, diff });
+    await deps.finishReady(row, { extracted: stored, diff });
     deps.log('import.ready', { importId: row.id, mode: row.mode, pages, ms: deps.now().getTime() - startedAt });
   } catch (err) {
     const message =
@@ -196,7 +217,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
       reason: err instanceof UserError ? (err.technical ?? err.message) : `${(err as Error).name}: ${(err as Error).message}`
     });
     try {
-      await deps.finishFailed(row.id, message);
+      await deps.finishFailed(row, message);
     } catch (finishErr) {
       deps.log('import.finish_failed_error', { importId: row.id, error: (finishErr as Error).message });
     }

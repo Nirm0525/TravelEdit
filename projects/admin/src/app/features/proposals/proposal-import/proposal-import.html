@@ -1,0 +1,261 @@
+<app-admin-page-header
+  [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/proposals' }, { label: 'Nueva desde PDF' }]"
+  title="Nueva propuesta desde PDF"
+/>
+
+<div class="proposal-import">
+  @switch (stage()) {
+    <!-- ------------------------------------------------------------ 1. Formulario -->
+    @case ('form') {
+      <form class="proposal-import__form" (submit)="$event.preventDefault(); continue()">
+        <p class="proposal-import__intro">
+          Sube el PDF del viaje y The Edit Assistant leerá los datos del cliente, el itinerario y los precios. Verás lo que
+          encontró antes de crear la propuesta en borrador.
+        </p>
+
+        <div>
+          <label
+            class="proposal-import__dropzone"
+            [class.is-dragging]="dragging()"
+            [class.has-file]="!!file()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave()"
+            (drop)="onDrop($event)"
+          >
+            <input class="proposal-import__file-input" type="file" accept="application/pdf,.pdf" (change)="onFileInput($event)" />
+            @if (file(); as f) {
+              <span class="proposal-import__file-name">{{ f.name }}</span>
+              <span class="proposal-import__file-meta">{{ (f.size / 1048576).toFixed(1) }} MB · clic o arrastra otro archivo para cambiarlo</span>
+            } @else {
+              <span class="proposal-import__drop-title">Arrastra el PDF aquí o haz clic para elegirlo</span>
+              <span class="proposal-import__file-meta">Solo archivos .pdf, de hasta 20 MB</span>
+            }
+          </label>
+          @if (file()) {
+            <button type="button" class="proposal-import__link" (click)="clearFile()">Quitar archivo</button>
+          }
+          @if (fileError(); as message) {
+            <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+          }
+        </div>
+
+        <label class="field">
+          <span>¿Por dónde llegó el cliente?</span>
+          <select [value]="effectiveChannel()" [disabled]="!!leadId()" (change)="onChannelChange($event)">
+            <option value="">Elige una opción</option>
+            @for (option of channelOptions; track option.value) {
+              <option [value]="option.value" [selected]="effectiveChannel() === option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (leadId()) {
+            <span class="field__hint">Con una solicitud vinculada el canal es siempre «Sitio web».</span>
+          }
+        </label>
+
+        @if (leads().length > 0) {
+          <label class="field">
+            <span>Vincular a una solicitud (opcional)</span>
+            <select [value]="leadId()" (change)="onLeadChange($event)">
+              <option value="">Sin vincular</option>
+              @for (lead of leads(); track lead.id) {
+                <option [value]="lead.id">{{ lead.name }}{{ lead.email ? ' — ' + lead.email : '' }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        <div class="proposal-import__footer">
+          <a class="btn btn--secondary" routerLink="/proposals">Cancelar</a>
+          <button type="submit" class="btn btn--primary" [disabled]="!canContinue()">Continuar</button>
+        </div>
+      </form>
+    }
+
+    <!-- ------------------------------------------------------------ 2. Procesando -->
+    @case ('working') {
+      <section class="proposal-import__status" role="status" aria-live="polite">
+        <span class="proposal-import__spinner" aria-hidden="true"></span>
+        @if (step() === 'uploading') {
+          <h2 class="proposal-import__status-title">Subiendo el archivo…</h2>
+        } @else {
+          <h2 class="proposal-import__status-title">The Edit Assistant está leyendo el PDF…</h2>
+          <p class="proposal-import__status-text">Puede tardar un minuto o dos. No cierres esta pantalla.</p>
+        }
+        @if (file(); as f) {
+          <p class="proposal-import__status-file">{{ f.name }}</p>
+        }
+      </section>
+    }
+
+    <!-- ------------------------------------------------------------ 3. Error -->
+    @case ('failed') {
+      <section class="proposal-import__status" role="alert">
+        <h2 class="proposal-import__status-title">No se pudo leer el PDF</h2>
+        <p class="proposal-import__status-text">{{ failureMessage() }}</p>
+        <div class="proposal-import__footer proposal-import__footer--center">
+          <button type="button" class="btn btn--secondary" (click)="startOver()">Elegir otro archivo</button>
+          <button type="button" class="btn btn--primary" (click)="retry()">Intentar de nuevo</button>
+        </div>
+      </section>
+    }
+
+    <!-- ------------------------------------------------------------ 4. Vista previa -->
+    @case ('ready') {
+      @if (preview(); as p) {
+        @if (p.warnings.length > 0 || p.missing.length > 0) {
+          <details class="proposal-import__notice" open>
+            <summary>
+              Revisa antes de crear:
+              {{ p.warnings.length }} {{ p.warnings.length === 1 ? 'aviso' : 'avisos' }} y
+              {{ p.missing.length }} {{ p.missing.length === 1 ? 'dato que falta' : 'datos que faltan' }}
+            </summary>
+            @if (p.warnings.length > 0) {
+              <ul>
+                @for (warning of p.warnings; track $index) {
+                  <li>{{ warning }}</li>
+                }
+              </ul>
+            }
+            @if (p.missing.length > 0) {
+              <p class="proposal-import__notice-title">No venía en el PDF (se completa en el constructor):</p>
+              <ul>
+                @for (item of p.missing; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+          </details>
+        }
+
+        <section class="proposal-import__section">
+          <h2 class="proposal-import__section-title">Cliente y viaje</h2>
+          <dl class="proposal-import__facts">
+            <div><dt>Cliente</dt><dd>{{ p.clientName || '—' }}</dd></div>
+            <div><dt>Correo</dt><dd>{{ p.clientEmail || '—' }}</dd></div>
+            <div><dt>Teléfono</dt><dd>{{ p.clientPhone || '—' }}</dd></div>
+            <div><dt>Viajeros</dt><dd>{{ p.travelers || '—' }}</dd></div>
+            <div><dt>Fechas</dt><dd>{{ p.dates || '—' }}</dd></div>
+            <div><dt>Destino</dt><dd>{{ p.destinations || '—' }}</dd></div>
+          </dl>
+        </section>
+
+        <section class="proposal-import__section">
+          <h2 class="proposal-import__section-title">
+            Itinerario <span class="proposal-import__count">{{ p.days.length }} días · {{ p.serviceCount }} servicios</span>
+          </h2>
+          @if (p.days.length === 0) {
+            <p class="proposal-import__empty">El PDF no trae un itinerario por días: lo armas en el constructor.</p>
+          }
+          <ol class="proposal-import__days">
+            @for (day of p.days; track day.key) {
+              <li class="proposal-import__day">
+                <header>
+                  <span class="proposal-import__day-number">Día {{ day.number }}</span>
+                  <span class="proposal-import__day-title">{{ day.title || 'Sin título' }}</span>
+                  @if (day.date) {
+                    <span class="proposal-import__day-date">{{ day.date }}</span>
+                  }
+                </header>
+                @if (day.services.length > 0) {
+                  <ul class="proposal-import__services">
+                    @for (service of day.services; track $index) {
+                      <li>
+                        <span class="proposal-import__chip">{{ service.typeLabel }}</span>
+                        <span class="proposal-import__service-name">{{ service.name }}</span>
+                        @if (service.time) {
+                          <span class="proposal-import__meta">{{ service.time }}</span>
+                        }
+                        @if (service.modality) {
+                          <span class="proposal-import__chip proposal-import__chip--soft">{{ service.modality }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="proposal-import__empty">Sin servicios.</p>
+                }
+              </li>
+            }
+          </ol>
+        </section>
+
+        <section class="proposal-import__section">
+          <h2 class="proposal-import__section-title">Inversión</h2>
+          @if (p.pricing; as pricing) {
+            @if (pricing.lines.length > 0) {
+              <ul class="proposal-import__lines">
+                @for (line of pricing.lines; track $index) {
+                  <li>
+                    <span class="proposal-import__line-label">
+                      {{ line.label }}
+                      @if (line.kind === 'fee') {
+                        <span class="proposal-import__chip proposal-import__chip--soft">Cargo</span>
+                      }
+                    </span>
+                    <span class="proposal-import__meta">
+                      @if (line.quantity !== 1) {
+                        {{ line.quantity }} × {{ formatMoney(line.unitPrice, pricing.currency) }}
+                      } @else if (line.perPerson) {
+                        por persona
+                      }
+                    </span>
+                    <span class="proposal-import__line-amount">{{ formatMoney(line.subtotal, pricing.currency) }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="proposal-import__empty">El PDF no trae líneas de precio: agrégalas en el constructor.</p>
+            }
+            @if (pricing.total !== null) {
+              <p class="proposal-import__total">Total del PDF <strong>{{ formatMoney(pricing.total, pricing.currency) }}</strong></p>
+            }
+          } @else {
+            <p class="proposal-import__empty">El PDF no trae precios: agrégalos en el constructor.</p>
+          }
+        </section>
+
+        @if (p.inclusions.length > 0 || p.exclusions.length > 0 || p.notes.length > 0) {
+          <section class="proposal-import__section">
+            <h2 class="proposal-import__section-title">Inclusiones, exclusiones y notas</h2>
+            <p class="proposal-import__hint">Solo lectura: esto no se copia a la propuesta.</p>
+            @if (p.inclusions.length > 0) {
+              <h3 class="proposal-import__subtitle">Incluye</h3>
+              <ul class="proposal-import__plain">
+                @for (item of p.inclusions; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+            @if (p.exclusions.length > 0) {
+              <h3 class="proposal-import__subtitle">No incluye</h3>
+              <ul class="proposal-import__plain">
+                @for (item of p.exclusions; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+            @if (p.notes.length > 0) {
+              <h3 class="proposal-import__subtitle">Notas</h3>
+              <ul class="proposal-import__plain">
+                @for (item of p.notes; track $index) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        @if (applyError(); as message) {
+          <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+        }
+
+        <div class="proposal-import__footer proposal-import__footer--sticky">
+          <button type="button" class="btn btn--secondary" [disabled]="applying()" (click)="startOver()">Elegir otro archivo</button>
+          <button type="button" class="btn btn--primary" [disabled]="applying()" (click)="createProposal()">
+            {{ applying() ? 'Creando…' : 'Crear propuesta en borrador' }}
+          </button>
+        </div>
+      }
+    }
+  }
+</div>

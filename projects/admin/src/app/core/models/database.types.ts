@@ -355,6 +355,31 @@ export interface Database {
         };
         Relationships: [];
       };
+      /** Importación de propuestas desde PDF — migraciones 0049 y 0050. Solo se puede insertar la fila inicial. */
+      proposal_imports: {
+        Row: {
+          id: string;
+          proposal_id: string | null;
+          file_path: string;
+          mode: 'new' | 'merge';
+          status: 'uploaded' | 'processing' | 'ready' | 'applied' | 'failed';
+          extracted: Record<string, unknown> | null;
+          diff: Record<string, unknown> | null;
+          error: string | null;
+          created_by: string;
+          created_at: string;
+          applied_at: string | null;
+          processing_started_at: string | null;
+        };
+        Insert: {
+          proposal_id?: string | null;
+          file_path: string;
+          mode: 'new' | 'merge';
+          created_by: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

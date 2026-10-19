@@ -53,6 +53,32 @@
   white-space: nowrap;
 }
 
+.proposals-list__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* Acción secundaria junto a "Nueva propuesta": contorno, mismo tamaño. */
+.proposals-list__pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  border: 1px solid var(--brand-600);
+  border-radius: 999px;
+  color: var(--brand-600);
+  font-weight: 700;
+  font-size: var(--size-small);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.proposals-list__pdf-btn:hover {
+  background: color-mix(in srgb, var(--brand-600) 8%, transparent);
+}
+
 .proposals-list__new-btn:hover {
   background: color-mix(in srgb, var(--brand-600) 85%, black);
 }

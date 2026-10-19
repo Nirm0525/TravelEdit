@@ -1,0 +1,403 @@
+/* Pantalla "Nueva desde PDF". Móvil primero: una columna, y a partir de ~48rem las fichas se reparten en rejilla. */
+
+.proposal-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 52rem;
+  min-width: 0;
+}
+
+.proposal-import__intro {
+  color: var(--text-secondary);
+  font-size: var(--size-body);
+  line-height: 1.55;
+}
+
+.proposal-import__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 36rem;
+}
+
+/* --- Zona para soltar el archivo --- */
+
+.proposal-import__dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: 9rem;
+  padding: var(--space-lg) var(--space-md);
+  border: 2px dashed var(--line-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-000);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-standard), background-color 0.2s var(--ease-standard);
+}
+
+.proposal-import__dropzone:hover,
+.proposal-import__dropzone:focus-within,
+.proposal-import__dropzone.is-dragging {
+  border-color: var(--brand-600);
+  background: color-mix(in srgb, var(--brand-600) 5%, var(--surface-000));
+}
+
+.proposal-import__dropzone.has-file {
+  border-style: solid;
+}
+
+.proposal-import__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.proposal-import__drop-title,
+.proposal-import__file-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__file-meta {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.proposal-import__link {
+  margin-top: var(--space-xs);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--brand-600);
+  font-size: var(--size-small);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Pie con las acciones --- */
+
+.proposal-import__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.proposal-import__footer--center {
+  justify-content: center;
+}
+
+/* En la vista previa la acción principal queda a la vista aunque la lista sea larga. */
+.proposal-import__footer--sticky {
+  position: sticky;
+  bottom: 0;
+  justify-content: flex-end;
+  padding: var(--space-sm) 0;
+  background: linear-gradient(to top, var(--canvas-100) 70%, transparent);
+}
+
+/* --- Procesando / error --- */
+
+.proposal-import__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-2xl) var(--space-md);
+  text-align: center;
+}
+
+.proposal-import__status-title {
+  font-size: var(--size-section-title);
+}
+
+.proposal-import__status-text {
+  max-width: 32rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.proposal-import__status-file {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid var(--line-200);
+  border-top-color: var(--brand-600);
+  border-radius: 50%;
+  animation: proposal-import-spin 0.9s linear infinite;
+}
+
+@keyframes proposal-import-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proposal-import__spinner {
+    animation-duration: 3s;
+  }
+}
+
+/* --- Aviso discreto --- */
+
+.proposal-import__notice {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid color-mix(in srgb, var(--attention-600) 45%, var(--line-200));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--attention-600) 8%, var(--surface-000));
+  font-size: var(--size-small);
+  line-height: 1.5;
+}
+
+.proposal-import__notice summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.proposal-import__notice ul {
+  margin: var(--space-xs) 0 0;
+  padding-left: var(--space-lg);
+}
+
+.proposal-import__notice-title {
+  margin-top: var(--space-sm);
+  font-weight: 600;
+}
+
+/* --- Secciones de la vista previa --- */
+
+.proposal-import__section {
+  padding: var(--space-md);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-000);
+  min-width: 0;
+}
+
+.proposal-import__section-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-sm);
+  font-size: var(--size-section-title);
+}
+
+.proposal-import__count,
+.proposal-import__hint,
+.proposal-import__meta {
+  font-size: var(--size-small);
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.proposal-import__empty {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.proposal-import__facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-sm) var(--space-lg);
+  margin: 0;
+}
+
+.proposal-import__facts dt {
+  font-size: var(--size-eyebrow);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.proposal-import__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Días y servicios --- */
+
+.proposal-import__days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal-import__day {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--line-200);
+  border-radius: var(--radius-md);
+}
+
+.proposal-import__day header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.proposal-import__day-number {
+  font-weight: 700;
+  color: var(--brand-600);
+}
+
+.proposal-import__day-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__day-date {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.proposal-import__services,
+.proposal-import__lines,
+.proposal-import__plain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal-import__plain {
+  padding-left: var(--space-md);
+  list-style: disc;
+}
+
+.proposal-import__services li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-xs);
+}
+
+.proposal-import__service-name {
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__chip {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-600) 10%, var(--surface-000));
+  color: var(--brand-600);
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.proposal-import__chip--soft {
+  background: var(--canvas-100);
+  color: var(--text-secondary);
+}
+
+.proposal-import__subtitle {
+  margin: var(--space-sm) 0 var(--space-2xs);
+  font-size: var(--size-small);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* --- Inversión --- */
+
+.proposal-import__lines li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label amount'
+    'meta amount';
+  gap: var(--space-3xs) var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--line-200);
+}
+
+.proposal-import__line-label {
+  grid-area: label;
+  overflow-wrap: anywhere;
+}
+
+.proposal-import__lines .proposal-import__meta {
+  grid-area: meta;
+}
+
+.proposal-import__line-amount {
+  grid-area: amount;
+  align-self: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.proposal-import__total {
+  margin-top: var(--space-sm);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.proposal-import__total strong {
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Pantallas medianas y grandes --- */
+
+@media (min-width: 48rem) {
+  .proposal-import__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proposal-import__section {
+    padding: var(--space-lg);
+  }
+}
+
+@media (min-width: 90rem) {
+  .proposal-import {
+    max-width: 60rem;
+  }
+}
+
+/* --- Teléfonos: las acciones ocupan todo el ancho --- */
+
+@media (max-width: 36rem) {
+  .proposal-import__footer {
+    align-items: stretch;
+  }
+
+  .proposal-import__footer .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .proposal-import__footer--sticky {
+    flex-direction: column-reverse;
+  }
+
+  .proposal-import__status {
+    padding-inline: 0;
+  }
+}

@@ -117,6 +117,13 @@ export const routes: Routes = [
           import('./features/proposals/proposal-create/proposal-create').then((m) => m.ProposalCreate)
       },
       {
+        path: 'proposals/import',
+        data: { title: 'Nueva desde PDF' },
+        canActivate: [permissionGuard('proposals')],
+        loadComponent: () =>
+          import('./features/proposals/proposal-import/proposal-import').then((m) => m.ProposalImport)
+      },
+      {
         // Sin unsavedChangesGuard: cada paso autoguarda por campo/acción,
         // mismo criterio que itinerario/galería de Destinos (no el de
         // General, que sí usa guard porque ahí se guarda con botón explícito).

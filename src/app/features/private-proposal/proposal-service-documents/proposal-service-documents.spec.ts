@@ -48,6 +48,13 @@ describe('ProposalServiceDocuments (propuesta privada)', () => {
     expect(links[1].disabled).toBe(false);
   });
 
+  it('cada documento lleva un icono y una etiqueta de tipo: PDF o Imagen', () => {
+    create([doc('1', 'Boleto.pdf'), { ...doc('2', 'Foto.png'), mimeType: 'image/png' }]);
+    const kinds = Array.from(el().querySelectorAll('.proposal-docs__kind')).map((k) => k.textContent?.trim());
+    expect(kinds).toEqual(['PDF', 'Imagen']);
+    expect(el().querySelectorAll('.proposal-docs__icon svg').length).toBe(2);
+  });
+
   it('no expone nada interno: el HTML solo lleva nombres (sin ids, rutas ni metadata)', () => {
     create([doc('11111111-1111-4111-8111-111111111111', 'Boleto.pdf')]);
     const html = el().innerHTML;
@@ -55,6 +62,7 @@ describe('ProposalServiceDocuments (propuesta privada)', () => {
     expect(html).not.toContain('storage');
     expect(html).not.toContain('application/pdf');
     expect(html).not.toContain('href');
+    expect(html).not.toContain('http');
   });
 
   it('documentDisplayName: quita la extensión y no deja el nombre vacío', () => {

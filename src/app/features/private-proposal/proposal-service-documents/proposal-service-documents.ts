@@ -24,4 +24,7 @@ export class ProposalServiceDocuments {
   readonly openDocument = output<ProposalDocument>();
 
   readonly displayName = documentDisplayName;
+  readonly isImage = (doc: ProposalDocument) => doc.mimeType.startsWith('image/');
+  /** Etiqueta discreta bajo el nombre: "PDF" o "Imagen". */
+  readonly kindLabel = (doc: ProposalDocument) => (this.isImage(doc) ? 'Imagen' : 'PDF');
 }

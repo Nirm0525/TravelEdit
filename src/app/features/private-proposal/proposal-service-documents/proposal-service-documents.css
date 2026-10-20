@@ -1,53 +1,101 @@
-/* Bloque discreto bajo cada servicio: solo aparece si hay documentos visibles para el cliente. */
+/* Documentos de un servicio: bloque sobrio y elegante, en la línea de la ficha del servicio (etiqueta en versalitas,
+   filas separadas por una línea de beige cálido). Solo aparece si hay documentos visibles para el cliente. */
 .proposal-docs {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  margin-top: var(--space-sm);
-  padding-top: var(--space-sm);
-  border-top: 1px solid color-mix(in srgb, var(--color-stone) 22%, transparent);
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-warm-beige);
 }
 
 .proposal-docs__title {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-stone) 80%, var(--color-ink));
 }
 
 .proposal-docs__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2xs);
+  gap: var(--space-xs);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .proposal-docs__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-cream) 55%, var(--color-white));
+  border: 1px solid color-mix(in srgb, var(--color-warm-beige) 70%, transparent);
+  border-radius: 0.9rem;
+}
+
+.proposal-docs__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--color-gold);
+  background: var(--color-white);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 35%, transparent);
+  border-radius: 50%;
+}
+
+.proposal-docs__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.proposal-docs__text {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2xs) var(--space-md);
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 }
 
 .proposal-docs__name {
-  min-width: 0;
+  font-weight: 500;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+.proposal-docs__kind {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-stone);
+}
+
 .proposal-docs__link {
-  padding: 0;
-  border: 0;
-  background: none;
+  min-height: 2.5rem;
+  padding: 0.45rem 1.1rem;
   font: inherit;
-  font-size: 0.9rem;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-burgundy);
+  background: transparent;
+  border: 1px solid var(--color-burgundy);
+  border-radius: 999px;
   cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.proposal-docs__link:hover:not(:disabled),
+.proposal-docs__link:focus-visible {
+  color: var(--color-white);
+  background: var(--color-burgundy);
 }
 
 .proposal-docs__link:disabled {
@@ -55,8 +103,15 @@
   cursor: progress;
 }
 
+/* Teléfono: el botón baja a su propia fila, a todo el ancho (objetivo táctil cómodo). */
 @media (max-width: 40rem) {
+  .proposal-docs__item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
   .proposal-docs__link {
+    grid-column: 1 / -1;
+    width: 100%;
     min-height: 2.75rem;
   }
 }

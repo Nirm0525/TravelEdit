@@ -44,6 +44,7 @@ export class ServiceDocuments {
   readonly accept = ATTACHMENT_ACCEPT;
   readonly maxFiles = ATTACHMENT_MAX_PER_SERVICE;
   readonly formatSize = formatFileSize;
+  readonly isImage = (a: ProposalServiceAttachment) => a.mimeType.startsWith('image/');
   readonly displayName = (a: ProposalServiceAttachment) => displayNameWithoutExtension(a.fileName);
 
   /** Mientras algo está en curso, todo lo demás de la sección queda bloqueado (evita dobles subidas y carreras). */

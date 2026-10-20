@@ -91,6 +91,24 @@
   opacity: 0.6;
 }
 
+.service-docs__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--brand-600);
+  background: color-mix(in srgb, var(--brand-600) 8%, var(--surface-000));
+  border: 1px solid color-mix(in srgb, var(--brand-600) 22%, var(--line-200));
+  border-radius: var(--radius-sm);
+}
+
+.service-docs__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
 .service-docs__main {
   display: flex;
   align-items: center;

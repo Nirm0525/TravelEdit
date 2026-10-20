@@ -12,6 +12,7 @@ import {
   formatFileSize,
   validateAttachmentFile
 } from '../../../../../core/utils/service-attachments';
+import { resolveViewableUrl } from '../../../../../core/utils/open-document';
 import { ConfirmDialog } from '../../../../../shared/ui/confirm-dialog/confirm-dialog';
 
 const PHASE_LABEL: Record<UploadPhase, string> = {
@@ -194,7 +195,7 @@ export class ServiceDocuments {
     try {
       const url = await this.attachmentsService.getUrl(attachment.id, download);
       if (tab) {
-        tab.location.href = url;
+        tab.location.href = await resolveViewableUrl(url, attachment.mimeType);
       } else {
         const link = document.createElement('a');
         link.href = url;

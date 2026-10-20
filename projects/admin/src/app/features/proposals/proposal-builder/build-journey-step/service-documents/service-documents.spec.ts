@@ -205,15 +205,19 @@ describe('ServiceDocuments', () => {
     expect(text()).toContain('No se pudo cambiar la visibilidad');
   });
 
-  it('abrir: pide una URL firmada (nunca usa una guardada) y la abre en la pestaña ya abierta', async () => {
+  it('abrir: pide una URL firmada (nunca usa una guardada) y la abre como blob en la pestaña ya abierta', async () => {
     const tab = { opener: 'x', location: { href: '' }, close: vi.fn() };
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('%PDF-1.4', { status: 200 })));
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:https://app.test/doc-1');
     create([att('a')]);
     button('Abrir')!.click();
     await settle();
     expect(openSpy).toHaveBeenCalledWith('', '_blank');
     expect(service.getUrl).toHaveBeenCalledWith('a', false);
-    expect(tab.location.href).toBe('https://signed.test/doc');
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('https://signed.test/doc');
+    expect((createUrl.mock.calls[0][0] as Blob).type).toBe('application/pdf');
+    expect(tab.location.href).toBe('blob:https://app.test/doc-1');
     expect(tab.opener).toBeNull();
 
     service.getUrl.mockRejectedValueOnce(new AttachmentApiError('No se encontró el documento.', 'not_found'));
@@ -222,6 +226,19 @@ describe('ServiceDocuments', () => {
     expect(tab.close).toHaveBeenCalled();
     expect(text()).toContain('No se pudo abrir el documento');
     openSpy.mockRestore();
+    createUrl.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it('abrir: si no se puede bajar el archivo, la pestaña abre la URL firmada directo', async () => {
+    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() };
+    vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
+    create([att('a')]);
+    button('Abrir')!.click();
+    await settle();
+    expect(tab.location.href).toBe('https://signed.test/doc');
+    vi.unstubAllGlobals();
   });
 
   it('abrir no expone rutas de Storage: el componente solo maneja ids y nombres', () => {

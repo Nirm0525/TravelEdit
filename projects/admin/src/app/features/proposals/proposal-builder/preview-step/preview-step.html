@@ -254,6 +254,32 @@
                       @if (service.description) {
                         <p>{{ service.description }}</p>
                       }
+                      @if (documentsByService()[service.id]; as docs) {
+                        <div class="preview__service-docs">
+                          <p class="preview__service-docs-title">Documentos</p>
+                          <ul class="preview__service-docs-list">
+                            @for (doc of docs; track doc.id) {
+                              <li>
+                                <span class="preview__service-doc-name">{{ documentName(doc) }}</span>
+                                <span class="preview__service-doc-badge" [class.is-visible]="doc.visibleToClient">
+                                  {{ doc.visibleToClient ? 'Visible para el cliente' : 'Solo interno' }}
+                                </span>
+                                <button
+                                  type="button"
+                                  class="preview__service-doc-open"
+                                  [disabled]="documentOpeningId() === doc.id"
+                                  (click)="openDocument(doc)"
+                                >
+                                  {{ documentOpeningId() === doc.id ? 'Abriendo…' : 'Ver documento →' }}
+                                </button>
+                              </li>
+                            }
+                          </ul>
+                          @if (documentError(); as message) {
+                            <p class="preview__service-doc-error" role="alert">{{ message }}</p>
+                          }
+                        </div>
+                      }
                     </li>
                   }
                 </ul>

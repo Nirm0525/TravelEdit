@@ -123,6 +123,8 @@ export class BuildJourneyStep implements OnInit {
 
   onAttachmentsChanged(serviceId: string, list: ProposalServiceAttachment[]): void {
     this.attachments.update((all) => [...all.filter((a) => a.serviceId !== serviceId), ...list]);
+    // La vista previa del constructor se refresca con cada guardado: también debe mostrar los documentos nuevos.
+    this.saved.emit();
   }
 
   private refreshDayImageUrls(days: ProposalDay[]): void {

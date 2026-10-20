@@ -3,6 +3,10 @@ import type { gsap } from 'gsap';
 import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
+import { ProposalServiceAttachmentsService } from '../../../../core/services/proposal-service-attachments';
+import { ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
+import { resolveViewableUrl } from '../../../../core/utils/open-document';
+import { displayNameWithoutExtension } from '../../../../core/utils/service-attachments';
 import { Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
@@ -114,6 +118,7 @@ interface ItinerarySegment {
 export class PreviewStep implements OnInit {
   private readonly proposalsService = inject(ProposalsService);
   private readonly proposalImages = inject(ProposalImagesService);
+  private readonly attachmentsService = inject(ProposalServiceAttachmentsService);
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly prefersReducedMotion =
@@ -135,6 +140,19 @@ export class PreviewStep implements OnInit {
   });
 
   readonly proposal = signal<Proposal | null>(null);
+
+  /** Documentos de la propuesta, por servicio (todos: aquí se ve cuáles ve el cliente y cuáles son internos). */
+  readonly attachments = signal<ProposalServiceAttachment[]>([]);
+  readonly documentsByService = computed(() => {
+    const map: Record<string, ProposalServiceAttachment[] | undefined> = {};
+    for (const attachment of this.attachments()) {
+      (map[attachment.serviceId] ??= []).push(attachment);
+    }
+    return map;
+  });
+  readonly documentOpeningId = signal<string | null>(null);
+  readonly documentError = signal<string | null>(null);
+  readonly documentName = (a: ProposalServiceAttachment) => displayNameWithoutExtension(a.fileName);
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
 
@@ -185,11 +203,49 @@ export class PreviewStep implements OnInit {
     this.loadError.set(null);
     try {
       this.proposal.set(await this.proposalsService.getById(this.proposalId()));
+      void this.loadAttachments();
     } catch (error) {
       console.error('No se pudo cargar la vista previa.', error);
       this.loadError.set('No se pudo cargar la vista previa. Inténtalo nuevamente.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Complemento de la vista previa: si falla, la propuesta se ve igual sin los documentos. */
+  private async loadAttachments(): Promise<void> {
+    try {
+      this.attachments.set(await this.attachmentsService.listForProposal(this.proposalId()));
+    } catch (error) {
+      console.error('No se pudieron cargar los documentos de la vista previa.', error);
+    }
+  }
+
+  /** Igual que en el editor: la pestaña se abre dentro del clic (los móviles no la bloquean) y luego recibe el documento. */
+  async openDocument(attachment: ProposalServiceAttachment): Promise<void> {
+    if (this.documentOpeningId()) {
+      return;
+    }
+    this.documentError.set(null);
+    this.documentOpeningId.set(attachment.id);
+    const tab = window.open('', '_blank');
+    if (tab) {
+      tab.opener = null;
+    }
+    try {
+      const url = await this.attachmentsService.getUrl(attachment.id);
+      const viewable = await resolveViewableUrl(url, attachment.mimeType);
+      if (tab) {
+        tab.location.href = viewable;
+      } else {
+        window.location.assign(viewable);
+      }
+    } catch (error) {
+      console.error('No se pudo abrir el documento.', error);
+      tab?.close();
+      this.documentError.set('No se pudo abrir el documento. Inténtalo de nuevo.');
+    } finally {
+      this.documentOpeningId.set(null);
     }
   }
 

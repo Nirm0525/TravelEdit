@@ -109,16 +109,30 @@ describe('PrivateProposal — documentos por servicio', () => {
     }
   });
 
-  it('abrir: pide una URL firmada al hacer clic (token + sesión + id) y la abre en la pestaña ya abierta', async () => {
+  it('abrir: pide una URL firmada al hacer clic (token + sesión + id) y la abre como blob en la pestaña ya abierta', async () => {
     const tab = { opener: 'x', location: { href: '' }, close: vi.fn() };
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('%PDF-1.4', { status: 200 })));
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:https://app.test/doc-1');
     await create([doc('x1', 's1', 'Boleto.pdf')]);
     (el().querySelector('.proposal-docs__link') as HTMLButtonElement).click();
     await settle();
     expect(openSpy).toHaveBeenCalledWith('', '_blank');
     expect(api.getDocumentUrl).toHaveBeenCalledWith(TOKEN, SESSION, 'x1');
-    expect(tab.location.href).toBe('https://signed.test/doc?token=abc');
+    expect((createUrl.mock.calls[0][0] as Blob).type).toBe('application/pdf');
+    expect(tab.location.href).toBe('blob:https://app.test/doc-1');
     expect(tab.opener).toBeNull();
+    createUrl.mockRestore();
+  });
+
+  it('abrir: si no se puede bajar el archivo, se abre la URL firmada directo', async () => {
+    const tab = { opener: 'x', location: { href: '' }, close: vi.fn() };
+    vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
+    await create([doc('x1', 's1', 'Boleto.pdf')]);
+    (el().querySelector('.proposal-docs__link') as HTMLButtonElement).click();
+    await settle();
+    expect(tab.location.href).toBe('https://signed.test/doc?token=abc');
   });
 
   it('abrir: si no se puede obtener la URL (404) se cierra la pestaña y se avisa sin detalles técnicos', async () => {

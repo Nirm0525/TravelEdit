@@ -10,6 +10,7 @@ import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scrol
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 import { Footer } from '../footer/footer';
+import { resolveViewableUrl } from '../../core/utils/open-document';
 import { ProposalServiceDocuments } from './proposal-service-documents/proposal-service-documents';
 import { serviceDetailRows } from '../../core/data/proposal-service-fields';
 import { buildPricingBreakdown } from '../../core/data/proposal-pricing-breakdown';
@@ -722,10 +723,12 @@ export class PrivateProposal implements OnDestroy {
     }
     try {
       const url = await this.publicProposal.getDocumentUrl(this.token(), session, doc.id);
+      // Se abre como blob: (ver open-document.ts): Storage sirve los archivos con una CSP que bloquea el visor de PDF.
+      const viewable = await resolveViewableUrl(url, doc.mimeType);
       if (tab) {
-        tab.location.href = url;
+        tab.location.href = viewable;
       } else {
-        this.document.defaultView?.location.assign(url);
+        this.document.defaultView?.location.assign(viewable);
       }
     } catch (error) {
       console.error('No se pudo abrir el documento.', error);

@@ -14,13 +14,28 @@ const USER = '11111111-1111-1111-1111-111111111111';
 const LEAD = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const IMPORT = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-// Adaptador: la plantilla de postgres.js ($1, $2…) sobre PGlite.
+// Valor marcado por `sql.json(...)`, igual que en postgres.js.
+class JsonParam {
+  constructor(readonly value: unknown) {}
+}
+
+// Adaptador: la plantilla de postgres.js ($1, $2…) sobre PGlite. Reproduce cómo postgres.js serializa los parámetros
+// que el servidor tipa como jsonb: SIEMPRE con JSON.stringify. Por eso un string que ya es JSON y va a un `$n::jsonb`
+// se guarda como string JSON (doble codificación), y `sql.json(obj)` guarda el objeto. PGlite por sí solo aceptaría
+// el string tal cual y ocultaría el error.
 // deno-lint-ignore no-explicit-any
 function adapt(q: { query(text: string, params?: any[]): Promise<{ rows: any[] }> }): TxSql {
-  return async (strings, ...values) => {
+  const run: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]> = async (strings, ...values) => {
     const text = strings.reduce((acc, part, i) => acc + part + (i < values.length ? `$${i + 1}` : ''), '');
-    return (await q.query(text, values)).rows;
+    const params = values.map((v, i) => {
+      if (v instanceof JsonParam) {
+        return JSON.stringify(v.value);
+      }
+      return typeof v === 'string' && /^\s*::jsonb/.test(strings[i + 1] ?? '') ? JSON.stringify(v) : v;
+    });
+    return (await q.query(text, params)).rows;
   };
+  return Object.assign(run, { json: (value: unknown) => new JsonParam(value) }) as unknown as TxSql;
 }
 
 async function setup(): Promise<{ db: PGlite; sql: SqlLike }> {
@@ -222,4 +237,22 @@ Deno.test('tx: en un conflicto (doble aplicación) el resumen de la primera no s
   const first = (await extractedOf(db)).extracted;
   assertEquals(await applyImportTx(sql, { ...args, retained: { ...retained(), meta: { model: 'otro' } } }), 'conflict');
   assertEquals((await extractedOf(db)).extracted, first);
+});
+
+Deno.test('tx: content y extracted se guardan como objeto jsonb, no como string JSON (doble codificación)', async () => {
+  const { db, sql } = await setup();
+  const m = mapped();
+  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: m, retained: retained() });
+  assert(id !== 'conflict');
+  const p = (await db.query<{ type: string; days: number; cover_title: string }>(
+    `select jsonb_typeof(content) as type, jsonb_array_length(content -> 'days') as days, content -> 'cover' ->> 'title' as cover_title
+       from proposals where id = $1`,
+    [id]
+  )).rows[0];
+  assertEquals(p, { type: 'object', days: m.content.days.length, cover_title: m.content.cover.title });
+  const imp = (await db.query<{ type: string; redacted: string }>(
+    `select jsonb_typeof(extracted) as type, extracted ->> 'redacted' as redacted from proposal_imports where id = $1`,
+    [IMPORT]
+  )).rows[0];
+  assertEquals(imp, { type: 'object', redacted: 'true' });
 });

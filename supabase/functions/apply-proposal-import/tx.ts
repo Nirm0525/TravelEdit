@@ -6,7 +6,13 @@ import type { MappedProposal } from '../_shared/proposal-mapping.ts';
 
 /** Forma mínima de postgres.js que usa este módulo (permite probarlo con otro cliente). */
 // deno-lint-ignore no-explicit-any
-export type TxSql = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
+export type TxSql = ((strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>) & {
+  /**
+   * Parámetro jsonb de postgres.js: recibe el OBJETO y el driver lo serializa una sola vez. No se le pasa un
+   * JSON.stringify(...) ni siquiera con `::jsonb`: el driver volvería a serializarlo y la columna quedaría como string JSON.
+   */
+  json(value: unknown): unknown;
+};
 export interface SqlLike extends TxSql {
   begin<T>(fn: (tx: TxSql) => Promise<T>): Promise<T>;
 }
@@ -43,7 +49,7 @@ export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<stri
       const applied = await tx`
         update public.proposal_imports
            set status = 'applied', applied_at = now(),
-               extracted = ${JSON.stringify(retained)}::jsonb, diff = null
+               extracted = ${tx.json(retained)}::jsonb, diff = null
          where id = ${importId}::uuid and mode = 'new' and status = 'ready'
         returning id`;
       if (applied.length === 0) {
@@ -57,7 +63,7 @@ export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<stri
         ) values (
           'draft', ${mapped.clientName}, ${mapped.clientEmail}, ${mapped.clientPhone}, ${mapped.destinationText},
           ${mapped.startDate}::date, ${mapped.endDate}::date, ${mapped.travelersCount}::int, ${mapped.currency},
-          ${userId}::uuid, ${userId}::uuid, ${originChannel}, ${leadId}::uuid, ${JSON.stringify(mapped.content)}::jsonb
+          ${userId}::uuid, ${userId}::uuid, ${originChannel}, ${leadId}::uuid, ${tx.json(mapped.content)}::jsonb
         )
         returning id`;
       const proposalId = String(inserted[0].id);

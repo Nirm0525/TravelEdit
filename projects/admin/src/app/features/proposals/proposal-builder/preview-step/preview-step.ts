@@ -6,7 +6,7 @@ import { ProposalImagesService } from '../../../../core/services/proposal-images
 import { ProposalServiceAttachmentsService } from '../../../../core/services/proposal-service-attachments';
 import { ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
 import { resolveViewableUrl } from '../../../../core/utils/open-document';
-import { displayNameWithoutExtension } from '../../../../core/utils/service-attachments';
+import { PreviewServiceDocuments } from './preview-service-documents';
 import { Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
@@ -111,7 +111,7 @@ interface ItinerarySegment {
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments],
   templateUrl: './preview-step.html',
   styleUrl: './preview-step.css'
 })
@@ -152,7 +152,6 @@ export class PreviewStep implements OnInit {
   });
   readonly documentOpeningId = signal<string | null>(null);
   readonly documentError = signal<string | null>(null);
-  readonly documentName = (a: ProposalServiceAttachment) => displayNameWithoutExtension(a.fileName);
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
 

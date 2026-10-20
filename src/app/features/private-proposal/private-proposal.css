@@ -769,14 +769,17 @@
 /* --- Sections --- */
 
 .proposal__section {
-  max-width: var(--measure);
+  /* Ancho editorial ÚNICO de todas las secciones (bienvenida, resumen, itinerario, consejos, inversión, términos, aceptar):
+     amplio pero con márgenes laterales; el texto corrido mantiene su propia medida (.proposal__rich). */
+  --editorial-width: 72rem;
+  max-width: var(--editorial-width);
   margin: 0 auto;
   padding: var(--space-2xl) var(--space-md);
   scroll-margin-top: 4.5rem;
 }
 
 /* Banda de título por sección — bordea de punta a punta aunque el resto del
-   contenido esté acotado a var(--measure), con el truco clásico de
+   contenido esté acotado al ancho editorial, con el truco clásico de
    left:50%/margin-left:-50vw (robusto sin importar el padding/max-width del
    padre, a diferencia de calc(50% - 50vw) que depende de esa geometría). */
 .proposal__band {
@@ -791,7 +794,7 @@
 }
 
 .proposal__band h2 {
-  max-width: var(--measure);
+  max-width: var(--editorial-width);
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -818,8 +821,20 @@
 }
 
 .proposal__rich {
+  /* Líneas legibles aunque la sección sea ancha: ~60 caracteres a este tamaño de letra. */
+  max-width: 60rem;
   font-size: var(--size-body);
   line-height: 1.75;
+}
+
+/* Ritmo vertical: 1rem solo ENTRE bloques hermanos (párrafos, listas, citas); nada al inicio ni al final y los ítems de una
+   lista no se tocan. El contenido viene de [innerHTML], por eso ::ng-deep (sus elementos no llevan el atributo de Angular). */
+.proposal__rich ::ng-deep > * {
+  margin-block: 0;
+}
+
+.proposal__rich ::ng-deep > * + * {
+  margin-top: var(--space-sm);
 }
 
 .proposal__summary {
@@ -858,14 +873,6 @@
 }
 
 /* --- Itinerary --- */
-
-.proposal__itinerary {
-  max-width: 72rem;
-}
-
-.proposal__itinerary .proposal__band h2 {
-  max-width: 72rem;
-}
 
 .proposal__days {
   display: flex;
@@ -1526,14 +1533,6 @@
 
 /* Inversión: sección más ancha y centrada — texto arriba, tarjeta del total y
    mezcla por tipo lado a lado (apiladas en pantallas angostas). */
-.proposal__pricing {
-  max-width: 72rem;
-}
-
-.proposal__pricing .proposal__band h2 {
-  max-width: 72rem;
-}
-
 .proposal__pricing-summary {
   display: flex;
   justify-content: center;
@@ -1792,7 +1791,6 @@
 /* --- Acceptance --- */
 
 .proposal__accept {
-  max-width: 72rem;
   text-align: center;
 }
 

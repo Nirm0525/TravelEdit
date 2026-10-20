@@ -1,5 +1,5 @@
 import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProposalsService } from '../../../core/services/proposals';
 import { LeadsService } from '../../../core/services/leads';
@@ -71,6 +71,7 @@ function publishErrorMessage(error: unknown): string {
 export class ProposalBuilder {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly proposalsService = inject(ProposalsService);
   private readonly leadsService = inject(LeadsService);
   private readonly auth = inject(AuthService);
@@ -350,7 +351,9 @@ export class ProposalBuilder {
     const url = this.router.serializeUrl(
       this.router.createUrlTree([], { relativeTo: this.route, queryParams: { step: 'preview' } })
     );
-    window.open(url, '_blank', 'noopener');
+    // serializeUrl no incluye el <base href>: el admin se sirve bajo /admin/ en producción, y sin ese prefijo la pestaña
+    // nueva cae en la web pública (página principal). prepareExternalUrl lo agrega (en desarrollo, con base "/", no cambia).
+    window.open(this.location.prepareExternalUrl(url), '_blank', 'noopener');
   }
 
   /** Un solo botón que siempre hace algo visible: en pantallas angostas abre

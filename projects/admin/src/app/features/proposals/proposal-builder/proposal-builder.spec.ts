@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { APP_BASE_HREF, DatePipe } from '@angular/common';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap, provideRouter } from '@angular/router';
@@ -61,6 +61,7 @@ describe('ProposalBuilder — pendientes para publicar', () => {
       imports: [ProposalBuilder],
       providers: [
         provideRouter([]),
+        { provide: APP_BASE_HREF, useValue: '/admin/' },
         { provide: ProposalsService, useValue: svc },
         { provide: LeadsService, useValue: {} },
         { provide: AuthService, useValue: { profile: () => ({ fullName: 'Asesora Demo' }) } },
@@ -163,5 +164,14 @@ describe('ProposalBuilder — pendientes para publicar', () => {
     await create('draft', [problem({ code: 'x', tab: 'pricing', line_id: 'l9', message: 'Precios: la línea «Hotel» no tiene precio.' })]);
     (el().querySelector('.publish-checklist__item') as HTMLButtonElement).click();
     expect((router.navigate as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1]?.queryParams?.step).toBe('pricing');
+  });
+
+  it('«Abrir en nueva pestaña» respeta el prefijo /admin/ (sin él la pestaña caía en la página principal de la web)', async () => {
+    await create();
+    vi.spyOn(router, 'createUrlTree').mockReturnValue({} as never);
+    vi.spyOn(router, 'serializeUrl').mockReturnValue('/proposals/p1/edit?step=preview');
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    fixture.componentInstance.openPreviewInNewTab();
+    expect(openSpy).toHaveBeenCalledWith('/admin/proposals/p1/edit?step=preview', '_blank', 'noopener');
   });
 });

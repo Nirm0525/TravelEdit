@@ -2370,3 +2370,8 @@
     display: none;
   }
 }
+
+/* El foco programático que recibe el destino de un scroll interno no lleva anillo (el teclado sigue desde ahí). */
+[tabindex='-1']:focus {
+  outline: none;
+}

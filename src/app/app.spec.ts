@@ -22,5 +22,6 @@ describe('App', () => {
     const harness = await RouterTestingHarness.create('/');
     const compiled = harness.routeNativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent?.trim()).toBeTruthy();
-  });
+    // Carga la portada completa (con animaciones): con otras suites pesadas en paralelo supera los 5 s por defecto.
+  }, 30_000);
 });

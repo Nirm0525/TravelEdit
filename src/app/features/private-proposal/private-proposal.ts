@@ -1,5 +1,5 @@
 import type { gsap } from 'gsap';
-import { Component, ElementRef, HostListener, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Injector, OnDestroy, afterNextRender, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
@@ -152,6 +152,18 @@ function nightsBetween(startIso: string, endIso: string): number | null {
  * (contenido para clientes VIP, no algo que deba sobrevivir indefinido en
  * el navegador).
  */
+/** Ancla estable (atributo data-anchor) de la tarjeta del Día 1: destino de «Ver itinerario completo». */
+export const ITINERARY_FIRST_DAY_ANCHOR = 'itinerary-day-1';
+/**
+ * Aire entre el borde superior visible y el destino del scroll. Se suma a la altura REAL de lo que queda fijo arriba (el botón
+ * de menú en móvil/tablet, medido en pantalla); en escritorio el menú es lateral y no tapa nada, así que solo queda este aire.
+ */
+export const SCROLL_TOP_GAP_PX = 16;
+/** Diferencia aceptada, en px, al comprobar que el scroll llegó al destino. */
+const SCROLL_SETTLE_TOLERANCE_PX = 2;
+/** Respaldo si el navegador no emite `scrollend` (Safari antiguo): cuánto se espera a que termine el scroll suave. */
+const SCROLL_SETTLE_TIMEOUT_MS = 900;
+
 @Component({
   selector: 'app-private-proposal',
   imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments],
@@ -166,6 +178,7 @@ export class PrivateProposal implements OnDestroy {
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly reducedMotion = inject(ReducedMotionService);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   readonly token = input.required<string>();
   readonly serviceTypeLabel = PROPOSAL_SERVICE_TYPE_LABEL;
@@ -448,7 +461,7 @@ export class PrivateProposal implements OnDestroy {
     this.daysMotion?.revert();
     this.daysMotion = undefined;
     if (expanded && goToFirstDay) {
-      this.scrollToFirstDay();
+      void this.scrollToSection(ITINERARY_FIRST_DAY_ANCHOR);
     }
     if (this.reducedMotion.reduced()) {
       return;
@@ -641,6 +654,12 @@ export class PrivateProposal implements OnDestroy {
       this.serviceComments.set(data.serviceComments);
       this.sessionToken = sessionToken;
       this.phase.set('content');
+      // Un clic en el menú antes de que cargara la propuesta: se cumple ahora que el contenido existe.
+      if (this.pendingScrollId) {
+        const pending = this.pendingScrollId;
+        this.pendingScrollId = null;
+        void this.scrollToSection(pending);
+      }
       // Complemento: no retrasa ni bloquea la propuesta; sin documentos visibles no se pinta nada.
       void this.loadDocuments(token, sessionToken);
       // Un tick después de montar el contenido, no en el mismo — así el CSS
@@ -895,35 +914,146 @@ export class PrivateProposal implements OnDestroy {
     }
   }
 
-  /** Lleva al primer día del itinerario (el de menor número) cuando sus tarjetas ya están montadas. */
-  private scrollToFirstDay(): void {
-    const firstDayId = this.navItems().find((item) => item.isDay)?.id;
-    if (!firstDayId) {
-      return;
-    }
-    setTimeout(() => {
-      this.setActiveSection(firstDayId);
-      document.getElementById(firstDayId)?.scrollIntoView({ behavior: this.reducedMotion.reduced() ? 'auto' : 'smooth', block: 'start' });
-      this.setupScrollSpy();
-    }, 150);
+  // ---------------------------------------------------------------- navegación interna (UNA sola función de scroll)
+
+  /** Último pedido de scroll: si llega otro mientras el anterior espera, el anterior se descarta (nunca dos scrolls a la vez). */
+  private scrollRequest = 0;
+  /** Destino pedido antes de que la propuesta terminara de cargar; se cumple al montarse el contenido. */
+  private pendingScrollId: string | null = null;
+
+  /** Espera a que Angular termine de pintar (el cajón ya cerró, las tarjetas ya existen): sin timeouts. */
+  private nextRender(): Promise<void> {
+    return new Promise((resolve) => afterNextRender(() => resolve(), { injector: this.injector }));
   }
 
-  scrollToSection(id: string): void {
-    this.setNavOpen(false);
-    this.setActiveSection(id);
-    const target = document.getElementById(id);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /**
+   * Altura REAL de lo que queda fijo arriba y podría tapar el destino: el botón de menú (position: fixed) en móvil/tablet.
+   * En escritorio el menú es lateral y no ocupa la parte superior. A eso se suma SCROLL_TOP_GAP_PX.
+   */
+  private scrollOffset(): number {
+    const button = this.document.querySelector<HTMLElement>('.proposal__menu-button');
+    let fixedHeight = 0;
+    if (button) {
+      const style = this.document.defaultView?.getComputedStyle(button);
+      if (style && style.position === 'fixed' && style.display !== 'none') {
+        fixedHeight = Math.max(0, button.getBoundingClientRect().bottom);
+      }
+    }
+    return fixedHeight + SCROLL_TOP_GAP_PX;
+  }
+
+  /** Por id, o por data-anchor (ancla estable, p. ej. itinerary-day-1). */
+  private findScrollTarget(id: string): HTMLElement | null {
+    return (
+      this.document.getElementById(id) ??
+      this.document.querySelector<HTMLElement>(`[data-anchor="${id.replace(/"/g, '')}"]`)
+    );
+  }
+
+  private isItineraryTarget(id: string): boolean {
+    return id.startsWith('dia-') || id.startsWith('itinerary-day-');
+  }
+
+  /** Si el destino no existe: el Día 1 cae en el primer día que haya, y cualquier día en el contenedor del itinerario. */
+  private fallbackScrollTarget(id: string): HTMLElement | null {
+    if (id === ITINERARY_FIRST_DAY_ANCHOR) {
+      const firstDayId = this.navItems().find((item) => item.isDay)?.id;
+      const firstDay = firstDayId ? this.document.getElementById(firstDayId) : null;
+      if (firstDay) {
+        return firstDay;
+      }
+    }
+    return this.isItineraryTarget(id) ? this.document.getElementById('itinerario') : null;
+  }
+
+  /** Resuelve cuando termina el scroll suave (`scrollend`) o, como respaldo, tras un tiempo. */
+  private scrollEnded(instant: boolean): Promise<void> {
+    if (instant) {
+      return this.nextRender();
+    }
+    const win = this.document.defaultView;
+    return new Promise((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const done = () => {
+        win?.removeEventListener('scrollend', done);
+        clearTimeout(timer);
+        resolve();
+      };
+      win?.addEventListener('scrollend', done, { once: true });
+      timer = setTimeout(done, SCROLL_SETTLE_TIMEOUT_MS);
+    });
+  }
+
+  /** Foco discreto en el destino (sin volver a desplazar y sin anillo): quien navega con teclado sigue desde ahí. */
+  private focusScrollTarget(target: HTMLElement): void {
+    if (!target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1');
+    }
+    target.focus({ preventScroll: true });
+  }
+
+  /**
+   * ÚNICA función de scroll interno de la propuesta (menú, cajón móvil y botones): lleva al INICIO real del destino,
+   * descontando lo que queda fijo arriba. `targetId` es un id (`itinerario`, `inversion`, `dia-<id>`…) o un data-anchor
+   * (`itinerary-day-1`).
+   *  - Cierra el cajón del menú primero (libera el bloqueo de scroll del body) y espera a que se pinte.
+   *  - Si la propuesta aún carga, lo recuerda y lo cumple al montarse el contenido.
+   *  - Si es un día y el itinerario está colapsado, lo expande y espera el render.
+   *  - Respeta prefers-reduced-motion (scroll instantáneo).
+   *  - Al terminar comprueba que llegó (animaciones o imágenes pueden mover la página) y corrige una vez, sin animar.
+   *  - Un pedido nuevo cancela al anterior: nunca hay dos scrolls compitiendo.
+   */
+  scrollToSection(targetId: string): Promise<void> {
+    const request = ++this.scrollRequest;
+    // Sin devolver el foco al botón de menú: el foco pasa al destino.
+    if (this.navOpen()) {
+      this.setNavOpen(false);
+    }
+    if (this.phase() !== 'content') {
+      this.pendingScrollId = targetId;
+      return Promise.resolve();
+    }
+    return this.performScroll(targetId, request);
+  }
+
+  private async performScroll(targetId: string, request: number): Promise<void> {
+    await this.nextRender();
+    if (request !== this.scrollRequest) {
       return;
     }
-    // Es un día y el itinerario completo sigue colapsado: se expande primero
-    // y se espera a que las tarjetas existan antes de desplazarse.
-    if (id.startsWith('dia-') && !this.itineraryExpanded()) {
+    let target = this.findScrollTarget(targetId);
+    if (!target && this.isItineraryTarget(targetId) && !this.itineraryExpanded()) {
       this.toggleItineraryExpanded();
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        this.setupScrollSpy();
-      }, 120);
+      await this.nextRender();
+      if (request !== this.scrollRequest) {
+        return;
+      }
+      target = this.findScrollTarget(targetId);
+    }
+    target ??= this.fallbackScrollTarget(targetId);
+    const win = this.document.defaultView;
+    if (!target || !win) {
+      return;
+    }
+
+    const instant = this.reducedMotion.reduced();
+    const top = Math.max(0, target.getBoundingClientRect().top + win.scrollY - this.scrollOffset());
+    win.scrollTo({ top, behavior: instant ? 'instant' : 'smooth' });
+    if (target.id && this.navItems().some((item) => item.id === target.id)) {
+      this.setActiveSection(target.id);
+    }
+    this.focusScrollTarget(target);
+
+    await this.scrollEnded(instant);
+    if (request !== this.scrollRequest) {
+      return;
+    }
+    const delta = target.getBoundingClientRect().top - this.scrollOffset();
+    if (Math.abs(delta) > SCROLL_SETTLE_TOLERANCE_PX) {
+      win.scrollTo({ top: Math.max(0, win.scrollY + delta), behavior: 'instant' });
+    }
+    if (this.isItineraryTarget(targetId)) {
+      this.setupScrollSpy();
     }
   }
 

@@ -395,7 +395,7 @@
               @if (itineraryExpanded()) {
                 <div class="proposal__days">
                   @for (day of d.content.days; track day.id; let i = $index) {
-                    <div class="proposal__day" [attr.id]="'dia-' + day.id">
+                    <div class="proposal__day" [attr.id]="'dia-' + day.id" [attr.data-anchor]="'itinerary-day-' + day.dayNumber">
                       <p class="proposal__day-number">Día {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}</p>
                       @if (dayBandLabel(day); as band) {
                         <div class="proposal__day-band proposal__bleed">

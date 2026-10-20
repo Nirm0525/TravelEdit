@@ -97,9 +97,11 @@ describe('vista previa: datos útiles para comparar con el PDF', () => {
     expect(plain.description).toBeNull();
   });
 
-  it('la descripción se recorta para mantener la lista compacta', () => {
-    const [long] = previewOf(svc('Paseo', 'activity', { description: 'palabra '.repeat(80) }));
-    expect(long.description!.length).toBeLessThanOrEqual(220);
+  it('la descripción solo se recorta si es muy larga (tope alto para poder revisar el contenido)', () => {
+    const [medium] = previewOf(svc('Paseo', 'activity', { description: 'palabra '.repeat(80).trim() }));
+    expect(medium.description!.endsWith('…')).toBe(false);
+    const [long] = previewOf(svc('Paseo', 'activity', { description: 'palabra '.repeat(200) }));
+    expect(long.description!.length).toBeLessThanOrEqual(900);
     expect(long.description!.endsWith('…')).toBe(true);
   });
 

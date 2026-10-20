@@ -13,7 +13,7 @@ export interface PreviewService {
   name: string;
   time: string | null;
   modality: string | null;
-  /** Descripción corta (recortada), si el PDF la trae. */
+  /** Descripción del servicio (recortada solo si es muy larga), si el PDF la trae. */
   description: string | null;
   /** Datos útiles para comparar con el PDF: ruta, vuelo, llegada, hotel y noches, duración, qué incluye… */
   facts: PreviewFact[];
@@ -25,6 +25,8 @@ export interface PreviewDay {
   title: string;
   city: string | null;
   date: string | null;
+  /** Texto descriptivo del día o destino (day.summary), si el PDF lo trae. */
+  summary: string | null;
   services: PreviewService[];
 }
 
@@ -58,6 +60,12 @@ export interface ImportPreview {
 }
 
 const MODALITY_LABEL = { private: 'Privado', shared: 'Compartido' } as const;
+
+/** Topes de recorte: lo bastante altos para revisar el contenido útil, sin convertir la vista en una pared de texto. */
+const SUMMARY_MAX = 900;
+const DESCRIPTION_MAX = 900;
+const FACT_MAX = 300;
+const FACT_LONG_MAX = 600;
 
 // ---------------------------------------------------------------- protección extra de datos sensibles
 
@@ -154,16 +162,16 @@ function toPreviewService(s: StoredExtraction['days'][number]['services'][number
     name: safe(s.name, 160) ?? '(sin nombre)',
     time: s.type === 'flight' ? (s.flight?.departure_time ?? s.time) : s.time,
     modality: s.modality ? MODALITY_LABEL[s.modality] : null,
-    description: safe(s.description, 220),
+    description: safe(s.description, DESCRIPTION_MAX),
     facts: serviceFacts(s)
   };
 }
 
 function cleanList(items: string[]): string[] {
-  return items.map((item) => safe(item, 240)).filter((item): item is string => !!item);
+  return items.map((item) => safe(item, FACT_MAX)).filter((item): item is string => !!item);
 }
 
-function pushFact(facts: PreviewFact[], label: string, value: string | null | undefined, max = 160): void {
+function pushFact(facts: PreviewFact[], label: string, value: string | null | undefined, max = FACT_MAX): void {
   const clean = safe(value, max);
   if (clean) {
     facts.push({ label, value: clean });
@@ -204,25 +212,37 @@ export function serviceFacts(s: StoredExtraction['days'][number]['services'][num
   if (s.type === 'flight' && s.flight) {
     pushFact(facts, 'Vuelo', [s.flight.airline, s.flight.flight_number].filter(Boolean).join(' '));
     pushFact(facts, 'Ruta', route(s.flight.origin, s.flight.destination));
+    pushFact(facts, 'Salida', dateAndTime(s.date, s.flight.departure_time));
     pushFact(facts, 'Llegada', dateAndTime(s.flight.arrival_date, s.flight.arrival_time));
+    pushFact(facts, 'Clase', s.flight.cabin);
+    pushFact(facts, 'Equipaje', s.flight.baggage);
+    pushFact(facts, 'Lugar', s.location);
   } else if (s.type === 'hotel' && s.hotel) {
     pushFact(facts, 'Check-in', dateAndTime(s.hotel.check_in_date, s.hotel.check_in_time));
     pushFact(facts, 'Check-out', dateAndTime(s.hotel.check_out_date, s.hotel.check_out_time));
     const nights = nightsBetween(s.hotel.check_in_date, s.hotel.check_out_date);
     pushFact(facts, 'Noches', nights ? String(nights) : null);
     pushFact(facts, 'Habitación', s.hotel.room_type);
+    pushFact(facts, 'Régimen', s.hotel.meal_plan);
+    pushFact(facts, 'Categoría', s.hotel.category);
+    pushFact(facts, 'Huéspedes', s.hotel.guests);
+    pushFact(facts, 'Dirección', s.hotel.address ?? s.location);
   } else if (s.type === 'transfer' && s.transfer) {
     pushFact(facts, 'Ruta', route(s.transfer.from, s.transfer.to));
     pushFact(facts, 'Vehículo', s.transfer.vehicle_type);
+    pushFact(facts, 'Pasajeros', s.transfer.passengers);
+    pushFact(facts, 'Equipaje', s.transfer.baggage);
+    pushFact(facts, 'Lugar', s.location);
   } else if (s.type === 'activity' && s.activity) {
     pushFact(facts, 'Duración', s.activity.duration);
     pushFact(facts, 'Punto de encuentro', s.activity.meeting_point ?? s.location);
+    pushFact(facts, 'Participantes', s.activity.participants);
     pushFact(facts, 'Idioma', s.activity.language);
-    pushFact(facts, 'Incluye', s.activity.included, 240);
+    pushFact(facts, 'Incluye', s.activity.included, FACT_LONG_MAX);
   } else if (s.location) {
     pushFact(facts, 'Lugar', s.location);
   }
-  pushFact(facts, 'No incluye', s.notes, 240);
+  pushFact(facts, 'No incluye', s.notes, FACT_LONG_MAX);
   return facts;
 }
 
@@ -249,6 +269,7 @@ export function buildPreview(data: StoredExtraction): ImportPreview {
     title: safe(day.title ?? day.base_city ?? '', 120) ?? '',
     city: day.base_city,
     date: formatDate(day.date),
+    summary: safe(day.summary, SUMMARY_MAX),
     services: day.services.filter((s) => !isGeneralService(s)).map(toPreviewService)
   }));
   const generalServices = data.days.flatMap((day) => day.services.filter(isGeneralService)).map(toPreviewService);

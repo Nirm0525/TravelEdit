@@ -23,18 +23,79 @@ function firstNonNull<T>(values: (T | null)[]): T | null {
   return values.find((v) => v != null) ?? null;
 }
 
+/**
+ * Une dos textos sin perder información ni repetirla: si uno contiene al otro (ignorando mayúsculas y acentos)
+ * queda el más completo; si son distintos se conservan ambos, separados por `separator`.
+ */
+export function mergeText(a: string | null, b: string | null, separator = '\n\n'): string | null {
+  const x = a?.trim() || null;
+  const y = b?.trim() || null;
+  if (!x || !y) {
+    return x ?? y;
+  }
+  const nx = normalizeName(x);
+  const ny = normalizeName(y);
+  if (nx === ny || nx.includes(ny)) {
+    return x;
+  }
+  if (ny.includes(nx)) {
+    return y;
+  }
+  return `${x}${separator}${y}`;
+}
+
+/** Rellena con `extra` lo que `base` no trae; los textos largos se unen con mergeText. */
+function mergeDetail<T extends Record<string, unknown> | null>(base: T, extra: T, textKeys: string[] = []): T {
+  if (!base) {
+    return extra;
+  }
+  if (!extra) {
+    return base;
+  }
+  const out: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(extra)) {
+    if (out[key] == null) {
+      out[key] = value;
+    } else if (textKeys.includes(key) && typeof out[key] === 'string' && typeof value === 'string') {
+      out[key] = mergeText(out[key] as string, value);
+    }
+  }
+  return out as T;
+}
+
+/** Mismo servicio visto dos veces: conserva lo del primero y suma lo que el segundo aporta (descripción, notas, fichas). */
+function mergeService(base: ExtractedService, extra: ExtractedService): ExtractedService {
+  return {
+    ...base,
+    subtype: base.subtype ?? extra.subtype,
+    location: base.location ?? extra.location,
+    description: mergeText(base.description, extra.description),
+    notes: mergeText(base.notes, extra.notes),
+    modality: base.modality ?? extra.modality,
+    price: base.price ?? extra.price,
+    source_page: base.source_page ?? extra.source_page,
+    flight: mergeDetail(base.flight, extra.flight),
+    hotel: mergeDetail(base.hotel, extra.hotel),
+    transfer: mergeDetail(base.transfer, extra.transfer),
+    activity: mergeDetail(base.activity, extra.activity, ['included'])
+  };
+}
+
 function mergeGroup(group: ExtractedDay[]): ExtractedDay {
   if (group.length === 1) {
     return group[0];
   }
-  const seen = new Set<string>();
+  const indexByKey = new Map<string, number>();
   const services: ExtractedService[] = [];
   for (const day of group) {
     for (const service of day.services) {
       const key = serviceKey(service);
-      if (!seen.has(key)) {
-        seen.add(key);
+      const at = indexByKey.get(key);
+      if (at === undefined) {
+        indexByKey.set(key, services.length);
         services.push(service);
+      } else {
+        services[at] = mergeService(services[at], service);
       }
     }
   }
@@ -49,13 +110,13 @@ function mergeGroup(group: ExtractedDay[]): ExtractedDay {
   }
   baseCity ??= [...group].reverse().find((d) => d.base_city)?.base_city ?? null;
 
-  const summaries = [...new Set(group.map((d) => d.summary).filter((x): x is string => !!x))];
+  const summary = group.reduce<string | null>((acc, d) => mergeText(acc, d.summary, ' '), null);
   return {
     number: Math.min(...group.map((d) => d.number)),
     date: firstNonNull(group.map((d) => d.date)),
     base_city: baseCity,
     title: firstNonNull(group.map((d) => d.title)),
-    summary: summaries.length > 0 ? summaries.join(' ') : null,
+    summary,
     services
   };
 }
@@ -139,7 +200,26 @@ function normalizeServices(days: ExtractedDay[]): { days: ExtractedDay[]; priceD
 
 /** Montos que NO son precios del viaje: coberturas de seguro, equipaje, penalidades. */
 const NOT_A_TRIP_PRICE =
-  /cobertura|asistencia\s+m[eé]dica|gastos\s+m[eé]dicos|repatriaci[oó]n|penalidad|penalizaci[oó]n|cargo\s+por\s+(?:cambio|cancelaci[oó]n)|pol[ií]tica\s+de\s+equipaje|equipaje\s+(?:extraviado|demorado|perdido|de\s+bodega|de\s+mano|adicional)|l[ií]mite\s+de|deducible|preexistencia|medicamentos|odontol[oó]gic|interrupci[oó]n\s+de\s+viaje|cancelaci[oó]n\s+de\s+viaje|asistencia\s+(?:al\s+viajero|en\s+viaje)/i;
+  /cobertura|asistencia\s+m[eé]dica|gastos\s+m[eé]dicos|repatriaci[oó]n|penalidad|penalizaci[oó]n|cargo\s+por\s+(?:cambio|cancelaci[oó]n)|pol[ií]tica\s+de\s+equipaje|equipaje\s+(?:extraviado|demorado|perdido|de\s+bodega|de\s+mano)|l[ií]mite\s+de|deducible|preexistencia|medicamentos|odontol[oó]gic|interrupci[oó]n\s+de\s+viaje|cancelaci[oó]n\s+de\s+viaje|asistencia\s+(?:al\s+viajero|en\s+viaje)/i;
+
+/**
+ * Equipaje o maleta adicional: puede ser un extra que se cobra (SÍ es precio del viaje) o un beneficio de un seguro
+ * ("equipaje adicional por demora…"). Solo se descarta si el texto de la línea lo enmarca como cobertura.
+ */
+const EXTRA_BAGGAGE = /(?:equipaje|maletas?|valijas?)\s+(?:adicional(?:es)?|extra)/i;
+const BAGGAGE_COVERAGE = /seguro|reembols|indemniz|compensaci|demora|extrav[ií]|p[eé]rdida|perdid|asistencia|gastos/i;
+
+/** `bodega` / `de mano` con la palabra adicional/extra es un cargo, no una política. */
+const BAGGAGE_POLICY_WITH_EXTRA = /equipaje\s+(?:de\s+bodega|de\s+mano)\s+(?:adicional(?:es)?|extra)/i;
+
+export function isNotTripPrice(text: string): boolean {
+  if (EXTRA_BAGGAGE.test(text) || BAGGAGE_POLICY_WITH_EXTRA.test(text)) {
+    // Equipaje extra cobrado como servicio: se conserva salvo que sea una cobertura u otra regla dura.
+    const withoutExtra = text.replace(BAGGAGE_POLICY_WITH_EXTRA, '');
+    return BAGGAGE_COVERAGE.test(text) || NOT_A_TRIP_PRICE.test(withoutExtra);
+  }
+  return NOT_A_TRIP_PRICE.test(text);
+}
 
 function dropNonTripPriceLines(data: Extraction): { data: Extraction; dropped: string[] } {
   if (!data.pricing) {
@@ -147,7 +227,7 @@ function dropNonTripPriceLines(data: Extraction): { data: Extraction; dropped: s
   }
   const dropped: string[] = [];
   const lines = data.pricing.lines.filter((line) => {
-    if (NOT_A_TRIP_PRICE.test(`${line.concept} ${line.detail ?? ''}`)) {
+    if (isNotTripPrice(`${line.concept} ${line.detail ?? ''}`)) {
       dropped.push(line.concept);
       return false;
     }

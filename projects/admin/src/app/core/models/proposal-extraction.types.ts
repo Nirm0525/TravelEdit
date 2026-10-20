@@ -25,6 +25,7 @@ export type TripExtraction = {
     date: string | null;
     base_city: string | null;
     title: string | null;
+    /** Texto descriptivo del día o del destino tal como lo trae el PDF (contexto del lugar e información útil para el cliente). Conserva el detalle respaldado por el documento, sin resumir de más ni inventar; null si el PDF no lo trae. Sin datos sensibles. */
     summary: string | null;
     services: {
       /** Tipo de servicio. Comida → activity; tren → transfer. */
@@ -36,6 +37,7 @@ export type TripExtraction = {
       date: string | null;
       time: string | null;
       location: string | null;
+      /** Descripción útil del servicio tal como la trae el PDF (recorrido, ruta, qué se visita, guía, recomendaciones, punto de recogida, duración y observaciones cuando no tengan campo propio). Conserva el detalle respaldado por el documento, sin resumir de más ni inventar; null si el PDF no describe el servicio. Sin datos sensibles. */
       description: string | null;
       /** Lo que el documento marca como 'No incluye' en este servicio. */
       notes: string | null;

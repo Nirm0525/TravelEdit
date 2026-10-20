@@ -40,7 +40,7 @@ Deno.test('mapeo: servicios con ficha por tipo, modalidad y subtype', () => {
   assertEquals(leg1.details.arrivalDate, '2027-05-04');
 
   assertEquals(leg2.time, '22:30');
-  assertEquals([leg2.details.arrivalTime, leg2.details.arrivalDate], ['01:10', '2027-05-05']); // llega al día siguiente
+  assertEquals([leg2.details.arrivalTime, leg2.details.arrivalDate], ['01:10 · 5 may 2027', '2027-05-05']); // llega al día siguiente: la fecha se ve junto a la hora
 
   assertEquals(hotel.type, 'hotel');
   assertEquals([hotel.details.checkInDate, hotel.details.checkOutDate], ['2027-05-04', '2027-05-06']);
@@ -208,8 +208,8 @@ Deno.test('mapeo: las notas generales van a Travel Tips (un grupo «General», u
       assert(tip.title.length > 0, 'el constructor muestra «Sin título» si falta');
     }
   }
-  // Clima y equipaje se clasifica; el resto queda como consejo general (categoría vacía).
-  assertEquals(notes.map((t) => t.category), ['', 'weather']);
+  // La documentación genérica y el clima se clasifican con categorías del contrato.
+  assertEquals(notes.map((t) => t.category), ['other', 'weather']);
 });
 
 Deno.test('mapeo: sin notas no se crea ningún grupo de consejos, y las notas repetidas no se duplican', () => {

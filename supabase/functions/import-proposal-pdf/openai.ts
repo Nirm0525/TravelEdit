@@ -49,6 +49,15 @@ export const SYSTEM_PROMPT = [
     'demás tipos. Los consejos y recomendaciones generales del viaje (clima, equipaje, qué documentos llevar) van en `notes` ' +
     'del viaje, redactados como consejos generales y sin ningún número de documento.',
 
+  'Descripciones: si el documento trae texto descriptivo de un día o destino, consérvalo en `summary` del día sin resumirlo de más. ' +
+    'Si trae la descripción de un servicio, consérvala en `description` del servicio con todo el detalle útil que respalde el documento: ' +
+    'recorrido, ruta, qué se visita, guía, recomendaciones, punto de recogida, duración y observaciones. ' +
+    'No reduzcas una actividad con varios párrafos de descripción a solo su nombre. ' +
+    'Nunca inventes texto: si el documento no describe un día o un servicio, déjalo en null.',
+
+  'Traslados: si el documento trae la duración, el vuelo o tren asociado u otros detalles que no tienen campo propio, ponlos en `description`. ' +
+    'Vuelos y traslados: si indican una ubicación que no cabe en origen o destino, consérvala en `location`.',
+
   '`missing` solo lista lo que REALMENTE no aparece en el documento. Un dato personal que sí aparece pero que debes omitir ' +
     '(pasaporte, fecha de nacimiento, boleto, localizador, asiento, tarjeta) no es un dato faltante: no lo anotes por tipo en ' +
     '`missing` ni escribas que faltan edades o documentos. Si el documento trae alguno de esos datos personales y lo omitiste, ' +

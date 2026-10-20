@@ -99,7 +99,9 @@ const ServiceSchema = z.object({
   date: nDate,
   time: nTime,
   location: nText,
-  description: nText,
+  description: nText.describe(
+    'Descripción útil del servicio tal como la trae el PDF (recorrido, ruta, qué se visita, guía, recomendaciones, punto de recogida, duración y observaciones cuando no tengan campo propio). Conserva el detalle respaldado por el documento, sin resumir de más ni inventar; null si el PDF no describe el servicio. Sin datos sensibles.'
+  ),
   notes: nText.describe("Lo que el documento marca como 'No incluye' en este servicio."),
   modality: z
     .enum(MODALITIES)
@@ -121,7 +123,9 @@ const DaySchema = z.object({
   date: nDate,
   base_city: nText,
   title: nText,
-  summary: nText,
+  summary: nText.describe(
+    'Texto descriptivo del día o del destino tal como lo trae el PDF (contexto del lugar e información útil para el cliente). Conserva el detalle respaldado por el documento, sin resumir de más ni inventar; null si el PDF no lo trae. Sin datos sensibles.'
+  ),
   services: z.array(ServiceSchema)
 });
 

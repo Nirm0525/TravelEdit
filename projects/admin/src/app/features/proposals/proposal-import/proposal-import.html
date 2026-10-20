@@ -156,6 +156,9 @@
                     <span class="proposal-import__day-date">{{ day.date }}</span>
                   }
                 </header>
+                @if (day.summary) {
+                  <p class="proposal-import__day-summary">{{ day.summary }}</p>
+                }
                 @if (day.services.length > 0) {
                   <ul class="proposal-import__services">
                     @for (service of day.services; track $index) {

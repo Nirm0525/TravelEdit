@@ -122,31 +122,47 @@
   background: color-mix(in srgb, var(--brand-600) 8%, transparent);
 }
 
-/* Ubicación (angosta) · Descripción (la que más espacio necesita) · imagen (a su tamaño). */
+/* Izquierda: Ubicación y, debajo, el botón de imagen. Derecha: la descripción, ancha y alta. */
 .day-card__body {
   display: grid;
-  grid-template-columns: minmax(10rem, 1fr) minmax(0, 5fr) auto;
+  grid-template-columns: minmax(12rem, 1fr) minmax(0, 4fr);
+  grid-template-areas:
+    'location description'
+    'image description';
+  grid-template-rows: auto 1fr;
   align-items: start;
   gap: var(--space-md);
   padding: var(--space-lg);
 }
 
+.day-card__location {
+  grid-area: location;
+}
+
+.day-card__description {
+  grid-area: description;
+}
+
+.day-card__description textarea {
+  min-height: 12rem;
+}
+
 .day-card__image {
+  grid-area: image;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
   align-items: flex-start;
-  /* Un poco más arriba, a la altura de la etiqueta «Descripción». */
-  margin-top: -0.4rem;
 }
 
 @media (max-width: 56rem) {
   .day-card__body {
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  }
-
-  .day-card__image {
-    margin-top: 0;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'location'
+      'description'
+      'image';
+    grid-template-rows: auto;
   }
 }
 

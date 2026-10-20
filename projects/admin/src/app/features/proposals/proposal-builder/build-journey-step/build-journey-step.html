@@ -44,17 +44,17 @@
             </header>
 
             <div class="day-card__body">
-              <label class="field">
+              <label class="field day-card__location">
                 <span>Ubicación</span>
                 <input type="text" [value]="day.location" (blur)="onDayFieldBlur(day, 'location', $event)" placeholder="Ej. Kioto, Japón" />
               </label>
 
-              <label class="field">
+              <label class="field day-card__description">
                 <span class="day-card__field-label">
                   Descripción
                   <button type="button" class="day-card__ai-trigger" (click)="openAssistant.emit('day_description:' + day.id)" title="Mejorar con The Edit Assistant">✨</button>
                 </span>
-                <textarea rows="3" [value]="day.description" (blur)="onDayFieldBlur(day, 'description', $event)"></textarea>
+                <textarea rows="8" [value]="day.description" (blur)="onDayFieldBlur(day, 'description', $event)"></textarea>
               </label>
 
               <div class="day-card__image">

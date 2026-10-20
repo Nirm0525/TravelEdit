@@ -1,5 +1,5 @@
 import type { gsap } from 'gsap';
-import { Component, ElementRef, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
@@ -426,11 +426,15 @@ export class PrivateProposal implements OnDestroy {
    *  que ya existían (mismo contenido, ahora detrás de un toggle en vez de
    *  siempre visible). */
   readonly itineraryExpanded = signal(false);
-  toggleItineraryExpanded(): void {
+  /** `goToFirstDay`: al expandir desde el botón «Ver itinerario completo», baja al Día 1 (donde empieza el detalle). */
+  toggleItineraryExpanded(goToFirstDay = false): void {
     const expanded = !this.itineraryExpanded();
     this.itineraryExpanded.set(expanded);
     this.daysMotion?.revert();
     this.daysMotion = undefined;
+    if (expanded && goToFirstDay) {
+      this.scrollToFirstDay();
+    }
     if (this.reducedMotion.reduced()) {
       return;
     }
@@ -808,11 +812,52 @@ export class PrivateProposal implements OnDestroy {
   }
 
   toggleNav(): void {
-    this.navOpen.update((open) => !open);
+    this.setNavOpen(!this.navOpen());
+  }
+
+  /** Cierra el cajón del menú y devuelve el foco al botón que lo abrió (cierre explícito: botón, fondo o Escape). */
+  closeNav(): void {
+    this.setNavOpen(false, true);
+  }
+
+  /** Escape cierra el cajón del menú (solo tiene efecto mientras está abierto). */
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.navOpen()) {
+      this.closeNav();
+    }
+  }
+
+  /**
+   * Abre o cierra el cajón del menú. Mientras está abierto se bloquea el scroll de la página (clase en <html>; el CSS
+   * solo la aplica en móvil/tablet, donde el menú es un cajón) y el foco pasa al botón de cerrar; al cerrar
+   * explícitamente, el foco vuelve al botón de menú.
+   */
+  private setNavOpen(open: boolean, restoreFocus = false): void {
+    this.navOpen.set(open);
+    this.document.documentElement.classList.toggle('proposal-nav-open', open);
+    if (open) {
+      setTimeout(() => this.document.querySelector<HTMLElement>('#proposal-sidebar .proposal__sidebar-close')?.focus({ preventScroll: true }), 60);
+    } else if (restoreFocus) {
+      this.document.querySelector<HTMLElement>('.proposal__menu-button')?.focus({ preventScroll: true });
+    }
+  }
+
+  /** Lleva al primer día del itinerario (el de menor número) cuando sus tarjetas ya están montadas. */
+  private scrollToFirstDay(): void {
+    const firstDayId = this.navItems().find((item) => item.isDay)?.id;
+    if (!firstDayId) {
+      return;
+    }
+    setTimeout(() => {
+      this.setActiveSection(firstDayId);
+      document.getElementById(firstDayId)?.scrollIntoView({ behavior: this.reducedMotion.reduced() ? 'auto' : 'smooth', block: 'start' });
+      this.setupScrollSpy();
+    }, 150);
   }
 
   scrollToSection(id: string): void {
-    this.navOpen.set(false);
+    this.setNavOpen(false);
     this.setActiveSection(id);
     const target = document.getElementById(id);
     if (target) {
@@ -882,7 +927,7 @@ export class PrivateProposal implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.document.documentElement.classList.remove('no-scrollbar');
+    this.document.documentElement.classList.remove('no-scrollbar', 'proposal-nav-open');
     this.scrollObserver?.disconnect();
     this.introMotion?.revert();
     this.scrollMotion?.revert();

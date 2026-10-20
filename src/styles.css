@@ -205,3 +205,12 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* Propuesta privada: con el cajón del menú abierto (móvil/tablet) la página de atrás no se desplaza. La clase la pone
+   y la quita PrivateProposal; va aquí porque el CSS del componente está encapsulado y no alcanza a <html>. */
+@media (max-width: 64rem) {
+  html.proposal-nav-open,
+  html.proposal-nav-open body {
+    overflow: hidden;
+  }
+}

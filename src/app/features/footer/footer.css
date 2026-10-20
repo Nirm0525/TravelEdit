@@ -6,7 +6,7 @@
 
 .site-footer__top {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-md);
   padding-bottom: var(--space-lg);
   border-bottom: 1px solid rgba(255, 253, 248, 0.15);
@@ -110,4 +110,18 @@
 
 .site-footer__legal a:hover {
   color: var(--color-gold);
+}
+
+/* Teléfonos y pantallas táctiles: enlaces y botón del pie con objetivo de ~44px. */
+@media (max-width: 48rem), (pointer: coarse) {
+  .site-footer__column a,
+  .site-footer__bottom a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  .site-footer__newsletter-row button {
+    min-height: 2.75rem;
+  }
 }

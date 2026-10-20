@@ -1,0 +1,62 @@
+/* Bloque discreto bajo cada servicio: solo aparece si hay documentos visibles para el cliente. */
+.proposal-docs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid color-mix(in srgb, var(--color-stone) 22%, transparent);
+}
+
+.proposal-docs__title {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-stone) 80%, var(--color-ink));
+}
+
+.proposal-docs__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal-docs__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2xs) var(--space-md);
+}
+
+.proposal-docs__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.proposal-docs__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.proposal-docs__link:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 40rem) {
+  .proposal-docs__link {
+    min-height: 2.75rem;
+  }
+}

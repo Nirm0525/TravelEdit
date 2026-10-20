@@ -16,6 +16,13 @@
       <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
     }
 
+    @if (attachmentsError(); as message) {
+      <p class="field__hint field__hint--error" role="alert">
+        {{ message }}
+        <button type="button" class="btn btn--secondary" (click)="loadAttachments()">Reintentar</button>
+      </p>
+    }
+
     @if (days().length === 0) {
       <p class="journey__empty">Todavía no hay días en el itinerario. Agrega el primero para empezar a construir el viaje.</p>
     } @else {
@@ -135,6 +142,13 @@
                           (filesReady)="onServiceImageSelected(day, service, $event)"
                         />
                       </div>
+
+                      <app-service-documents
+                        [proposalId]="proposalId()"
+                        [serviceId]="service.id"
+                        [attachments]="attachmentsByService()[service.id] ?? noAttachments"
+                        (changed)="onAttachmentsChanged(service.id, $event)"
+                      />
                     </div>
                   }
                 </div>
@@ -163,4 +177,13 @@
   [message]="'¿Eliminar el día ' + (dayPendingDelete()?.dayNumber ?? '') + ' del itinerario? Esta acción no se puede deshacer.'"
   (confirmed)="confirmRemoveDay()"
   (cancelled)="cancelRemoveDay()"
+/>
+
+<app-confirm-dialog
+  [open]="!!removalWithDocs()"
+  title="Eliminar con documentos adjuntos"
+  [message]="removalWithDocsMessage()"
+  confirmLabel="Eliminar todo"
+  (confirmed)="confirmRemovalWithDocs()"
+  (cancelled)="cancelRemovalWithDocs()"
 />

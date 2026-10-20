@@ -380,6 +380,25 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      /** Documentos adjuntos por servicio — migración 0054. El admin solo lee; escribir es de las Edge Functions (service_role). */
+      proposal_service_attachments: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          service_id: string;
+          file_name: string;
+          storage_path: string;
+          mime_type: string;
+          file_size: number;
+          visible_to_client: boolean;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

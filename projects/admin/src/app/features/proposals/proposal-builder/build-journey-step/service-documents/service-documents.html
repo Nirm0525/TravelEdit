@@ -1,0 +1,88 @@
+<section class="service-docs" aria-label="Documentos del servicio">
+  <div class="service-docs__header">
+    <p class="service-docs__title">Documentos del servicio</p>
+    <button
+      type="button"
+      class="service-docs__add"
+      [disabled]="busy() || atLimit()"
+      (click)="filePicker.click()"
+    >
+      + Adjuntar archivo
+    </button>
+    <input
+      #filePicker
+      type="file"
+      class="service-docs__input"
+      multiple
+      [accept]="accept"
+      tabindex="-1"
+      aria-hidden="true"
+      (change)="onFilesSelected($event)"
+    />
+    <input
+      #replacePicker
+      type="file"
+      class="service-docs__input"
+      [accept]="accept"
+      tabindex="-1"
+      aria-hidden="true"
+      (change)="onReplaceSelected($event)"
+    />
+  </div>
+
+  @if (busy() && busyLabel()) {
+    <p class="service-docs__status" role="status" aria-live="polite">{{ busyLabel() }}</p>
+  }
+
+  @if (error(); as message) {
+    <p class="service-docs__error" role="alert">{{ message }}</p>
+  }
+
+  @if (attachments().length === 0) {
+    <p class="service-docs__empty">
+      Sin documentos. Adjunta boletos, vouchers o confirmaciones (PDF, JPEG, PNG o WebP, hasta 10 MB). Por defecto no se muestran al cliente.
+    </p>
+  } @else {
+    <ul class="service-docs__list">
+      @for (item of attachments(); track item.id) {
+        <li class="service-docs__item" [class.service-docs__item--busy]="busyId() === item.id">
+          <div class="service-docs__main">
+            <span class="service-docs__icon" aria-hidden="true">📄</span>
+            <div class="service-docs__info">
+              <span class="service-docs__name" [title]="item.fileName">{{ item.fileName }}</span>
+              <span class="service-docs__meta">{{ formatSize(item.fileSize) }}</span>
+            </div>
+          </div>
+
+          <label class="service-docs__visible">
+            <input
+              type="checkbox"
+              [checked]="item.visibleToClient"
+              [disabled]="busy()"
+              (change)="onToggleVisible(item, $event)"
+            />
+            <span>Visible para el cliente</span>
+          </label>
+
+          <div class="service-docs__actions">
+            <button type="button" [disabled]="busy()" (click)="open(item)">Abrir</button>
+            <button type="button" [disabled]="busy()" (click)="open(item, true)">Descargar</button>
+            <button type="button" [disabled]="busy()" (click)="startReplace(item, replacePicker)">Reemplazar</button>
+            <button type="button" class="service-docs__delete" [disabled]="busy()" (click)="requestDelete(item)">Eliminar</button>
+          </div>
+        </li>
+      }
+    </ul>
+    @if (atLimit()) {
+      <p class="service-docs__hint">Llegaste al máximo de {{ maxFiles }} documentos para este servicio.</p>
+    }
+  }
+
+  <app-confirm-dialog
+    [open]="!!pendingDelete()"
+    title="Eliminar documento"
+    [message]="'¿Eliminar «' + (pendingDelete()?.fileName ?? '') + '»? El archivo se borrará de forma permanente.'"
+    (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"
+  />
+</section>

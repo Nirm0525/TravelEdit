@@ -15,3 +15,9 @@ verify_jwt = false
 # token de la URL, y los destinatarios se resuelven siempre server-side.
 [functions.notify-proposal-activity]
 verify_jwt = false
+
+# proposal-documents la llama el cliente desde la propuesta privada, sin sesion de Supabase Auth.
+# La proteccion es propia: exige una sesion valida de proposal_access_sessions para el mismo token
+# de la URL (mismas reglas que get_proposal_content) y solo entrega documentos con visible_to_client = true.
+[functions.proposal-documents]
+verify_jwt = false

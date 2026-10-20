@@ -1,0 +1,20 @@
+@if (documents().length > 0) {
+  <div class="proposal-docs no-print">
+    <p class="proposal-docs__title">Documentos</p>
+    <ul class="proposal-docs__list">
+      @for (doc of documents(); track doc.id) {
+        <li class="proposal-docs__item">
+          <span class="proposal-docs__name">{{ displayName(doc.name) }}</span>
+          <button
+            type="button"
+            class="proposal-docs__link"
+            [disabled]="busyId() === doc.id"
+            (click)="openDocument.emit(doc)"
+          >
+            {{ busyId() === doc.id ? 'Abriendo…' : 'Ver documento →' }}
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+}

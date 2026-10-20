@@ -497,6 +497,17 @@
                               <p class="proposal__service-description">{{ service.description }}</p>
                             }
 
+                            <app-proposal-service-documents
+                              [documents]="documentsByService()[service.id] ?? noDocuments"
+                              [busyId]="documentOpeningId()"
+                              (openDocument)="openDocument($event)"
+                            />
+                            @if (documentError(); as message) {
+                              @if (documentsByService()[service.id]) {
+                                <p class="private-proposal__gate-error no-print" role="alert">{{ message }}</p>
+                              }
+                            }
+
                             @if (commentOpenId() === service.id) {
                               <div class="proposal__service-feedback no-print">
                                 <label class="proposal__service-feedback-label" [for]="'comment-' + service.id">

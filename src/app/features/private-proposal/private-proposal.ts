@@ -3,13 +3,14 @@ import { Component, ElementRef, HostListener, OnDestroy, computed, effect, injec
 import { CurrencyPipe, DatePipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
-import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
+import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalDocument, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
 import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../core/models/proposal-enums-public';
 import { ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup } from '../../core/models/proposal-content.model';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 import { Footer } from '../footer/footer';
+import { ProposalServiceDocuments } from './proposal-service-documents/proposal-service-documents';
 import { serviceDetailRows } from '../../core/data/proposal-service-fields';
 import { buildPricingBreakdown } from '../../core/data/proposal-pricing-breakdown';
 import {
@@ -152,7 +153,7 @@ function nightsBetween(startIso: string, endIso: string): number | null {
  */
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })
@@ -207,6 +208,19 @@ export class PrivateProposal implements OnDestroy {
    *  (transition-duration: 0 ya aplicado globalmente en styles.css). */
   readonly contentRevealed = signal(false);
   private sessionToken: string | null = null;
+
+  /** Documentos visibles para el cliente, por servicio (los entrega proposal-documents; nunca rutas de Storage). */
+  readonly documents = signal<ProposalDocument[]>([]);
+  readonly documentsByService = computed(() => {
+    const map: Record<string, ProposalDocument[] | undefined> = {};
+    for (const doc of this.documents()) {
+      (map[doc.serviceId] ??= []).push(doc);
+    }
+    return map;
+  });
+  readonly noDocuments: ProposalDocument[] = [];
+  readonly documentOpeningId = signal<string | null>(null);
+  readonly documentError = signal<string | null>(null);
 
   readonly codeInput = signal('');
   readonly verifying = signal(false);
@@ -626,6 +640,8 @@ export class PrivateProposal implements OnDestroy {
       this.serviceComments.set(data.serviceComments);
       this.sessionToken = sessionToken;
       this.phase.set('content');
+      // Complemento: no retrasa ni bloquea la propuesta; sin documentos visibles no se pinta nada.
+      void this.loadDocuments(token, sessionToken);
       // Un tick después de montar el contenido, no en el mismo — así el CSS
       // de transición (opacity/transform) tiene un estado inicial real desde
       // el que animar en vez de arrancar ya en el estado final.
@@ -684,6 +700,39 @@ export class PrivateProposal implements OnDestroy {
       this.phase.set('gate');
     } finally {
       this.verifying.set(false);
+    }
+  }
+
+  private async loadDocuments(token: string, sessionToken: string): Promise<void> {
+    this.documents.set(await this.publicProposal.getDocuments(token, sessionToken));
+  }
+
+  /** Pide una URL firmada al hacer clic (nunca se guarda) y la abre en una pestaña nueva. */
+  async openDocument(doc: ProposalDocument): Promise<void> {
+    const session = this.sessionToken;
+    if (!session || this.documentOpeningId()) {
+      return;
+    }
+    this.documentError.set(null);
+    this.documentOpeningId.set(doc.id);
+    // La pestaña se abre ya, dentro del clic, para que los navegadores móviles no la bloqueen; luego recibe la URL.
+    const tab = this.document.defaultView?.open('', '_blank') ?? null;
+    if (tab) {
+      tab.opener = null;
+    }
+    try {
+      const url = await this.publicProposal.getDocumentUrl(this.token(), session, doc.id);
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        this.document.defaultView?.location.assign(url);
+      }
+    } catch (error) {
+      console.error('No se pudo abrir el documento.', error);
+      tab?.close();
+      this.documentError.set('No pudimos abrir el documento. Inténtalo de nuevo en unos segundos.');
+    } finally {
+      this.documentOpeningId.set(null);
     }
   }
 

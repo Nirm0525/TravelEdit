@@ -1,7 +1,9 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
+import { ProposalServiceAttachmentsService } from '../../../../core/services/proposal-service-attachments';
+import { AttachmentApiError, ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
 import {
   ProposalContent,
   ProposalDay,
@@ -14,19 +16,21 @@ import { PROPOSAL_SERVICE_TYPE_OPTIONS } from '../../../../core/data/proposal-op
 import { PROPOSAL_SERVICE_FIELDS } from '../../../../core/data/proposal-service-fields';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
+import { ServiceDocuments } from './service-documents/service-documents';
 
 type DayField = 'title' | 'location' | 'description';
 type ServiceField = 'title' | 'description' | 'notes' | 'time';
 
 @Component({
   selector: 'app-build-journey-step',
-  imports: [DragDropModule, ImageUploader, ConfirmDialog],
+  imports: [DragDropModule, ImageUploader, ConfirmDialog, ServiceDocuments],
   templateUrl: './build-journey-step.html',
   styleUrl: './build-journey-step.css'
 })
 export class BuildJourneyStep implements OnInit {
   private readonly proposalsService = inject(ProposalsService);
   private readonly proposalImages = inject(ProposalImagesService);
+  private readonly attachmentsService = inject(ProposalServiceAttachmentsService);
 
   readonly proposalId = input.required<string>();
   readonly saved = output<void>();
@@ -52,6 +56,31 @@ export class BuildJourneyStep implements OnInit {
   readonly uploadingServiceId = signal<string | null>(null);
   readonly dayPendingDelete = signal<ProposalDay | null>(null);
 
+  /** Documentos adjuntos de TODA la propuesta (una sola consulta); cada servicio muestra los suyos. */
+  readonly attachments = signal<ProposalServiceAttachment[]>([]);
+  readonly attachmentsError = signal<string | null>(null);
+  readonly attachmentsByService = computed(() => {
+    const map: Record<string, ProposalServiceAttachment[] | undefined> = {};
+    for (const attachment of this.attachments()) {
+      (map[attachment.serviceId] ??= []).push(attachment);
+    }
+    return map;
+  });
+  readonly noAttachments: ProposalServiceAttachment[] = [];
+
+  /** Servicio o día que se quiere borrar y tiene documentos: espera la confirmación explícita del usuario. */
+  readonly removalWithDocs = signal<{ kind: 'service' | 'day'; day: ProposalDay; service?: ProposalServiceItem; count: number } | null>(null);
+  readonly removalWithDocsMessage = computed(() => {
+    const pending = this.removalWithDocs();
+    if (!pending) {
+      return '';
+    }
+    const docs = `${pending.count} documento${pending.count === 1 ? ' adjunto' : 's adjuntos'}`;
+    return pending.kind === 'service'
+      ? `Este servicio tiene ${docs}. Si lo eliminas, los archivos también se borrarán de forma permanente. ¿Continuar?`
+      : `Este día tiene ${docs} en sus servicios. Si lo eliminas, los archivos también se borrarán de forma permanente. ¿Continuar?`;
+  });
+
   private content: ProposalContent | null = null;
 
   // Ver el comentario equivalente en client-trip-step.ts — proposalId (input
@@ -73,12 +102,27 @@ export class BuildJourneyStep implements OnInit {
       this.days.set(proposal.content.days);
       this.refreshDayImageUrls(proposal.content.days);
       this.refreshServiceImageUrls(proposal.content.days);
+      void this.loadAttachments();
     } catch (error) {
       console.error('No se pudo cargar el itinerario.', error);
       this.loadError.set('No se pudo cargar el itinerario. Inténtalo nuevamente.');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async loadAttachments(): Promise<void> {
+    this.attachmentsError.set(null);
+    try {
+      this.attachments.set(await this.attachmentsService.listForProposal(this.proposalId()));
+    } catch (error) {
+      console.error('No se pudieron cargar los documentos adjuntos.', error);
+      this.attachmentsError.set('No se pudieron cargar los documentos adjuntos.');
+    }
+  }
+
+  onAttachmentsChanged(serviceId: string, list: ProposalServiceAttachment[]): void {
+    this.attachments.update((all) => [...all.filter((a) => a.serviceId !== serviceId), ...list]);
   }
 
   private refreshDayImageUrls(days: ProposalDay[]): void {
@@ -168,7 +212,7 @@ export class BuildJourneyStep implements OnInit {
       return Promise.resolve();
     }
     this.dayPendingDelete.set(null);
-    return this.enqueueMutation((days) => this.renumber(days.filter((d) => d.id !== day.id)));
+    return this.runRemoval({ kind: 'day', day });
   }
 
   dropDay(event: CdkDragDrop<ProposalDay[]>): Promise<void> {
@@ -235,9 +279,67 @@ export class BuildJourneyStep implements OnInit {
   }
 
   removeService(day: ProposalDay, service: ProposalServiceItem): Promise<void> {
-    return this.enqueueMutation((days) =>
-      days.map((d) => (d.id === day.id ? { ...d, services: d.services.filter((s) => s.id !== service.id) } : d))
-    );
+    return this.runRemoval({ kind: 'service', day, service });
+  }
+
+  confirmRemovalWithDocs(): Promise<void> {
+    const pending = this.removalWithDocs();
+    this.removalWithDocs.set(null);
+    return pending ? this.runRemoval(pending, { expectedCount: pending.count }) : Promise.resolve();
+  }
+
+  cancelRemovalWithDocs(): void {
+    this.removalWithDocs.set(null);
+  }
+
+  /**
+   * Borrar un servicio o un día pasa por el servidor, no por el guardado normal de `days`: el servidor lo quita del
+   * contenido ACTUAL de la base (una pestaña vieja no puede pisar días ni servicios) y purga sus documentos. Si hay
+   * documentos pide antes una confirmación explícita (el recuento que ve el usuario viaja con la confirmación).
+   * Va detrás de la cola de guardados para no adelantarse a ediciones pendientes.
+   */
+  private runRemoval(
+    target: { kind: 'service' | 'day'; day: ProposalDay; service?: ProposalServiceItem },
+    confirmation?: { expectedCount: number }
+  ): Promise<void> {
+    const run = this.saveChain.then(() => this.executeRemoval(target, confirmation));
+    this.saveChain = run.catch(() => undefined);
+    return run;
+  }
+
+  private async executeRemoval(
+    target: { kind: 'service' | 'day'; day: ProposalDay; service?: ProposalServiceItem },
+    confirmation?: { expectedCount: number }
+  ): Promise<void> {
+    if (!this.content) {
+      return;
+    }
+    this.saving.set(true);
+    this.saveError.set(null);
+    try {
+      const outcome =
+        target.kind === 'service'
+          ? await this.attachmentsService.removeService(this.proposalId(), target.day.id, target.service!.id, confirmation)
+          : await this.attachmentsService.removeDay(this.proposalId(), target.day.id, confirmation);
+      this.content = outcome.content;
+      this.days.set(outcome.content.days);
+      this.refreshDayImageUrls(outcome.content.days);
+      this.refreshServiceImageUrls(outcome.content.days);
+      const alive = new Set(outcome.content.days.flatMap((d) => d.services.map((s) => s.id)));
+      this.attachments.update((all) => all.filter((a) => alive.has(a.serviceId)));
+      this.saved.emit();
+    } catch (error) {
+      if (error instanceof AttachmentApiError && (error.code === 'confirmation_required' || error.code === 'count_changed')) {
+        this.removalWithDocs.set({ ...target, count: error.attachmentCount });
+      } else {
+        console.error('No se pudo eliminar.', error);
+        this.saveError.set(error instanceof Error ? error.message : 'No se pudo eliminar. Inténtalo nuevamente.');
+        // Una purga parcial pudo borrar documentos: se vuelve a leer la lista real.
+        void this.loadAttachments();
+      }
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   dropService(day: ProposalDay, event: CdkDragDrop<ProposalServiceItem[]>): Promise<void> {

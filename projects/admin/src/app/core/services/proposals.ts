@@ -2,6 +2,7 @@ import { PublishProblem } from '../models/publish-readiness';
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
+import { ProposalServiceAttachmentsService } from './proposal-service-attachments';
 import { Proposal, ProposalContent, createEmptyProposalContent, toProposal } from '../models/proposal.model';
 import { PROPOSAL_STATUS_LABEL, ProposalStatus } from '../models/proposal-enums';
 
@@ -46,6 +47,20 @@ export interface UpdateProposalPayload {
   expiresAt?: string | null;
 }
 
+/**
+ * Los documentos adjuntos de la propuesta YA se eliminaron (Storage y metadata), pero el DELETE de la propuesta falló.
+ * No se intenta restaurar nada: la purga es idempotente, así que volver a intentar eliminar la propuesta funciona.
+ */
+export const PROPOSAL_DOCUMENTS_PURGED_MESSAGE =
+  'Los documentos de la propuesta ya se eliminaron, pero no fue posible eliminar la propuesta. Vuelve a intentarlo.';
+
+export class ProposalDocumentsPurgedError extends Error {
+  constructor() {
+    super(PROPOSAL_DOCUMENTS_PURGED_MESSAGE);
+    this.name = 'ProposalDocumentsPurgedError';
+  }
+}
+
 /** Publish/unpublish/set-access-code son RPC — nunca un UPDATE directo de
  *  `status`/código, para que la validación de "está listo para publicar" y
  *  el hasheo del código sigan viviendo únicamente en Supabase (ver
@@ -58,6 +73,7 @@ export interface UpdateProposalPayload {
 })
 export class ProposalsService {
   private readonly supabase = inject(SupabaseService);
+  private readonly serviceAttachments = inject(ProposalServiceAttachmentsService);
   private readonly auth = inject(AuthService);
 
   async list(params: ProposalListParams): Promise<ProposalListPage> {
@@ -218,9 +234,25 @@ export class ProposalsService {
   }
 
   async remove(id: string): Promise<void> {
-    const { error } = await this.supabase.client.from('proposals').delete().eq('id', id);
-    if (error) {
-      throw error;
+    // Los documentos adjuntos viven en un bucket privado: la cascada de la base borraría solo las filas y dejaría los
+    // archivos huérfanos. Orden: 1) objetos de Storage, 2) metadata (ambos en purge-proposal), 3) la propuesta.
+    // Si la purga falla, la propuesta NO se elimina. Si la purga termina y falla el DELETE, la propuesta queda viva
+    // sin documentos a propósito (preferible a dejar archivos sensibles huérfanos): se avisa con un error claro y
+    // volver a intentar funciona, porque no quedan documentos que purgar.
+    const documents = await this.serviceAttachments.listForProposal(id);
+    const purged = documents.length > 0;
+    if (purged) {
+      await this.serviceAttachments.purgeProposal(id);
+    }
+    let failure: unknown = null;
+    try {
+      const { error } = await this.supabase.client.from('proposals').delete().eq('id', id);
+      failure = error;
+    } catch (err) {
+      failure = err;
+    }
+    if (failure) {
+      throw purged ? new ProposalDocumentsPurgedError() : failure;
     }
   }
 

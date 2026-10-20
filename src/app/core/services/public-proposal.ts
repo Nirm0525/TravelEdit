@@ -53,6 +53,17 @@ export interface PublicProposalData {
   serviceComments: Record<string, string>;
 }
 
+/**
+ * Documento de un servicio visible para ESTE cliente (boleto, voucher, confirmación…). Solo id, servicio, nombre
+ * y tipo: la Edge Function proposal-documents nunca entrega rutas de Storage ni metadata interna.
+ */
+export interface ProposalDocument {
+  id: string;
+  serviceId: string;
+  name: string;
+  mimeType: string;
+}
+
 function toServiceComments(value: Record<string, unknown> | null | undefined): Record<string, string> {
   const comments: Record<string, string> = {};
   for (const [key, text] of Object.entries(value ?? {})) {
@@ -248,6 +259,36 @@ export class PublicProposalService {
     if (error) {
       throw error;
     }
+  }
+
+  /**
+   * Documentos visibles de la propuesta, por la Edge Function proposal-documents (que valida token + sesión con las
+   * mismas reglas que get_proposal_content). Son un complemento: si falla, la propuesta se ve igual sin ellos.
+   */
+  async getDocuments(token: string, sessionToken: string): Promise<ProposalDocument[]> {
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke<{ documents?: ProposalDocument[] }>('proposal-documents', {
+        body: { action: 'list', token, sessionToken }
+      });
+      if (error || !Array.isArray(data?.documents)) {
+        return [];
+      }
+      return data.documents.filter((d) => typeof d?.id === 'string' && typeof d.serviceId === 'string' && typeof d.name === 'string');
+    } catch (err) {
+      console.error('No se pudieron cargar los documentos.', err);
+      return [];
+    }
+  }
+
+  /** URL firmada de 10 minutos para abrir UN documento; se pide al hacer clic y nunca se guarda. */
+  async getDocumentUrl(token: string, sessionToken: string, attachmentId: string): Promise<string> {
+    const { data, error } = await this.supabase.client.functions.invoke<{ url?: string }>('proposal-documents', {
+      body: { action: 'url', token, sessionToken, attachmentId }
+    });
+    if (error || typeof data?.url !== 'string') {
+      throw new Error('No se pudo abrir el documento.');
+    }
+    return data.url;
   }
 
   /**

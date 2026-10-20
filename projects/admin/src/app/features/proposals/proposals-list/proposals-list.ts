@@ -1,7 +1,7 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ProposalsService } from '../../../core/services/proposals';
+import { ProposalDocumentsPurgedError, ProposalsService } from '../../../core/services/proposals';
 import { ProposalImagesService } from '../../../core/services/proposal-images';
 import { Proposal } from '../../../core/models/proposal.model';
 import { ProposalStatus } from '../../../core/models/proposal-enums';
@@ -210,7 +210,13 @@ export class ProposalsList {
       await this.loadCounts();
     } catch (error) {
       console.error('No se pudo eliminar la propuesta.', error);
-      this.actionError.set('No se pudo eliminar la propuesta. Inténtalo nuevamente.');
+      this.actionError.set(
+        error instanceof ProposalDocumentsPurgedError ? error.message : 'No se pudo eliminar la propuesta. Inténtalo nuevamente.'
+      );
+      if (error instanceof ProposalDocumentsPurgedError) {
+        // La propuesta sigue, pero ya sin documentos: la lista debe reflejar el estado real.
+        await this.load();
+      }
     } finally {
       this.deletingId.set(null);
     }

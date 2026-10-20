@@ -125,7 +125,7 @@
 /* Ubicación (angosta) · Descripción (la que más espacio necesita) · imagen (a su tamaño). */
 .day-card__body {
   display: grid;
-  grid-template-columns: minmax(11rem, 1fr) minmax(0, 3.2fr) auto;
+  grid-template-columns: minmax(10rem, 1fr) minmax(0, 5fr) auto;
   align-items: start;
   gap: var(--space-md);
   padding: var(--space-lg);

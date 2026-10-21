@@ -6,6 +6,10 @@ import { MAX_FILE_BYTES, MAX_FILES_PER_SERVICE, SIGNED_URL_TTL_SECONDS, parseSto
 
 const P1 = '11111111-1111-4111-8111-111111111111';
 const P2 = '22222222-2222-4222-8222-222222222222';
+const I1 = '55555555-5555-4555-8555-555555555555'; // itinerario de la Asesora
+const I2 = '66666666-6666-4666-8666-666666666666'; // itinerario del admin
+const SVC_I1 = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'; // I1
+const SVC_I2 = 'ffffffff-ffff-4fff-8fff-ffffffffffff'; // I2
 const SVC_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'; // P1, día 1
 const SVC_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // P1, día 1
 const SVC_C = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'; // P1, día 2
@@ -13,6 +17,8 @@ const SVC_X = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'; // P2, día 1 (otra propue
 const ADMIN = '99999999-9999-4999-8999-999999999991';
 const ADVISOR = '99999999-9999-4999-8999-999999999992';
 const VIEWER = '99999999-9999-4999-8999-999999999993';
+const ADVISOR2 = '99999999-9999-4999-8999-999999999994';
+const EDITOR = '99999999-9999-4999-8999-999999999995';
 
 const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
@@ -27,19 +33,31 @@ const contentP1 = () => ({
 });
 const contentP2 = () => ({ cover: { title: 'Viaje 2' }, days: [{ id: 'day-x', dayNumber: 1, title: 'X', services: [{ id: SVC_X, title: 'Otro' }] }] });
 
-const TOKENS: Record<string, { id: string; manages: boolean; admin: boolean; sees: string[] }> = {
-  'admin-token': { id: ADMIN, manages: true, admin: true, sees: [P1, P2] },
-  // Asesora: solo ve P2 (RLS de proposals).
-  'advisor-token': { id: ADVISOR, manages: true, admin: false, sees: [P2] },
-  // Autenticado sin permiso para gestionar propuestas.
-  'viewer-token': { id: VIEWER, manages: false, admin: false, sees: [] }
+const contentI1 = () => ({ cover: { title: 'Itinerario 1' }, days: [{ id: 'day-i1', dayNumber: 1, title: 'I', services: [{ id: SVC_I1, title: 'Museo' }] }] });
+const contentI2 = () => ({ cover: { title: 'Itinerario 2' }, days: [{ id: 'day-i2', dayNumber: 1, title: 'J', services: [{ id: SVC_I2, title: 'Paseo' }] }] });
+
+type Role = 'admin' | 'editor' | 'staff' | null;
+const TOKENS: Record<string, { id: string; role: Role; sees: string[] }> = {
+  'admin-token': { id: ADMIN, role: 'admin', sees: [P1, P2, I1, I2] },
+  'editor-token': { id: EDITOR, role: 'editor', sees: [P1, P2, I1, I2] },
+  // Asesora: solo ve lo suyo (RLS de proposals): P2 e I1.
+  'advisor-token': { id: ADVISOR, role: 'staff', sees: [P2, I1] },
+  // Otra Asesora a la que, por un fallo de RLS hipotético, se le «ve» lo ajeno: la propiedad debe frenarla igual.
+  'advisor2-token': { id: ADVISOR2, role: 'staff', sees: [P2, I1] },
+  // Autenticado sin rol de gestión.
+  'viewer-token': { id: VIEWER, role: null, sees: [] }
 };
 
 class World {
-  proposals = new Map<string, { content: unknown; updated_at: string }>([
-    [P1, { content: contentP1(), updated_at: 'v1' }],
-    [P2, { content: contentP2(), updated_at: 'w1' }]
+  proposals = new Map<string, { content: unknown; updated_at: string; kind: 'proposal' | 'itinerary'; advisor_id: string | null }>([
+    [P1, { content: contentP1(), updated_at: 'v1', kind: 'proposal', advisor_id: ADMIN }],
+    [P2, { content: contentP2(), updated_at: 'w1', kind: 'proposal', advisor_id: ADVISOR }],
+    [I1, { content: contentI1(), updated_at: 'i1', kind: 'itinerary', advisor_id: ADVISOR }],
+    [I2, { content: contentI2(), updated_at: 'j1', kind: 'itinerary', advisor_id: ADMIN }]
   ]);
+  /** «kind:acción» que la base le niega a todos (para probar que los permisos no se mezclan entre tipos). */
+  denied = new Set<string>();
+  canTravelCalls: string[] = [];
   rows: AttachmentRow[] = [];
   objects = new Map<string, Uint8Array>();
   signedUploads: string[] = [];
@@ -58,10 +76,25 @@ class World {
   deps: Deps = {
     env: () => undefined,
     getUser: (token) => Promise.resolve(TOKENS[token] ? { id: TOKENS[token].id } : null),
-    canManageProposals: (token) => Promise.resolve(TOKENS[token]?.manages === true),
+    // Réplica de public.can_travel (0055): admin/editor/staff ver·crear·editar·gestionar_documentos; eliminar solo admin; tipo desconocido = false.
+    canTravel: (token, kind, action) => {
+      this.canTravelCalls.push(`${kind}:${action}`);
+      const role = TOKENS[token]?.role ?? null;
+      const ok = (kind === 'proposal' || kind === 'itinerary') && role !== null && (action === 'eliminar' ? role === 'admin' : true);
+      return Promise.resolve(ok && !this.denied.has(`${kind}:${action}`));
+    },
+    // Réplica de public.is_own_or_full: admin/editor cualquiera; staff solo lo suyo.
+    isOwnOrFull: (token, advisorId) => {
+      const t = TOKENS[token];
+      return Promise.resolve(t?.role === 'admin' || t?.role === 'editor' || (t?.role === 'staff' && advisorId === t.id));
+    },
     getProposalAsUser: (token, id) => {
       const p = this.proposals.get(id);
-      return Promise.resolve(p && TOKENS[token]?.sees.includes(id) ? { id, content: structuredClone(p.content), updated_at: p.updated_at } : null);
+      return Promise.resolve(
+        p && TOKENS[token]?.sees.includes(id)
+          ? { id, content: structuredClone(p.content), updated_at: p.updated_at, kind: p.kind, advisor_id: p.advisor_id }
+          : null
+      );
     },
     updateContentAsUser: (token, id, expected, content) => {
       this.beforeContentUpdate?.();
@@ -72,9 +105,8 @@ class World {
       }
       p.content = structuredClone(content);
       p.updated_at = `v${++this.version}`;
-      return Promise.resolve({ id, content: structuredClone(p.content), updated_at: p.updated_at });
+      return Promise.resolve({ id, content: structuredClone(p.content), updated_at: p.updated_at, kind: p.kind, advisor_id: p.advisor_id });
     },
-    isAdmin: (userId) => Promise.resolve(Object.values(TOKENS).some((t) => t.id === userId && t.admin)),
 
     getAttachment: (id) => Promise.resolve(this.rows.find((r) => r.id === id) ?? null),
     findByPath: (path) => Promise.resolve(this.rows.find((r) => r.storage_path === path) ?? null),
@@ -197,12 +229,22 @@ Deno.test('OPTIONS desde el dominio del admin → 204 con CORS', async () => {
   assertEquals(res.headers.get('Access-Control-Allow-Origin'), 'https://thetravel-edit.com');
 });
 
-Deno.test('un usuario autenticado SIN permiso para gestionar propuestas no puede nada (403)', async () => {
+Deno.test('un usuario autenticado SIN rol de gestión no puede nada: la base no le muestra el registro (404)', async () => {
   const w = new World();
   for (const action of ['prepare-upload', 'finalize-upload', 'set-visibility', 'delete', 'sign', 'remove-service', 'remove-day', 'purge-proposal']) {
-    const res = await w.call('viewer-token', { action, proposalId: P1, serviceId: SVC_A });
-    assertEquals(res.status, 403, action);
+    for (const proposalId of [P1, I1]) {
+      const res = await w.call('viewer-token', { action, proposalId, serviceId: SVC_A, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 });
+      assert(res.status === 404 || res.status === 400, `${action} ${proposalId}: ${res.status}`);
+    }
   }
+  assertEquals(w.signedUploads.length, 0);
+});
+
+Deno.test('si el usuario VE el registro pero can_travel(kind, gestionar_documentos) es false → 403 y no se escribe nada', async () => {
+  const w = new World();
+  w.denied.add('proposal:gestionar_documentos');
+  const res = await w.call('admin-token', { action: 'prepare-upload', proposalId: P1, serviceId: SVC_A, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 });
+  assertEquals([res.status, res.body.code], [403, 'forbidden']);
   assertEquals(w.signedUploads.length, 0);
 });
 
@@ -722,4 +764,97 @@ Deno.test('purge-proposal: si Storage falla responde 502 (para abortar la elimin
   const res = await w.call('admin-token', { action: 'purge-proposal', proposalId: P1 });
   assertEquals([res.status, res.body.code], [502, 'storage_failed']);
   assert(w.rows.some((r) => r.storage_path === [...w.failRemove][0]));
+});
+
+// ---------------------------------------------------------------- Propuesta e Itinerario (post-0055)
+
+Deno.test('itinerario: se adjunta, firma, cambia visibilidad y elimina igual que en una propuesta (autorizado por can_travel(itinerary))', async () => {
+  const w = new World();
+  const up = await w.attach({ token: 'advisor-token', proposalId: I1, serviceId: SVC_I1 });
+  const done = await up.finalize();
+  assertEquals(done.status, 200, JSON.stringify(done.body));
+  assertEquals([done.body.attachment.proposalId, done.body.attachment.visibleToClient], [I1, false]);
+  assert(w.canTravelCalls.includes('itinerary:gestionar_documentos'), 'el permiso se pide por el tipo del registro');
+  assertFalse(w.canTravelCalls.some((c) => c.startsWith('proposal:')), 'un itinerario no se autoriza como propuesta');
+  const id = done.body.attachment.id;
+  assertEquals((await w.call('advisor-token', { action: 'set-visibility', attachmentId: id, visible: true })).body.attachment.visibleToClient, true);
+  assertMatch((await w.call('advisor-token', { action: 'sign', attachmentId: id })).body.url, /^https:\/\/storage\.test\/sign\//);
+  assertEquals((await w.call('advisor-token', { action: 'delete', attachmentId: id })).body.deleted, true);
+  assertEquals(w.rows.length, 0);
+});
+
+Deno.test('propuesta: la Asesora sigue adjuntando a la suya (P2) con el mismo flujo', async () => {
+  const w = new World();
+  const up = await w.attach({ token: 'advisor-token', proposalId: P2, serviceId: SVC_X });
+  assertEquals((await up.finalize()).status, 200);
+  assert(w.canTravelCalls.includes('proposal:gestionar_documentos'));
+});
+
+Deno.test('itinerario: conserva límites MIME/tamaño/cantidad y la validación de service_id', async () => {
+  const w = new World();
+  const bad = (extra: Record<string, unknown>) =>
+    w.call('admin-token', { action: 'prepare-upload', proposalId: I2, serviceId: SVC_I2, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10, ...extra });
+  assertEquals((await bad({ mimeType: 'text/html' })).status, 400);
+  assertEquals((await bad({ fileSize: MAX_FILE_BYTES + 1 })).body.code, 'too_large');
+  assertEquals((await bad({ serviceId: SVC_A })).body.code, 'service_not_found'); // servicio de una propuesta, no de este itinerario
+  for (let i = 0; i < MAX_FILES_PER_SERVICE; i++) {
+    assertEquals((await (await w.attach({ proposalId: I2, serviceId: SVC_I2, fileName: `d${i}.pdf` })).finalize()).status, 200);
+  }
+  assertEquals((await bad({})).body.code, 'too_many_files');
+});
+
+Deno.test('Asesora ajena: no toca documentos de un registro que no es suyo, aunque la base se lo «mostrara» (propiedad = 404)', async () => {
+  const w = new World();
+  const mine = await w.attach({ token: 'advisor-token', proposalId: I1, serviceId: SVC_I1 }); // dueña: ADVISOR
+  const id = (await mine.finalize()).body.attachment.id;
+  const before = w.signedUploads.length;
+  const prep = await w.call('advisor2-token', { action: 'prepare-upload', proposalId: I1, serviceId: SVC_I1, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 });
+  assertEquals(prep.status, 404);
+  for (const action of ['set-visibility', 'delete', 'sign']) {
+    assertEquals((await w.call('advisor2-token', { action, attachmentId: id, visible: true })).status, 404, action);
+  }
+  assertEquals((await w.call('advisor2-token', { action: 'remove-service', proposalId: I1, serviceId: SVC_I1, confirm: true, expectedCount: 1 })).status, 404);
+  // Lo mismo sobre una propuesta ajena (P2 es de ADVISOR).
+  assertEquals((await w.call('advisor2-token', { action: 'prepare-upload', proposalId: P2, serviceId: SVC_X, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 })).status, 404);
+  assertEquals([w.rows.length, w.signedUploads.length], [1, before]);
+  assert(w.objects.has(mine.path));
+});
+
+Deno.test('admin y editor gestionan documentos de cualquier registro, de ambos tipos', async () => {
+  const w = new World();
+  for (const token of ['admin-token', 'editor-token']) {
+    for (const [proposalId, serviceId] of [[P2, SVC_X], [I1, SVC_I1]]) {
+      assertEquals((await (await w.attach({ token, proposalId, serviceId, fileName: `${token}.pdf` })).finalize()).status, 200, `${token} ${proposalId}`);
+    }
+  }
+});
+
+Deno.test('los permisos no se mezclan: sin permiso sobre itinerarios, un itinerario da 403 y una propuesta sigue funcionando', async () => {
+  const w = new World();
+  w.denied.add('itinerary:gestionar_documentos');
+  const it = await w.call('admin-token', { action: 'prepare-upload', proposalId: I2, serviceId: SVC_I2, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 });
+  assertEquals([it.status, it.body.code], [403, 'forbidden']);
+  assertEquals((await (await w.attach({ proposalId: P1, serviceId: SVC_A })).finalize()).status, 200);
+  // Y al revés.
+  const w2 = new World();
+  w2.denied.add('proposal:gestionar_documentos');
+  assertEquals((await (await w2.attach({ proposalId: I2, serviceId: SVC_I2 })).finalize()).status, 200);
+  assertEquals((await w2.call('admin-token', { action: 'prepare-upload', proposalId: P1, serviceId: SVC_A, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 })).status, 403);
+});
+
+Deno.test('el tipo sale de la base, no del cuerpo: un campo kind en la solicitud no cambia el permiso', async () => {
+  const w = new World();
+  w.denied.add('itinerary:gestionar_documentos');
+  const res = await w.call('admin-token', { action: 'prepare-upload', kind: 'proposal', proposalId: I2, serviceId: SVC_I2, fileName: 'a.pdf', mimeType: 'application/pdf', fileSize: 10 });
+  assertEquals(res.status, 403);
+});
+
+Deno.test('purge-proposal de un itinerario: solo admin (can_travel eliminar); el editor recibe 403 y no se borra nada', async () => {
+  const w = new World();
+  await (await w.attach({ proposalId: I2, serviceId: SVC_I2 })).finalize();
+  assertEquals((await w.call('editor-token', { action: 'purge-proposal', proposalId: I2 })).status, 403);
+  assertEquals(w.rows.length, 1);
+  const res = await w.call('admin-token', { action: 'purge-proposal', proposalId: I2 });
+  assertEquals([res.status, res.body.deletedDocuments], [200, 1]);
+  assert(w.canTravelCalls.includes('itinerary:eliminar'));
 });

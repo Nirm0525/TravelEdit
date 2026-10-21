@@ -18,7 +18,7 @@ import { PublishChecklist } from './publish-checklist/publish-checklist';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
 import { can } from '../../../core/data/permissions';
-import { BuilderStep, injectTravelMode, travelConfigOf } from '../../travel/travel-config';
+import { BuilderStep, injectTravelMode, travelConfigOf, travelPaths } from '../../travel/travel-config';
 
 /** 'preview' no es una pestaña visible — la vista previa en vivo es la
  *  columna persistente de la derecha, siempre montada sin importar qué
@@ -76,6 +76,8 @@ export class ProposalBuilder {
 
   readonly proposal = signal<Proposal | null>(null);
   readonly loading = signal(true);
+  /** true mientras se redirige a la ruta que corresponde al `kind` real de la fila: no se pinta nada del modo equivocado. */
+  readonly redirecting = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly publishing = signal(false);
   readonly publishError = signal<string | null>(null);
@@ -244,14 +246,34 @@ export class ProposalBuilder {
     this.loading.set(true);
     this.loadError.set(null);
     try {
-      this.proposal.set(await this.proposalsService.getById(this.proposalId));
+      const row = await this.proposalsService.getById(this.proposalId);
+      // El `kind` de la base es la fuente de verdad: si la fila no es del modo de esta ruta se redirige a la correcta
+      // (id, ?step y demás query params intactos) y NO se renderiza un modo con los datos de otro.
+      if (row && row.kind !== this.mode) {
+        this.redirectToRealKind(row);
+        return;
+      }
+      this.proposal.set(row);
       void this.refreshReadiness();
     } catch (error) {
       console.error('No se pudo cargar la propuesta.', error);
       this.loadError.set('No se pudo cargar la propuesta. Inténtalo nuevamente.');
     } finally {
-      this.loading.set(false);
+      if (!this.redirecting()) {
+        this.loading.set(false);
+      }
     }
+  }
+
+  private redirectToRealKind(row: Proposal): void {
+    this.redirecting.set(true);
+    const map = this.route.snapshot.queryParamMap;
+    const queryParams: Record<string, string | string[]> = {};
+    for (const key of map.keys) {
+      const all = map.getAll(key);
+      queryParams[key] = all.length > 1 ? all : (all[0] ?? '');
+    }
+    void this.router.navigate(travelPaths.edit(row.kind, row.id), { queryParams, replaceUrl: true });
   }
 
   /** Los pasos hijos llaman esto después de guardar — el header (nombre,

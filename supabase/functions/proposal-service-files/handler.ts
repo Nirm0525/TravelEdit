@@ -14,9 +14,12 @@
 //   remove-day        base, no el de una pestaña vieja) y purgan sus documentos; exigen confirmación si hay adjuntos.
 //   purge-proposal    borra todos los documentos de una propuesta (solo admin) antes de eliminarla.
 //
-// Autorización: JWT válido + can_manage_proposals() + la propuesta es visible para ESE usuario (RLS de proposals,
-// que ya limita a la Asesora a sus propuestas). Solo después se escribe con service_role. Para los adjuntos se
-// parte de la fila, y se exige el mismo alcance sobre su propuesta.
+// Sirve a Propuestas Y a Itinerarios (mismo bucket y tabla; el tipo lo decide proposals.kind, nunca el cuerpo de la solicitud).
+// Autorización: JWT válido + el registro es visible para ESE usuario (RLS de proposals) + es suyo (is_own_or_full: admin/editor
+// cualquiera, la Asesora solo lo suyo) + can_travel(kind, 'gestionar_documentos'). Solo después se escribe con service_role.
+// Los permisos NO se mezclan: lo que se puede hacer con un itinerario se decide con 'itinerary', no con 'proposal'. Para los
+// adjuntos se parte de la fila y se exige el mismo alcance sobre su registro. Eliminar todos los documentos de un registro
+// (purge-proposal) exige además can_travel(kind, 'eliminar').
 import { corsHeadersFor } from '../_shared/cors.ts';
 import type { InspectResult } from '../_shared/object-inspect.ts';
 import {
@@ -78,10 +81,15 @@ export const toView = (row: AttachmentRow): AttachmentView => ({
   updatedAt: row.updated_at
 });
 
+export type TravelKind = 'proposal' | 'itinerary';
+
 export interface ProposalForUser {
   id: string;
   content: unknown;
   updated_at: string;
+  /** Tipo del registro (proposals.kind): decide qué permiso aplica. */
+  kind: TravelKind;
+  advisor_id: string | null;
 }
 
 export type InsertResult = { row: AttachmentRow } | { error: 'duplicate_path' | 'service_not_found' | 'too_many_files' };
@@ -89,12 +97,14 @@ export type InsertResult = { row: AttachmentRow } | { error: 'duplicate_path' | 
 export interface Deps {
   env(name: string): string | undefined;
   getUser(token: string): Promise<{ id: string } | null>;
-  canManageProposals(token: string): Promise<boolean>;
+  /** public.can_travel(kind, action) con el cliente del USUARIO (rol real en la base; desconocido = false). */
+  canTravel(token: string, kind: string, action: string): Promise<boolean>;
+  /** public.is_own_or_full(advisor_id) con el cliente del USUARIO: admin/editor cualquiera, la Asesora solo lo suyo. */
+  isOwnOrFull(token: string, advisorId: string | null): Promise<boolean>;
   /** Lee la propuesta con el cliente del USUARIO: si RLS no la devuelve, null. */
   getProposalAsUser(token: string, proposalId: string): Promise<ProposalForUser | null>;
   /** Actualiza proposals.content con el cliente del usuario solo si updated_at sigue siendo el leído (null = cambió). */
   updateContentAsUser(token: string, proposalId: string, expectedUpdatedAt: string, content: unknown): Promise<ProposalForUser | null>;
-  isAdmin(userId: string): Promise<boolean>;
 
   getAttachment(id: string): Promise<AttachmentRow | null>;
   findByPath(path: string): Promise<AttachmentRow | null>;
@@ -159,10 +169,6 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
     if (!body || typeof body !== 'object' || typeof body.action !== 'string') {
       return json({ error: 'Solicitud inválida.', code: 'bad_request' }, 400);
     }
-    if (!(await deps.canManageProposals(token))) {
-      return json({ error: 'No tienes permiso para gestionar propuestas.', code: 'forbidden' }, 403);
-    }
-
     const ctx: Ctx = { deps, token, userId: user.id };
     switch (body.action) {
       case 'prepare-upload':
@@ -215,11 +221,17 @@ function requireServiceId(value: unknown): string {
   return value;
 }
 
-/** Alcance real: la propuesta debe ser visible para ESTE usuario (RLS). Si no, 404 (no se revela si existe). */
-async function requireProposal(ctx: Ctx, proposalId: string): Promise<ProposalForUser> {
+/**
+ * Alcance real: el registro debe ser visible para ESTE usuario (RLS) y suyo (is_own_or_full); si no, 404 (no se revela si
+ * existe). Con el registro a la vista, su TIPO decide el permiso: can_travel(kind, action) o 403.
+ */
+async function requireProposal(ctx: Ctx, proposalId: string, action = 'gestionar_documentos'): Promise<ProposalForUser> {
   const proposal = await ctx.deps.getProposalAsUser(ctx.token, proposalId);
-  if (!proposal) {
+  if (!proposal || !(await ctx.deps.isOwnOrFull(ctx.token, proposal.advisor_id))) {
     throw NOT_FOUND_PROPOSAL;
+  }
+  if (!(await ctx.deps.canTravel(ctx.token, proposal.kind, action))) {
+    throw new HttpError(403, 'forbidden', 'No tienes permiso para gestionar los documentos de este viaje.');
   }
   return proposal;
 }
@@ -231,9 +243,12 @@ async function requireAttachment(ctx: Ctx, attachmentId: unknown): Promise<{ row
   if (!row) {
     throw NOT_FOUND_ATTACHMENT;
   }
-  const proposal = await ctx.deps.getProposalAsUser(ctx.token, row.proposal_id);
-  if (!proposal) {
-    throw NOT_FOUND_ATTACHMENT;
+  // Mismo alcance que sobre el registro (visible, propio y permiso por tipo); para el adjunto, ajeno = 404.
+  let proposal: ProposalForUser;
+  try {
+    proposal = await requireProposal(ctx, row.proposal_id);
+  } catch (err) {
+    throw err instanceof HttpError && err.status === 404 ? NOT_FOUND_ATTACHMENT : err;
   }
   return { row, proposal };
 }
@@ -532,11 +547,12 @@ async function removeItem(ctx: Ctx, body: Body, kind: 'service' | 'day') {
 
 async function purgeProposal(ctx: Ctx, body: Body) {
   const proposalId = requireUuid(body.proposalId, 'proposalId');
-  // Solo el admin elimina propuestas (policy proposals_delete): si no lo es, no se purga nada.
-  if (!(await ctx.deps.isAdmin(ctx.userId))) {
-    throw new HttpError(403, 'forbidden', 'Solo un administrador puede eliminar propuestas.');
+  // Solo quien puede ELIMINAR ese tipo de registro (can_travel(kind, 'eliminar'): hoy solo admin, policy proposals_delete);
+  // si no, no se purga nada.
+  const proposal = await requireProposal(ctx, proposalId);
+  if (!(await ctx.deps.canTravel(ctx.token, proposal.kind, 'eliminar'))) {
+    throw new HttpError(403, 'forbidden', 'Solo un administrador puede eliminar este registro.');
   }
-  await requireProposal(ctx, proposalId);
   const rows = await ctx.deps.listForProposal(proposalId);
   let purged = 0;
   for (const row of rows) {

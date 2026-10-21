@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ProposalsService } from '../../../../core/services/proposals';
+import { TravelKind } from '../../../../core/models/proposal-enums';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
 import { ProposalServiceAttachmentsService } from '../../../../core/services/proposal-service-attachments';
 import { AttachmentApiError, ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
@@ -82,6 +83,8 @@ export class BuildJourneyStep implements OnInit {
   });
 
   private content: ProposalContent | null = null;
+  /** Tipo del registro abierto (para reconstruir el contenido sin términos de partida en un itinerario). */
+  private kind: TravelKind = 'proposal';
 
   // Ver el comentario equivalente en client-trip-step.ts — proposalId (input
   // required) no tiene valor todavía dentro del constructor, dispara NG0950.
@@ -98,6 +101,7 @@ export class BuildJourneyStep implements OnInit {
         this.loadError.set('No se encontró la propuesta.');
         return;
       }
+      this.kind = proposal.kind;
       this.content = proposal.content;
       this.days.set(proposal.content.days);
       this.refreshDayImageUrls(proposal.content.days);
@@ -321,8 +325,8 @@ export class BuildJourneyStep implements OnInit {
     try {
       const outcome =
         target.kind === 'service'
-          ? await this.attachmentsService.removeService(this.proposalId(), target.day.id, target.service!.id, confirmation)
-          : await this.attachmentsService.removeDay(this.proposalId(), target.day.id, confirmation);
+          ? await this.attachmentsService.removeService(this.proposalId(), target.day.id, target.service!.id, confirmation, this.kind)
+          : await this.attachmentsService.removeDay(this.proposalId(), target.day.id, confirmation, this.kind);
       this.content = outcome.content;
       this.days.set(outcome.content.days);
       this.refreshDayImageUrls(outcome.content.days);

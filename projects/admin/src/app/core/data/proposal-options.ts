@@ -1,4 +1,4 @@
-import { ProposalServiceType, ProposalStatus } from '../models/proposal-enums';
+import { ProposalServiceType, ProposalStatus, TRAVEL_STATUSES, TravelKind, statusLabelOf } from '../models/proposal-enums';
 
 export const PROPOSAL_STATUS_OPTIONS: ReadonlyArray<{ value: ProposalStatus; label: string }> = [
   { value: 'draft', label: 'Borrador' },
@@ -7,6 +7,11 @@ export const PROPOSAL_STATUS_OPTIONS: ReadonlyArray<{ value: ProposalStatus; lab
   { value: 'accepted', label: 'Aceptada' },
   { value: 'expired', label: 'Expirada' }
 ];
+
+/** Chips de filtro por estado de cada tipo: solo los estados que ese tipo tiene. */
+export function statusOptionsFor(kind: TravelKind): ReadonlyArray<{ value: ProposalStatus; label: string }> {
+  return TRAVEL_STATUSES[kind].map((value) => ({ value, label: statusLabelOf(kind, value) }));
+}
 
 export const PROPOSAL_SERVICE_TYPE_OPTIONS: ReadonlyArray<{ value: ProposalServiceType; label: string }> = [
   { value: 'flight', label: 'Vuelo' },

@@ -1,5 +1,5 @@
 import { Database } from './database.types';
-import { ProposalServiceType, ProposalStatus } from './proposal-enums';
+import { ProposalServiceType, ProposalStatus, TravelKind } from './proposal-enums';
 import { DEFAULT_TERMS_HTML, DEFAULT_TERMS_TITLE } from '../data/proposal-default-terms';
 
 type ProposalRow = Database['public']['Tables']['proposals']['Row'];
@@ -114,6 +114,8 @@ export interface ProposalContent {
 
 export interface Proposal {
   id: string;
+  /** Tipo de registro (proposals.kind): la fuente de verdad del modo del editor, por encima de la URL. */
+  kind: TravelKind;
   publicToken: string;
   leadId: string | null;
   status: ProposalStatus;
@@ -145,6 +147,8 @@ export interface Proposal {
   /** Cuando el cliente envió sus comentarios al equipo (null = nunca). */
   feedbackSentAt: string | null;
   publishedAt: string | null;
+  /** Cuándo se compartió el itinerario (0056); null siempre en propuestas. */
+  sharedAt: string | null;
   viewedAt: string | null;
   expiresAt: string | null;
   createdBy: string | null;
@@ -166,13 +170,42 @@ export function createEmptyProposalContent(): ProposalContent {
   };
 }
 
+/**
+ * Contenido de partida de un ITINERARIO: portada, bienvenida, días/servicios y Travel Tips. Nada contractual: sin términos
+ * de partida ni líneas de precio. `ProposalContent` es el tipo compartido y exige `intro`, `pricing` y `terms`, así que se
+ * dejan con valores estructuralmente seguros (vacíos) que el itinerario ni muestra ni trata como contrato.
+ */
+export function createEmptyItineraryContent(): ProposalContent {
+  return {
+    cover: { title: '', subtitle: '', imagePath: null },
+    welcome: { body: '' },
+    intro: { headline: '', body: '' },
+    days: [],
+    pricing: { lines: [], feesLines: [] },
+    travelTips: [],
+    terms: { title: '', body: '' }
+  };
+}
+
+export const createEmptyContentFor = (kind: TravelKind): ProposalContent =>
+  kind === 'itinerary' ? createEmptyItineraryContent() : createEmptyProposalContent();
+
 /** Borrador del mensaje de bienvenida con el nombre de quien solicitó la
  *  propuesta. Solo afirma cosas que son ciertas de la propuesta en sí (fue
  *  hecha a medida, se eligen servicios con "Sí, por favor") — nada de
  *  disponibilidad, depósitos ni garantías, que dependen de cada agencia y
  *  que el agente puede agregar a mano o pedirle al asistente. */
-export function defaultWelcomeText(clientName: string): string {
+export function defaultWelcomeText(clientName: string, kind: TravelKind = 'proposal'): string {
   const name = clientName.trim();
+  if (kind === 'itinerary') {
+    // Sin «Sí, por favor» ni aceptación: el itinerario no es una cotización.
+    return [
+      name ? `Hola, ${name}:` : 'Hola:',
+      'Este itinerario ha sido preparado especialmente para ti y para tu viaje.',
+      'Aquí encontrarás tu recorrido día a día, con los detalles de cada servicio.',
+      'Tu asesora de viajes estará atenta para resolver cualquier duda.'
+    ].join('\n\n');
+  }
   return [
     name ? `Hola, ${name}:` : 'Hola:',
     'Esta propuesta ha sido diseñada especialmente para ti y para tu viaje.',
@@ -226,8 +259,8 @@ export function createFeeLine(): ProposalFeeLine {
 /** El contenido siempre lo escribe este mismo builder — un valor inesperado
  *  (jsonb vacío `{}` en una propuesta recién creada) se resuelve al shape
  *  vacío en vez de fallar, mismo criterio que toLeadTripDetails(). */
-export function toProposalContent(value: unknown): ProposalContent {
-  const empty = createEmptyProposalContent();
+export function toProposalContent(value: unknown, kind: TravelKind = 'proposal'): ProposalContent {
+  const empty = createEmptyContentFor(kind);
   if (!value || typeof value !== 'object') {
     return empty;
   }
@@ -255,8 +288,10 @@ export function toProposalContent(value: unknown): ProposalContent {
 }
 
 export function toProposal(row: ProposalRow): Proposal {
+  const kind: TravelKind = row.kind === 'itinerary' ? 'itinerary' : 'proposal';
   return {
     id: row.id,
+    kind,
     publicToken: row.public_token,
     leadId: row.lead_id,
     status: row.status,
@@ -269,7 +304,7 @@ export function toProposal(row: ProposalRow): Proposal {
     advisorId: row.advisor_id,
     currency: row.currency,
     accessRequired: row.access_required,
-    content: toProposalContent(row.content),
+    content: toProposalContent(row.content, kind),
     title: row.title,
     coverImagePath: row.cover_image_path,
     pricingSubtotal: Number(row.pricing_subtotal),
@@ -284,6 +319,7 @@ export function toProposal(row: ProposalRow): Proposal {
     ),
     feedbackSentAt: row.feedback_sent_at ?? null,
     publishedAt: row.published_at,
+    sharedAt: row.shared_at ?? null,
     viewedAt: row.viewed_at,
     expiresAt: row.expires_at,
     createdBy: row.created_by,

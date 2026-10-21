@@ -1,20 +1,21 @@
 import { InjectionToken, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import type { PermissionCode } from '../../core/data/permissions';
+import type { TravelKind } from '../../core/models/proposal-enums';
 
 /**
  * Módulo padre «Viajes»: Propuestas e Itinerarios comparten el mismo builder y la misma lista; lo que cambia por modo
  * vive AQUÍ, en una sola configuración, para no repartir `if (mode === …)` por todo el código.
  */
-export type TravelMode = 'proposal' | 'itinerary';
+export type TravelMode = TravelKind;
 
 /** Pasos del editor. 'preview' no es una pestaña visible: es la vista previa de página completa (?step=preview). */
 export type BuilderStep = 'client-trip' | 'cover' | 'journey' | 'pricing' | 'travel-tips' | 'terms' | 'assistant' | 'preview';
 
 /**
- * Los Itinerarios todavía no tienen soporte en la base de datos (falta distinguirlos de una propuesta con `kind`), así que
- * su lista no podría mostrar datos correctos. Hasta entonces el código está listo pero el modo no se ofrece en ninguna parte
- * (ni menú, ni rutas). Se cambia a `true` junto con la migración de `kind`.
+ * La base ya distingue los tipos (proposals.kind, migración 0055) y el panel filtra por `kind` en cada consulta, así que
+ * Itinerarios ya funciona de punta a punta en borrador. Sigue apagado hasta que exista el flujo de compartir (0056): con el
+ * flag en `false` el modo no se ofrece en ninguna parte (ni menú, ni rutas). Es el ÚNICO cambio que activa Itinerarios.
  */
 export const ITINERARIES_ENABLED = false;
 
@@ -85,6 +86,8 @@ export interface TravelLabels {
   deleteTitle: string;
   deleteConfirm: (clientName: string) => string;
   deleteError: string;
+  /** «No se pudo crear la propuesta…»: el artículo cambia con el género, por eso va como frase completa. */
+  createError: string;
 }
 
 export interface TravelModeConfig {
@@ -118,7 +121,8 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       edit: 'Editar propuesta',
       deleteTitle: 'Eliminar propuesta',
       deleteConfirm: (client) => `¿Eliminar la propuesta de ${client}? Esta acción no se puede deshacer.`,
-      deleteError: 'No se pudo eliminar la propuesta. Inténtalo nuevamente.'
+      deleteError: 'No se pudo eliminar la propuesta. Inténtalo nuevamente.',
+      createError: 'No se pudo crear la propuesta. Intenta de nuevo.'
     },
     tabs: [
       { key: 'client-trip', label: 'Client & Trip' },
@@ -169,7 +173,8 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       edit: 'Editar itinerario',
       deleteTitle: 'Eliminar itinerario',
       deleteConfirm: (client) => `¿Eliminar el itinerario de ${client}? Esta acción no se puede deshacer.`,
-      deleteError: 'No se pudo eliminar el itinerario. Inténtalo nuevamente.'
+      deleteError: 'No se pudo eliminar el itinerario. Inténtalo nuevamente.',
+      createError: 'No se pudo crear el itinerario. Intenta de nuevo.'
     },
     // Fase 1: datos del viaje (cliente simplificado), portada, itinerario, tips y asistente. Sin precios ni términos.
     tabs: [

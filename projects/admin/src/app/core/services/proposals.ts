@@ -3,17 +3,17 @@ import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 import { ProposalServiceAttachmentsService } from './proposal-service-attachments';
-import { Proposal, ProposalContent, createEmptyProposalContent, toProposal } from '../models/proposal.model';
-import { PROPOSAL_STATUS_LABEL, ProposalStatus } from '../models/proposal-enums';
+import { Proposal, ProposalContent, createEmptyContentFor, toProposal } from '../models/proposal.model';
+import { ProposalStatus, TRAVEL_STATUSES, TravelKind, statusLabelOf } from '../models/proposal-enums';
 
 export interface ProposalListPage {
   items: Proposal[];
   total: number;
 }
 
-const ALL_STATUSES: ProposalStatus[] = ['draft', 'published', 'viewed', 'accepted', 'expired'];
-
 export interface ProposalListParams {
+  /** Tipo de registro: el filtro va en la consulta a Supabase (nunca se carga todo y se filtra en Angular). */
+  kind: TravelKind;
   page: number;
   pageSize: number;
   status?: ProposalStatus;
@@ -21,6 +21,8 @@ export interface ProposalListParams {
 }
 
 export interface CreateProposalPayload {
+  /** Se envía SIEMPRE explícito: la creación no depende del DEFAULT de la base. */
+  kind: TravelKind;
   clientName: string;
   leadId?: string;
   /** Canal de origen; si falta, la base usa 'other'. */
@@ -61,6 +63,9 @@ export class ProposalDocumentsPurgedError extends Error {
   }
 }
 
+/** Mensaje cuando la Edge Function rechaza un itinerario (409 KIND_NOT_SUPPORTED): no debería ocurrir porque la interfaz no ofrece la acción. */
+export const KIND_NOT_SUPPORTED_MESSAGE = 'Esta acción solo está disponible para propuestas.';
+
 /** Publish/unpublish/set-access-code son RPC — nunca un UPDATE directo de
  *  `status`/código, para que la validación de "está listo para publicar" y
  *  el hasheo del código sigan viviendo únicamente en Supabase (ver
@@ -83,6 +88,7 @@ export class ProposalsService {
     let query = this.supabase.client
       .from('proposals')
       .select('*', { count: 'exact' })
+      .eq('kind', params.kind)
       .order('updated_at', { ascending: false })
       .range(from, to);
 
@@ -96,8 +102,8 @@ export class ProposalsService {
       // su etiqueta en español (lo único que el staff realmente escribe),
       // nunca contra el valor crudo del enum en inglés.
       const searchLower = params.search.toLowerCase();
-      for (const status of ALL_STATUSES) {
-        if (PROPOSAL_STATUS_LABEL[status].toLowerCase().includes(searchLower)) {
+      for (const status of TRAVEL_STATUSES[params.kind]) {
+        if (statusLabelOf(params.kind, status).toLowerCase().includes(searchLower)) {
           orParts.push(`status.eq.${status}`);
         }
       }
@@ -115,16 +121,17 @@ export class ProposalsService {
     };
   }
 
-  /** Conteos globales por estado para los chips de filtro de la lista — no
+  /** Conteos globales por estado de UN tipo para los chips de filtro de la lista — no
    *  dependen de la búsqueda/paginación actual, así que se piden aparte con
    *  `head: true` (solo count, sin traer filas) en vez de derivarse de la
-   *  página cargada. */
-  async countsByStatus(): Promise<Record<ProposalStatus, number>> {
+   *  página cargada. Solo se consultan los estados que ese tipo tiene; el resto queda en 0. */
+  async countsByStatus(kind: TravelKind): Promise<Record<ProposalStatus, number>> {
     const counts = await Promise.all(
-      ALL_STATUSES.map(async (status) => {
+      TRAVEL_STATUSES[kind].map(async (status) => {
         const { count, error } = await this.supabase.client
           .from('proposals')
           .select('*', { count: 'exact', head: true })
+          .eq('kind', kind)
           .eq('status', status);
         if (error) {
           throw error;
@@ -132,9 +139,13 @@ export class ProposalsService {
         return [status, count ?? 0] as const;
       })
     );
-    return Object.fromEntries(counts) as Record<ProposalStatus, number>;
+    return { draft: 0, shared: 0, published: 0, viewed: 0, accepted: 0, expired: 0, ...Object.fromEntries(counts) } as Record<ProposalStatus, number>;
   }
 
+  /**
+   * Lee un registro por id, de CUALQUIER tipo: el `kind` de la fila es la fuente de verdad. Quien lo use para un modo concreto
+   * (el editor) debe comparar `proposal.kind` con el modo de la ruta y redirigir, nunca asumir el tipo por la URL.
+   */
   async getById(id: string): Promise<Proposal | null> {
     const { data, error } = await this.supabase.client.from('proposals').select('*').eq('id', id).maybeSingle();
     if (error) {
@@ -147,6 +158,7 @@ export class ProposalsService {
     const { data, error } = await this.supabase.client
       .from('proposals')
       .insert({
+        kind: payload.kind,
         client_name: payload.clientName,
         lead_id: payload.leadId ?? null,
         ...(payload.originChannel ? { origin_channel: payload.originChannel } : {}),
@@ -154,8 +166,8 @@ export class ProposalsService {
         travelers_count: payload.travelersCount ?? null,
         start_date: payload.startDate ?? null,
         end_date: payload.endDate ?? null,
-        // Nace con los términos de partida (editables) ya cargados.
-        content: createEmptyProposalContent() as unknown as Record<string, unknown>,
+        // Una propuesta nace con los términos de partida (editables) ya cargados; un itinerario, sin nada contractual.
+        content: createEmptyContentFor(payload.kind) as unknown as Record<string, unknown>,
         created_by: this.auth.profile()?.id
       })
       .select('*')
@@ -176,6 +188,7 @@ export class ProposalsService {
     const { data, error } = await this.supabase.client
       .from('proposals')
       .select('*')
+      .eq('kind', 'proposal')
       .eq('lead_id', leadId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -352,6 +365,10 @@ export class ProposalsService {
     }
     try {
       const body = await context.json();
+      // Un itinerario no se envía por aquí (409): mensaje propio, sin el texto técnico del servidor.
+      if (body?.code === 'KIND_NOT_SUPPORTED') {
+        return KIND_NOT_SUPPORTED_MESSAGE;
+      }
       return typeof body?.error === 'string' ? body.error : null;
     } catch {
       return null;

@@ -48,7 +48,8 @@ export interface Deps {
   /** Dueño del objeto en storage.objects; null si el objeto no existe. */
   objectOwner(path: string): Promise<{ ownerId: string | null } | null>;
   download(path: string): Promise<Uint8Array | null>;
-  getProposalSnapshot(proposalId: string): Promise<ProposalSnapshot | null>;
+  /** Con su `kind`: la importación en modo merge es EXCLUSIVA de Propuestas (nunca modifica un itinerario). */
+  getProposalSnapshot(proposalId: string): Promise<(ProposalSnapshot & { kind: string }) | null>;
   /** deadlineAt: instante (ms epoch) en que el proceso debe haber terminado. */
   extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number; onUsage?: (usage: Usage) => void } & ProviderSettings): Promise<Extraction>;
   /** Solo escribe si la fila sigue en 'processing' con el mismo processing_started_at (dueño del bloqueo). */
@@ -219,6 +220,10 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
       const snapshot = row.proposal_id ? await deps.getProposalSnapshot(row.proposal_id) : null;
       if (!snapshot) {
         throw new UserError('La propuesta ya no existe.', 'propuesta no encontrada');
+      }
+      // Cierra por defecto: solo kind = 'proposal'. (El trigger de la base también impide importaciones sobre itinerarios.)
+      if (snapshot.kind !== 'proposal') {
+        throw new UserError('La importación de PDF solo aplica a propuestas, no a itinerarios.', `kind no soportado: ${String(snapshot.kind)}`);
       }
       diff = computeDiff(extraction, snapshot);
     }

@@ -268,3 +268,20 @@ Deno.test('la importación crea SIEMPRE kind=proposal, escrito explícitamente (
   const row = (await db.query<{ kind: string }>(`select kind from proposals where id = $1`, [id])).rows[0];
   assertEquals(row.kind, 'proposal');
 });
+
+Deno.test('la importación solo INSERTA: un itinerario existente (y una importación merge que lo apunte) queda intacto', async () => {
+  const { db, sql } = await setup();
+  const ITIN = '77777777-7777-4777-8777-777777777777';
+  const MERGE = '88888888-8888-4888-8888-888888888888';
+  await db.exec(`insert into proposals (id, kind, client_name, content) values ('${ITIN}', 'itinerary', 'Itinerario', '{"a":1}');
+    insert into proposal_imports (id, file_path, mode, status, proposal_id, created_by) values ('${MERGE}', '${USER}/m.pdf', 'merge', 'ready', '${ITIN}', '${USER}')`);
+  const before = (await db.query(`select * from proposals where id = '${ITIN}'`)).rows[0];
+
+  assertEquals(await applyImportTx(sql, { importId: MERGE, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() }), 'conflict');
+  const created = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+  assert(created !== 'conflict' && created !== ITIN);
+
+  assertEquals((await db.query(`select * from proposals where id = '${ITIN}'`)).rows[0], before);
+  assertEquals((await importRow(db, MERGE)).status, 'ready');
+  assertEquals(await count(db, 'proposals'), 2);
+});

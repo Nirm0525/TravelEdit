@@ -39,6 +39,7 @@
 }
 
 .proposal-builder__status-badge.is-published,
+.proposal-builder__status-badge.is-shared,
 .proposal-builder__status-badge.is-viewed,
 .proposal-builder__status-badge.is-accepted {
   color: var(--success-600);

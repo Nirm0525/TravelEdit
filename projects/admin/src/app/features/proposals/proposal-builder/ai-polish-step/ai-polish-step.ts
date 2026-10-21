@@ -289,7 +289,7 @@ export class AiPolishStep implements OnInit {
         // Con el campo vacío se le da al asistente el borrador con el nombre
         // del cliente como base — si no, no tendría texto sobre el cual
         // trabajar (solo reescribe lo que ya existe, nunca inventa).
-        return htmlToPlainText(this.content.welcome.body) || defaultWelcomeText(this.proposal?.clientName ?? '');
+        return htmlToPlainText(this.content.welcome.body) || defaultWelcomeText(this.proposal?.clientName ?? '', this.proposal?.kind);
       case 'intro':
         return htmlToPlainText(this.content.intro.body);
       case 'day_title':

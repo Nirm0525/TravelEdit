@@ -309,7 +309,7 @@ export class ClientTripStep implements OnInit {
   /** Rellena el editor con el borrador (nombre del cliente incluido) y lo
    *  guarda — solo se ofrece con el campo vacío, nunca pisa texto escrito. */
   generateWelcome(): Promise<void> {
-    const text = defaultWelcomeText(this.form.controls.clientName.value);
+    const text = defaultWelcomeText(this.form.controls.clientName.value, this.proposal?.kind);
     const escape = (line: string) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const html = text
       .split(/\n+/)

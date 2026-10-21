@@ -289,6 +289,7 @@ export class LeadDetail {
     const details = lead.details;
     const travelersCount = details.adults != null ? details.adults + (details.children ?? 0) : undefined;
     return {
+      kind: 'proposal',
       clientName: lead.name,
       leadId: lead.id,
       originChannel: 'web',

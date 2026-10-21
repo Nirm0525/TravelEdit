@@ -22,7 +22,7 @@ const ALL: PublishProblem[] = [
 
 function proposal(status = 'draft') {
   return {
-    id: 'p1', status, clientName: 'Cliente Demo', clientEmail: 'c@ejemplo.test', leadId: null, accessRequired: true, publicToken: 't',
+    id: 'p1', kind: 'proposal', status, clientName: 'Cliente Demo', clientEmail: 'c@ejemplo.test', leadId: null, accessRequired: true, publicToken: 't',
     updatedAt: '2027-01-01T00:00:00Z', acceptedAt: null, acceptedByName: null, content: {}
   };
 }

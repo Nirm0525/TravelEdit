@@ -18,7 +18,7 @@ export function createRealDeps(): Deps {
     },
 
     async getProposal(proposalId) {
-      const { data } = await admin.from('proposals').select('id, public_token, status, expires_at, content').eq('id', proposalId).maybeSingle();
+      const { data } = await admin.from('proposals').select('id, kind, public_token, status, expires_at, content').eq('id', proposalId).maybeSingle();
       return (data as ProposalRow | null) ?? null;
     },
 

@@ -2,8 +2,8 @@
 //
 // Entrada: POST { action: 'list' | 'url', token, sessionToken, attachmentId? } sin JWT de usuario: el acceso lo
 // decide esta función con consultas explícitas (service_role), con las MISMAS reglas que get_proposal_content
-// (supabase/migrations/0040/0043/0051): sesión vigente emitida para esa propuesta, public_token coincidente, estado
-// published/viewed/accepted y propuesta no expirada. Además solo se entregan documentos con visible_to_client = true.
+// (supabase/migrations/0040/0043/0051/0055): sesión vigente emitida para ese registro, public_token coincidente, estado
+// abierto SEGÚN SU TIPO (proposal: published/viewed/accepted; itinerary: shared/viewed) y registro no expirado. Además solo se entregan documentos con visible_to_client = true.
 //
 //  - Nunca se devuelve storage_path ni metadata interna: solo id, servicio, nombre y tipo.
 //  - La URL firmada se genera al hacer clic y dura 10 minutos; no se guarda en la base.
@@ -20,6 +20,8 @@ export interface SessionRow {
 
 export interface ProposalRow {
   id: string;
+  /** proposals.kind. Un tipo desconocido no abre nada (cierra por defecto). */
+  kind: string;
   public_token: string;
   status: string;
   expires_at: string | null;
@@ -45,7 +47,13 @@ export interface Deps {
   log(message: string, meta?: Record<string, unknown>): void;
 }
 
-export const OPEN_STATUSES = ['published', 'viewed', 'accepted'];
+/** Estados en los que el cliente ve el viaje, por tipo (mismo criterio que get_proposal_content en 0055). Un borrador nunca. */
+export const OPEN_STATUSES_BY_KIND: Record<string, readonly string[]> = {
+  proposal: ['published', 'viewed', 'accepted'],
+  itinerary: ['shared', 'viewed']
+};
+
+export const isOpen = (kind: string, status: string): boolean => (OPEN_STATUSES_BY_KIND[kind] ?? []).includes(status);
 
 export async function handleRequest(req: Request, deps: Deps, now: () => number = () => Date.now()): Promise<Response> {
   const cors = corsHeadersFor(req, deps.env('ALLOWED_ORIGINS'));
@@ -78,7 +86,7 @@ export async function handleRequest(req: Request, deps: Deps, now: () => number 
     if (
       !proposal ||
       proposal.public_token.toLowerCase() !== token.toLowerCase() ||
-      !OPEN_STATUSES.includes(proposal.status) ||
+      !isOpen(proposal.kind, proposal.status) ||
       (proposal.expires_at !== null && new Date(proposal.expires_at).getTime() <= now())
     ) {
       return notFound();

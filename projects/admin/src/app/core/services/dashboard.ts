@@ -90,6 +90,8 @@ export class DashboardService {
       this.supabase.client
         .from('proposals')
         .select('id, client_name, title, status, updated_at, feedback_sent_at, service_comments')
+        // El panel habla de «Propuestas»: los itinerarios no se mezclan en sus conteos ni listas.
+        .eq('kind', 'proposal')
         .order('updated_at', { ascending: false })
         .limit(200)
     ]);

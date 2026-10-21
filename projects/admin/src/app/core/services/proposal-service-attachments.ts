@@ -6,6 +6,7 @@ import {
   UploadPhase
 } from '../models/proposal-service-attachment.model';
 import { ProposalContent, toProposalContent } from '../models/proposal.model';
+import { TravelKind } from '../models/proposal-enums';
 import { validateAttachmentFile } from '../utils/service-attachments';
 
 const BUCKET = 'proposal-service-files';
@@ -51,6 +52,11 @@ interface AttachmentView {
   createdAt: string;
   updatedAt: string;
 }
+
+/** 403: el tipo de registro es visible pero la persona no puede gestionar sus documentos. */
+export const ATTACHMENTS_FORBIDDEN_MESSAGE = 'No tienes permiso para gestionar estos documentos.';
+/** 404: no existe, no es visible o no es suyo — a propósito no se distingue (no se revela de quién es). */
+export const ATTACHMENTS_NOT_FOUND_MESSAGE = 'No se encontró este documento o ya no está disponible.';
 
 export interface RemovalOutcome {
   content: ProposalContent;
@@ -150,13 +156,14 @@ export class ProposalServiceAttachmentsService {
     proposalId: string,
     dayId: string,
     serviceId: string,
-    confirmation?: { expectedCount: number }
+    confirmation?: { expectedCount: number },
+    kind: TravelKind = 'proposal'
   ): Promise<RemovalOutcome> {
-    return this.remove({ action: 'remove-service', proposalId, dayId, serviceId }, confirmation);
+    return this.remove({ action: 'remove-service', proposalId, dayId, serviceId }, confirmation, kind);
   }
 
-  async removeDay(proposalId: string, dayId: string, confirmation?: { expectedCount: number }): Promise<RemovalOutcome> {
-    return this.remove({ action: 'remove-day', proposalId, dayId }, confirmation);
+  async removeDay(proposalId: string, dayId: string, confirmation?: { expectedCount: number }, kind: TravelKind = 'proposal'): Promise<RemovalOutcome> {
+    return this.remove({ action: 'remove-day', proposalId, dayId }, confirmation, kind);
   }
 
   /** Borra todos los documentos de una propuesta (solo admin) antes de eliminarla. Si falla, la propuesta no debe borrarse. */
@@ -164,13 +171,13 @@ export class ProposalServiceAttachmentsService {
     await this.call<{ deletedDocuments: number }>({ action: 'purge-proposal', proposalId });
   }
 
-  private async remove(body: Record<string, unknown>, confirmation?: { expectedCount: number }): Promise<RemovalOutcome> {
+  private async remove(body: Record<string, unknown>, confirmation?: { expectedCount: number }, kind: TravelKind = 'proposal'): Promise<RemovalOutcome> {
     const res = await this.call<{ content: unknown; deletedDocuments: number }>({
       ...body,
       confirm: confirmation !== undefined,
       expectedCount: confirmation?.expectedCount
     });
-    return { content: toProposalContent(res.content), deletedDocuments: res.deletedDocuments };
+    return { content: toProposalContent(res.content, kind), deletedDocuments: res.deletedDocuments };
   }
 
   private async call<T>(body: Record<string, unknown>): Promise<T> {
@@ -186,9 +193,21 @@ export class ProposalServiceAttachmentsService {
 
   private async toApiError(error: unknown): Promise<AttachmentApiError> {
     const context = (error as { context?: Response })?.context;
+    // 403 = el registro es visible pero no hay permiso sobre sus documentos (can_travel); el mensaje es fijo, nunca el del servidor.
+    if (context?.status === 403) {
+      return new AttachmentApiError(ATTACHMENTS_FORBIDDEN_MESSAGE, 'forbidden');
+    }
     if (context && typeof context.json === 'function') {
       try {
         const { error: message, code, ...extra } = (await context.json()) as { error?: string; code?: string; [key: string]: unknown };
+        if (code === 'forbidden') {
+          return new AttachmentApiError(ATTACHMENTS_FORBIDDEN_MESSAGE, 'forbidden');
+        }
+        // 404 genérico (registro o documento no visible/ajeno): mismo mensaje, sin revelar propiedad. Los 404 específicos
+        // (service_not_found, object_missing, day_not_found…) conservan su texto.
+        if (code === 'not_found') {
+          return new AttachmentApiError(ATTACHMENTS_NOT_FOUND_MESSAGE, 'not_found');
+        }
         return new AttachmentApiError(message ?? 'No se pudo completar la operación.', code ?? 'unknown', extra);
       } catch {
         // cuerpo no JSON: se cae al mensaje genérico

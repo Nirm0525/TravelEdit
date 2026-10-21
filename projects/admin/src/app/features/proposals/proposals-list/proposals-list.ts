@@ -4,9 +4,8 @@ import { RouterLink } from '@angular/router';
 import { ProposalDocumentsPurgedError, ProposalsService } from '../../../core/services/proposals';
 import { ProposalImagesService } from '../../../core/services/proposal-images';
 import { Proposal } from '../../../core/models/proposal.model';
-import { ProposalStatus } from '../../../core/models/proposal-enums';
-import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
-import { PROPOSAL_STATUS_OPTIONS } from '../../../core/data/proposal-options';
+import { ProposalStatus, statusLabelOf } from '../../../core/models/proposal-enums';
+import { statusOptionsFor } from '../../../core/data/proposal-options';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { AuthService } from '../../../core/services/auth';
 import { can } from '../../../core/data/permissions';
@@ -38,12 +37,16 @@ export class ProposalsList {
   readonly canRemove = computed(() => can(this.auth.profile()?.role, this.config.permissions.remove));
   readonly showPdfImport = computed(() => this.config.capabilities.pdfImport && this.canCreate());
 
-  readonly statusLabel = PROPOSAL_STATUS_LABEL;
+  /** Etiqueta del estado según el tipo de la lista (Itinerarios habla de «compartido», Propuestas de «publicada»). */
+  statusText(status: ProposalStatus): string {
+    return statusLabelOf(this.mode, status);
+  }
 
   commentCount(item: Proposal): number {
     return Object.keys(item.serviceComments).length;
   }
-  readonly statusOptions = PROPOSAL_STATUS_OPTIONS;
+  /** Solo los estados que este tipo tiene (Itinerarios: borrador · compartido · visto). */
+  readonly statusOptions = statusOptionsFor(this.mode);
 
   readonly items = signal<Proposal[]>([]);
   readonly total = signal(0);
@@ -55,12 +58,14 @@ export class ProposalsList {
 
   readonly counts = signal<Record<ProposalStatus, number>>({
     draft: 0,
+    shared: 0,
     published: 0,
     viewed: 0,
     accepted: 0,
     expired: 0
   });
-  readonly totalCount = computed(() => Object.values(this.counts()).reduce((sum, n) => sum + n, 0));
+  /** Total de ESTE tipo: suma solo sus estados (los conteos de otro tipo nunca se mezclan). */
+  readonly totalCount = computed(() => this.statusOptions.reduce((sum, option) => sum + this.counts()[option.value], 0));
 
   readonly actionError = signal<string | null>(null);
   readonly togglingId = signal<string | null>(null);
@@ -81,6 +86,7 @@ export class ProposalsList {
     this.loadError.set(null);
     try {
       const result = await this.proposalsService.list({
+        kind: this.mode,
         page: this.page(),
         pageSize: this.pageSize,
         status: this.statusFilter() || undefined,
@@ -102,7 +108,7 @@ export class ProposalsList {
    *  tecla de búsqueda. */
   private async loadCounts(): Promise<void> {
     try {
-      this.counts.set(await this.proposalsService.countsByStatus());
+      this.counts.set(await this.proposalsService.countsByStatus(this.mode));
     } catch (error) {
       console.error('No se pudieron cargar los conteos de propuestas.', error);
     }

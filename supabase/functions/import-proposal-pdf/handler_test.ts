@@ -85,7 +85,7 @@ function harness(over: Partial<Deps> = {}, importRow: ImportRow | null = row()):
     },
     objectOwner: () => Promise.resolve({ ownerId: USER }),
     download: () => Promise.resolve(validPdf()),
-    getProposalSnapshot: () => Promise.resolve(proposalSnapshot()),
+    getProposalSnapshot: () => Promise.resolve({ ...proposalSnapshot(), kind: 'proposal' }),
     extract: (args): Promise<Extraction> => {
       h.extractCalls++;
       args.onUsage?.({ attempt: 1, inputTokens: 1200, outputTokens: 800, reasoningTokens: 100 });
@@ -499,4 +499,30 @@ Deno.test('cierre: finishReady y finishFailed en conflicto → queda import.fini
   assertEquals(logged(h, 'import.finish_failed_error').length, 1);
   assertEquals(h.ready.length, 0);
   assertEquals(h.failed.length, 0);
+});
+
+// ---------------------------------------------------------------- merge: solo Propuestas (post-0055)
+
+Deno.test('merge sobre un itinerario: la importación falla sin calcular diff ni dejarla lista', async () => {
+  const h = harness({ getProposalSnapshot: () => Promise.resolve({ ...proposalSnapshot(), kind: 'itinerary' }) }, row({ mode: 'merge', proposal_id: PROPOSAL }));
+  const res = await call(h);
+  assertEquals(res.status, 202);
+  assertEquals(h.ready.length, 0, 'no debe quedar lista (ni con diff)');
+  assertEquals(h.failed.length, 1);
+  assertStringIncludes(h.failed[0].message, 'solo aplica a propuestas');
+});
+
+Deno.test('merge con un kind desconocido o ausente cierra por defecto (falla)', async () => {
+  for (const kind of ['trip', undefined]) {
+    const h = harness({ getProposalSnapshot: () => Promise.resolve({ ...proposalSnapshot(), kind } as never) }, row({ mode: 'merge', proposal_id: PROPOSAL }));
+    await call(h);
+    assertEquals([h.ready.length, h.failed.length], [0, 1], String(kind));
+  }
+});
+
+Deno.test('merge sobre una propuesta sigue calculando el diff', async () => {
+  const h = harness({}, row({ mode: 'merge', proposal_id: PROPOSAL }));
+  assertEquals((await call(h)).status, 202);
+  assertEquals([h.ready.length, h.failed.length], [1, 0]);
+  assert(h.ready[0].diff !== null);
 });

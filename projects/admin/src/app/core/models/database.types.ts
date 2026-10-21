@@ -286,6 +286,10 @@ export interface Database {
           id: string;
           public_token: string;
           lead_id: string | null;
+          /** Tipo de registro — migración 0055. Inmutable: no está en Update. */
+          kind: 'proposal' | 'itinerary';
+          /** Cuándo se compartió un itinerario (0056); null mientras no. */
+          shared_at: string | null;
           status: ProposalStatus;
           client_name: string;
           destination_text: string | null;
@@ -322,6 +326,8 @@ export interface Database {
         };
         Insert: {
           lead_id?: string | null;
+          /** Se envía SIEMPRE explícito al crear (no se depende del DEFAULT de la base). */
+          kind?: 'proposal' | 'itinerary';
           client_name: string;
           client_email?: string | null;
           /** Canal por el que llegó el cliente — migración 0049. */

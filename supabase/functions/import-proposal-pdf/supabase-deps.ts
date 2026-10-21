@@ -60,8 +60,9 @@ export function createRealDeps(): RealDeps {
     async canEditProposal(token, proposalId) {
       const client = userClient(token);
       // Si RLS no devuelve la propuesta, el usuario ni siquiera puede verla.
-      const { data: proposal } = await client.from('proposals').select('id, advisor_id').eq('id', proposalId).maybeSingle();
-      if (!proposal) {
+      const { data: proposal } = await client.from('proposals').select('id, advisor_id, kind').eq('id', proposalId).maybeSingle();
+      // La importación en modo merge es solo para Propuestas: un itinerario no se edita por aquí aunque sea suyo.
+      if (!proposal || proposal.kind !== 'proposal') {
         return false;
       }
       const { data: canManage } = await client.rpc('can_manage_proposals');
@@ -116,10 +117,10 @@ export function createRealDeps(): RealDeps {
     async getProposalSnapshot(proposalId) {
       const { data } = await admin
         .from('proposals')
-        .select('updated_at, client_name, client_email, client_phone, start_date, end_date, travelers_count, currency, pricing_total, content')
+        .select('kind, updated_at, client_name, client_email, client_phone, start_date, end_date, travelers_count, currency, pricing_total, content')
         .eq('id', proposalId)
         .maybeSingle();
-      return (data as ProposalSnapshot | null) ?? null;
+      return (data as (ProposalSnapshot & { kind: string }) | null) ?? null;
     },
 
     extract: ({ pdfBase64, apiKey, deadlineAt, ...provider }) =>

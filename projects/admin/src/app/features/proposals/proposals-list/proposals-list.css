@@ -311,7 +311,8 @@
   color: var(--text-secondary);
 }
 
-.proposals-list__status-badge[data-status='published'] {
+.proposals-list__status-badge[data-status='published'],
+.proposals-list__status-badge[data-status='shared'] {
   background: color-mix(in srgb, var(--success-600) 14%, var(--surface-000));
   color: var(--success-600);
 }

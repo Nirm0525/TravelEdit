@@ -5,8 +5,8 @@ import { PermissionCode, can } from '../data/permissions';
 import { TRAVEL_FEATURES, TravelMode, isTravelModeEnabled, travelPaths } from '../../features/travel/travel-config';
 
 /**
- * Guard de las rutas de Viajes: el modo debe estar habilitado (Itinerarios todavía no lo está: no existe `kind` en la base) y
- * la persona debe tener el permiso. Un modo deshabilitado redirige a Propuestas, nunca deja una lista con datos incorrectos.
+ * Guard de las rutas de Viajes: el modo debe estar habilitado (Itinerarios sigue apagado hasta 0056) y la persona debe tener
+ * el permiso de ESE modo (nunca el de otro). Un modo deshabilitado redirige a Propuestas.
  */
 export function travelGuard(mode: TravelMode, code: PermissionCode): CanActivateFn {
   return async () => {

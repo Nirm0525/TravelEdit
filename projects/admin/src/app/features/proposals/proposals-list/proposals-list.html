@@ -139,8 +139,8 @@
             </div>
           </a>
 
-          <div class="proposals-list__status-badge" [attr.data-status]="item.status">{{ statusLabel[item.status] }}</div>
-          @if (item.feedbackSentAt && item.status !== 'accepted') {
+          <div class="proposals-list__status-badge" [attr.data-status]="item.status">{{ statusText(item.status) }}</div>
+          @if (config.capabilities.quoteComments && item.feedbackSentAt && item.status !== 'accepted') {
             <div class="proposals-list__status-badge" data-status="feedback" title="El cliente envió comentarios">
               Cambios solicitados ({{ commentCount(item) }})
             </div>

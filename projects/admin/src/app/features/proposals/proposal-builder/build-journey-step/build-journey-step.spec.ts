@@ -36,7 +36,7 @@ describe('BuildJourneyStep — documentos por servicio', () => {
   const modalText = () => el().querySelector('.admin-modal__panel')?.textContent?.replace(/\s+/g, ' ') ?? '';
 
   async function create(days: ProposalDay[], docs: ProposalServiceAttachment[] = []): Promise<void> {
-    proposals.getById.mockResolvedValue({ id: 'p1', content: content(days) });
+    proposals.getById.mockResolvedValue({ id: 'p1', kind: 'proposal', content: content(days) });
     attachments.listForProposal.mockResolvedValue(docs);
     fixture = TestBed.createComponent(BuildJourneyStep);
     fixture.componentRef.setInput('proposalId', 'p1');
@@ -78,7 +78,7 @@ describe('BuildJourneyStep — documentos por servicio', () => {
   });
 
   it('si no se pueden cargar los documentos, el editor sigue y se ofrece reintentar', async () => {
-    proposals.getById.mockResolvedValue({ id: 'p1', content: content([day('d1', 1, ['s1'])]) });
+    proposals.getById.mockResolvedValue({ id: 'p1', kind: 'proposal', content: content([day('d1', 1, ['s1'])]) });
     attachments.listForProposal.mockRejectedValueOnce(new Error('rls')).mockResolvedValueOnce([att('a', 's1')]);
     fixture = TestBed.createComponent(BuildJourneyStep);
     fixture.componentRef.setInput('proposalId', 'p1');
@@ -96,7 +96,7 @@ describe('BuildJourneyStep — documentos por servicio', () => {
     attachments.removeService.mockResolvedValue({ content: content([day('d1', 1, ['s2'])]), deletedDocuments: 0 });
     (el().querySelector('.service-card__remove') as HTMLButtonElement).click();
     await settle();
-    expect(attachments.removeService).toHaveBeenCalledWith('p1', 'd1', 's1', undefined);
+    expect(attachments.removeService).toHaveBeenCalledWith('p1', 'd1', 's1', undefined, 'proposal');
     expect(el().querySelectorAll('.service-card').length).toBe(1);
     expect(modalText()).toBe('');
     // La baja no se hace con el guardado normal de days (que podría pisar a otra pestaña).
@@ -118,7 +118,7 @@ describe('BuildJourneyStep — documentos por servicio', () => {
 
     dangerButton()!.click();
     await settle();
-    expect(attachments.removeService).toHaveBeenLastCalledWith('p1', 'd1', 's1', { expectedCount: 2 });
+    expect(attachments.removeService).toHaveBeenLastCalledWith('p1', 'd1', 's1', { expectedCount: 2 }, 'proposal');
     expect(el().querySelectorAll('.service-card').length).toBe(1);
     // Los documentos del servicio borrado ya no están en pantalla.
     expect(el().querySelectorAll('.service-docs__item').length).toBe(0);
@@ -172,13 +172,13 @@ describe('BuildJourneyStep — documentos por servicio', () => {
     expect(modalText()).toContain('¿Eliminar el día 1');
     dangerButton()!.click(); // primera confirmación (la de siempre)
     await settle();
-    expect(attachments.removeDay).toHaveBeenCalledWith('p1', 'd1', undefined);
+    expect(attachments.removeDay).toHaveBeenCalledWith('p1', 'd1', undefined, 'proposal');
     expect(modalText()).toContain('Este día tiene 1 documento adjunto');
     expect(el().querySelectorAll('.day-card').length).toBe(2);
 
     dangerButton()!.click(); // segunda: con documentos
     await settle();
-    expect(attachments.removeDay).toHaveBeenLastCalledWith('p1', 'd1', { expectedCount: 1 });
+    expect(attachments.removeDay).toHaveBeenLastCalledWith('p1', 'd1', { expectedCount: 1 }, 'proposal');
     expect(el().querySelectorAll('.day-card').length).toBe(1);
   });
 

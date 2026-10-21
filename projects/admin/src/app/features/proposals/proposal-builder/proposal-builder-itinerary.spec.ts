@@ -36,7 +36,7 @@ describe('ProposalBuilder — modo itinerario vs propuesta', () => {
 
   async function render(mode: TravelMode, role = 'staff'): Promise<void> {
     svc = {
-      getById: vi.fn().mockResolvedValue(row),
+      getById: vi.fn().mockResolvedValue({ ...row, kind: mode }),
       getPublishReadiness: vi.fn().mockResolvedValue([]),
       hasAccessCode: vi.fn().mockResolvedValue(true)
     };

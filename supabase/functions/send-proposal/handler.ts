@@ -1,0 +1,656 @@
+// Edge Function: send-proposal
+//
+// El botón "Enviar propuesta" del detalle de solicitud llama aquí. A
+// diferencia de submit-lead (público, sin JWT), esta función SÍ requiere
+// sesión: solo staff/admin puede enviar propuestas, así que corre con la
+// verificación de JWT del gateway activada por defecto (no hay entrada
+// [functions.send-proposal] en config.toml — ese es justamente el
+// comportamiento que queremos, verify_jwt=true).
+//
+// El frontend manda solo { leadId, subject, message } — nunca un correo
+// destinatario. El correo real se lee siempre de `leads.email` con la
+// service role, para que no haya forma de que alguien mande una propuesta
+// a un destinatario arbitrario manipulando el body de la request.
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { loadProposalToSend } from './proposal-source.ts';
+
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:4200',
+  'http://localhost:4201',
+  'http://localhost:4301',
+  'http://localhost:4305',
+  'https://thetravel-edit.com'
+]);
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin') ?? '';
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin'
+  };
+  if (ALLOWED_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Mismos secrets y mismo remitente por defecto que submit-lead — no se crea
+// una segunda integración de correo.
+const FALLBACK_FROM_EMAIL = 'The Travel Edit <onboarding@resend.dev>';
+const SITE = 'https://thetravel-edit.com';
+
+const MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+function formatFechaCorta(date: Date): string {
+  return `${date.getDate()} ${MESES_CORTOS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+// Mismo header/footer de marca que submit-lead (ver ese archivo para el
+// razonamiento de tablas + Georgia como aproximación web-safe).
+function emailHeaderHtml(): string {
+  return `
+    <tr>
+      <td align="center" style="padding:8px 24px 24px;">
+        <img src="${SITE}/images/logos/thetraveleditlogo1.png" width="140" alt="The Travel Edit" style="display:block; margin:0 auto 12px;" />
+        <div style="border-top:1px solid #C79A5B; width:100%; margin:0 0 12px;"></div>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; letter-spacing:3px; color:#8A7F76;">BECAUSE LUXURY IS PERSONAL</p>
+        <div style="border-top:1px solid #C79A5B; width:100%; margin:12px 0 0;"></div>
+      </td>
+    </tr>`;
+}
+
+function emailFooterHtml(legalLine: string): string {
+  return `
+    <tr>
+      <td style="background:#CAAE97; padding:24px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td valign="middle">
+              <img src="${SITE}/images/logos/thetraveledit2.png" width="90" alt="The Travel Edit" style="display:block;" />
+            </td>
+            <td valign="middle" align="right" style="font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#16110F; line-height:1.6;">
+              info@thetravel-edit.com<br />www.thetravel-edit.com
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="background:#4A1F26; padding:16px 32px;">
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:11px; line-height:1.6; color:#CAAE97; text-align:center;">${legalLine}</p>
+      </td>
+    </tr>`;
+}
+
+function emailShellHtml(bodyRowsHtml: string, legalLine: string): string {
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="margin:0; padding:0; background:#E9DFD3;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DFD3;">
+      <tr>
+        <td align="center" style="padding:24px 12px;">
+          <!--[if mso]><table role="presentation" width="520" cellpadding="0" cellspacing="0" align="center"><tr><td><![endif]-->
+          <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="width:100%; max-width:520px; background:#F6EFE6;">
+            ${emailHeaderHtml()}
+            ${bodyRowsHtml}
+            ${emailFooterHtml(legalLine)}
+          </table>
+          <!--[if mso]></td></tr></table><![endif]-->
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+interface EmailContent {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+// `subject` y `message` vienen de un administrador autenticado, no de un
+// visitante anónimo — pero igual se escapan antes de insertarlos en HTML,
+// porque terminan en el correo de un cliente real y un editor/staff no
+// debería poder inyectar markup ahí por error (o intencionalmente).
+function buildProposalEmail(clientName: string, subject: string, message: string): EmailContent {
+  const safeName = escapeHtml(clientName.split(' ')[0] || clientName);
+  const safeSubject = escapeHtml(subject);
+  const safeMessageHtml = escapeHtml(message).replace(/\n/g, '<br />');
+  const fecha = formatFechaCorta(new Date());
+
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 32px 36px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">TU PROPUESTA DE VIAJE &middot; ${fecha}</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:30px; line-height:1.25; color:#F6EFE6;">Hola ${safeName},<br />esto es lo que pensamos para ti.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 32px 8px;">
+        <p style="margin:0 0 16px; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#7A2338;">${safeSubject}</p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:1.7; color:#16110F;">${safeMessageHtml}</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:24px 32px 8px;">
+        <a href="mailto:info@thetravel-edit.com" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:2px; padding:14px 28px;">RESPONDER A ESTA PROPUESTA</a>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:20px 32px 32px;">
+        <div style="border-top:1px solid #C79A5B; margin:0 0 20px;"></div>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:17px; color:#6D2A34;">Estamos listos para ajustar cualquier detalle.</p>
+      </td>
+    </tr>`;
+
+  const html = emailShellHtml(bodyRows, 'Recibes este correo porque solicitaste un viaje a medida con The Travel Edit.');
+  const text = [`Hola ${clientName}, esto es lo que pensamos para ti.`, '', subject, '', message, '', 'The Travel Edit'].join('\n');
+
+  return { subject: `Tu propuesta de viaje — ${subject}`, html, text };
+}
+
+interface SendResult {
+  sent: boolean;
+  error?: string;
+}
+
+async function sendViaResend(
+  apiKey: string,
+  fromEmail: string,
+  payload: { to: string[]; subject: string; html: string; text: string; replyTo?: string }
+): Promise<SendResult> {
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+        ...(payload.replyTo ? { reply_to: payload.replyTo } : {})
+      })
+    });
+
+    if (!response.ok) {
+      console.error('send-proposal: Resend respondió', response.status, await response.text());
+      return { sent: false, error: `Resend respondió ${response.status}` };
+    }
+
+    return { sent: true };
+  } catch (err) {
+    console.error('send-proposal: error inesperado enviando email', err);
+    return { sent: false, error: 'error de red hacia Resend' };
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function fetchResendFromEmail(serviceClient: any): Promise<string> {
+  try {
+    const { data } = await serviceClient.from('site_settings').select('value').eq('key', 'resend_from_email').maybeSingle();
+    const override = data?.value;
+    if (typeof override === 'string' && override) {
+      return override;
+    }
+  } catch (err) {
+    console.error('send-proposal: no se pudo leer resend_from_email de site_settings, se usa el fallback.', err);
+  }
+  return Deno.env.get('RESEND_FROM_EMAIL') || FALLBACK_FROM_EMAIL;
+}
+
+interface RequestBody {
+  leadId?: string;
+  subject?: string;
+  message?: string;
+}
+
+// ------------------------------------------------------------------
+// Modo "proposal" — nuevo flujo del Smart Proposal Builder: "Enviar al
+// cliente" desde una propuesta ya publicada. A diferencia del modo legacy
+// de arriba (asunto/mensaje libres escritos por el asesor), este SOLO
+// recibe `proposalId` — el destinatario (nombre/email vía el lead
+// vinculado), el status y la URL privada se resuelven todos server-side con
+// la service role, nunca desde lo que mande Angular. El código de acceso
+// NUNCA viaja en este correo (ver K en la especificación): el enlace y el
+// código son dos canales separados a propósito.
+// ------------------------------------------------------------------
+interface ProposalRequestBody {
+  mode: 'proposal';
+  proposalId?: string;
+}
+
+function isProposalBody(value: unknown): value is ProposalRequestBody {
+  return !!value && typeof value === 'object' && (value as Record<string, unknown>).mode === 'proposal';
+}
+
+function buildProposalInviteEmail(clientName: string, privateUrl: string, accessRequired: boolean): EmailContent {
+  const safeName = escapeHtml(clientName.split(' ')[0] || clientName);
+  const safeUrl = escapeHtml(privateUrl);
+  const accessNote = accessRequired
+    ? 'Por tu seguridad, necesitarás un código de acceso para abrirla. Te lo compartiremos por otro canal.'
+    : '';
+
+  const sections = [
+    ['01', 'ITINERARIO', 'Tu viaje, día a día'],
+    ['02', 'EXPERIENCIAS', 'Alojamientos y momentos seleccionados'],
+    ['03', 'DETALLES', 'Inversión y condiciones de tu viaje']
+  ];
+
+  const bodyRows = `
+    <tr>
+      <td style="background:#6D2A34; padding:32px 28px 34px; border-radius:2px;">
+        <p style="margin:0 0 10px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#CAAE97;">&mdash; TU PROPUESTA DE VIAJE</p>
+        <p style="margin:0 0 14px; font-family:Georgia,'Times New Roman',serif; font-size:30px; line-height:1.2; color:#F6EFE6;">Hola ${safeName},<br /><em>tu propuesta está lista.</em></p>
+        <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; color:#F6EFE6;">Hemos preparado una propuesta pensada enteramente para ti, a partir de todo lo que nos compartiste.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:28px 28px 0;">
+        <p style="margin:0 0 12px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#16110F;">EN TU PROPUESTA ENCONTRARÁS</p>
+        <div style="border-top:1px solid #C79A5B;"></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:0 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            ${sections
+              .map(
+                ([n, label, desc], i) => `
+            <td width="33%" valign="top" style="padding:16px ${i === 2 ? '0' : '12px'} 16px ${i === 0 ? '0' : '12px'};${i < 2 ? ' border-right:1px solid #E3D3C0;' : ''}">
+              <p style="margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:16px; color:#CAAE97;">${n}</p>
+              <p style="margin:0 0 4px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:1px; color:#7A2338;">${label}</p>
+              <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.5; color:#8A7F76;">${desc}</p>
+            </td>`
+              )
+              .join('')}
+          </tr>
+        </table>
+        <div style="border-top:1px solid #E3D3C0;"></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center" style="padding:28px 28px 8px;">
+        <a href="${safeUrl}" style="display:inline-block; background:#6D2A34; color:#F6EFE6; text-decoration:none; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:2px; padding:14px 32px;">VER MI PROPUESTA</a>
+        <p style="margin:10px 0 0; font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#8A7F76;">Disponible en línea desde cualquier dispositivo.</p>
+      </td>
+    </tr>
+
+    ${
+      accessNote
+        ? `<tr>
+      <td style="padding:20px 28px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DFD3; border-radius:2px;">
+          <tr>
+            <td width="44" valign="middle" style="padding:16px 0 16px 16px;">
+              <div style="width:30px; height:30px; line-height:30px; border:1px solid #CAAE97; border-radius:15px; text-align:center; font-size:13px; background:#F6EFE6;">&#128274;</div>
+            </td>
+            <td valign="middle" style="padding:16px 16px 16px 12px;">
+              <p style="margin:0 0 3px; font-family:Arial,Helvetica,sans-serif; font-size:10px; font-weight:bold; letter-spacing:2px; color:#6D2A34;">ACCESO PROTEGIDO</p>
+              <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.5; color:#16110F;">${accessNote}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`
+        : ''
+    }
+
+    <tr>
+      <td align="center" style="padding:28px 28px 32px;">
+        <p style="margin:0 0 6px; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.6; color:#8A7F76;">¿Quieres ajustar algo? Responde a este correo y tu asesor lo afinará contigo.</p>
+        <p style="margin:0; font-family:Georgia,'Times New Roman',serif; font-style:italic; font-size:16px; color:#6D2A34;">Con cariño, el equipo de The Travel Edit.</p>
+      </td>
+    </tr>`;
+
+  const html = emailShellHtml(bodyRows, 'Recibes este correo porque solicitaste un viaje a medida con The Travel Edit.');
+  const text = [
+    `Hola ${clientName}, tu propuesta de viaje está lista.`,
+    '',
+    'Ver mi propuesta:',
+    privateUrl,
+    ...(accessNote ? ['', accessNote] : []),
+    '',
+    'The Travel Edit'
+  ].join('\n');
+
+  return { subject: 'Tu propuesta de viaje está lista', html, text };
+}
+
+// Sin tipos de tablas generados, supabase-js infiere `never` en select/insert/update: se usa el cliente sin esquema.
+// deno-lint-ignore no-explicit-any
+type AnyClient = SupabaseClient<any, any, any, any, any>;
+
+async function handleProposalMode(
+  body: ProposalRequestBody,
+  callerClient: AnyClient,
+  serviceClient: AnyClient,
+  callerId: string,
+  json: (body: unknown, status: number) => Response
+): Promise<Response> {
+  const { data: canManage, error: canManageError } = await callerClient.rpc('can_manage_proposals');
+  if (canManageError || canManage !== true) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes permiso para enviar propuestas.' }, 403);
+  }
+
+  const proposalId = typeof body.proposalId === 'string' ? body.proposalId.trim() : '';
+  if (!proposalId) {
+    return json({ code: 'BAD_REQUEST', error: 'Falta la propuesta a enviar.' }, 400);
+  }
+
+  // Visibilidad (RLS), tipo (SOLO kind = 'proposal'; un itinerario se rechaza sin enviar ni mutar nada) y status
+  // published/viewed: todo en proposal-source.ts.
+  const loaded = await loadProposalToSend(callerClient, serviceClient, proposalId);
+  if (!('proposal' in loaded)) {
+    return json(loaded.body, loaded.status);
+  }
+  const { proposal } = loaded;
+
+  // Destinatario: el correo que el staff cargó en la propia propuesta
+  // (proposals.client_email) o, si no hay, el de la solicitud vinculada. Siempre
+  // se lee del row con la service role — nunca del body de la request.
+  let lead: { id: string; name: string; email: string | null; status: string } | null = null;
+  if (proposal.lead_id) {
+    const { data: leadRow, error: leadError } = await serviceClient
+      .from('leads')
+      .select('id, name, email, status')
+      .eq('id', proposal.lead_id)
+      .maybeSingle();
+
+    if (leadError) {
+      console.error('send-proposal (proposal): error leyendo el lead vinculado', leadError);
+      return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la solicitud vinculada.' }, 500);
+    }
+    lead = leadRow;
+  }
+
+  const recipient = (proposal.client_email?.trim() || lead?.email?.trim() || '').trim();
+  if (!recipient) {
+    return json(
+      { code: 'NO_RECIPIENT', error: 'Falta el correo del cliente. Agrégalo en el paso "Cliente y viaje" de la propuesta.' },
+      400
+    );
+  }
+
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) {
+    console.error('send-proposal (proposal): RESEND_API_KEY no configurado.');
+    return json({ code: 'EMAIL_NOT_CONFIGURED', error: 'El envío de correos no está configurado todavía.' }, 502);
+  }
+
+  const privateUrl = `${SITE}/private/${proposal.public_token}`;
+  const fromEmail = await fetchResendFromEmail(serviceClient);
+  const email = buildProposalInviteEmail(proposal.client_name ?? lead?.name ?? '', privateUrl, proposal.access_required === true);
+
+  // Las respuestas del cliente van directo a su asesora.
+  let advisorEmail: string | undefined;
+  if (proposal.advisor_id) {
+    const { data: advisorUser } = await serviceClient.auth.admin.getUserById(proposal.advisor_id);
+    advisorEmail = advisorUser?.user?.email ?? undefined;
+  }
+
+  const result = await sendViaResend(resendApiKey, fromEmail, {
+    to: [recipient],
+    replyTo: advisorEmail,
+    subject: email.subject,
+    html: email.html,
+    text: email.text
+  });
+
+  if (!result.sent) {
+    if (lead) {
+      await serviceClient
+        .from('leads')
+        .update({ proposal_email_status: 'failed', proposal_email_error: result.error ?? 'Resend rechazó el envío.' })
+        .eq('id', lead.id);
+    }
+
+    return json({ code: 'EMAIL_SEND_FAILED', error: 'No se pudo enviar la propuesta. Intenta de nuevo.' }, 502);
+  }
+
+  const sentAt = new Date().toISOString();
+  // Mismo criterio que el modo legacy: solo avanza el lead si estaba en un
+  // punto temprano del pipeline; nunca retrocede uno ya más adelante ni uno
+  // cerrado. El envío exitoso es la ÚNICA acción de esta fase que mueve el
+  // estado del lead — crear el draft, publicar o copiar el link no lo tocan.
+  if (lead) {
+    const nextStatus = lead.status === 'nueva' || lead.status === 'contactada' ? 'propuesta_enviada' : lead.status;
+
+    const { error: updateError } = await serviceClient
+      .from('leads')
+      .update({
+        proposal_sent_at: sentAt,
+        proposal_sent_by: callerId,
+        proposal_email_status: 'sent',
+        proposal_email_error: null,
+        status: nextStatus
+      })
+      .eq('id', lead.id);
+
+    if (updateError) {
+      console.error('send-proposal (proposal): el correo se envió pero no se pudo actualizar el lead', updateError);
+      return json({ code: 'INTERNAL_ERROR', error: 'La propuesta se envió, pero no se pudo registrar. Refresca la página.' }, 500);
+    }
+  }
+
+  const auditRows: Record<string, unknown>[] = [
+    {
+      entity_type: 'proposal',
+      entity_id: proposalId,
+      actor_id: callerId,
+      action: 'proposal_sent_to_client',
+      summary: `Propuesta enviada a ${recipient}`
+    }
+  ];
+  if (lead) {
+    auditRows.unshift({
+      entity_type: 'lead',
+      entity_id: lead.id,
+      actor_id: callerId,
+      action: 'proposal_sent',
+      summary: 'Propuesta enviada por correo al cliente'
+    });
+  }
+  const { error: auditError } = await serviceClient.from('audit_log').insert(auditRows);
+  if (auditError) {
+    console.error('send-proposal (proposal): no se pudo registrar en audit_log', auditError);
+  }
+
+  return json({ ok: true, sentTo: recipient, sentAt }, 200);
+}
+
+/** Lo único que la prueba de punta a punta necesita sustituir: cómo se crean los clientes de Supabase. */
+export interface Deps {
+  createClient: typeof createClient;
+}
+
+const defaultDeps: Deps = { createClient };
+
+export async function handleRequest(req: Request, deps: Deps = defaultDeps): Promise<Response> {
+  const cors = corsHeadersFor(req);
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: cors });
+  }
+
+  const json = (body: unknown, status: number) =>
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
+  if (req.method !== 'POST') {
+    return json({ code: 'METHOD_NOT_ALLOWED', error: 'Método no permitido.' }, 405);
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return json({ code: 'UNAUTHORIZED_NO_AUTH_HEADER', error: 'Falta el header de autorización.' }, 401);
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) {
+    return json({ code: 'UNAUTHORIZED_INVALID_TOKEN', error: 'Token de autorización inválido.' }, 401);
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  // callerClient corre con la sesión real del usuario (anon key + su JWT) —
+  // se usa solo para confirmar quién es y para invocar can_manage_leads() en
+  // su propio contexto, nunca para leer/escribir leads directamente.
+  const callerClient = deps.createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: `Bearer ${token}` } }
+  });
+
+  const { data: userData, error: userError } = await callerClient.auth.getUser(token);
+  if (userError || !userData.user) {
+    return json({ code: 'UNAUTHORIZED_INVALID_TOKEN', error: 'Sesión inválida.' }, 401);
+  }
+
+  const serviceClient = deps.createClient(supabaseUrl, serviceRoleKey);
+  const rawBody = await req.json().catch(() => null);
+
+  if (isProposalBody(rawBody)) {
+    return handleProposalMode(rawBody, callerClient, serviceClient, userData.user.id, json);
+  }
+
+  // Mecanismo de permisos existente: can_manage_leads() = rol admin o staff
+  // (0007_roles_permissions.sql). 'editor' queda afuera, igual que en las
+  // policies de leads_update/leads_select.
+  const { data: canManage, error: canManageError } = await callerClient.rpc('can_manage_leads');
+  if (canManageError || canManage !== true) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes permiso para enviar propuestas.' }, 403);
+  }
+
+  const body = rawBody as RequestBody | null;
+  const leadId = typeof body?.leadId === 'string' ? body.leadId.trim() : '';
+  const subject = typeof body?.subject === 'string' ? body.subject.trim() : '';
+  const message = typeof body?.message === 'string' ? body.message.trim() : '';
+
+  if (!leadId) {
+    return json({ code: 'BAD_REQUEST', error: 'Falta la solicitud a la que enviar la propuesta.' }, 400);
+  }
+  if (!subject) {
+    return json({ code: 'BAD_REQUEST', error: 'El asunto es obligatorio.' }, 400);
+  }
+  if (!message) {
+    return json({ code: 'BAD_REQUEST', error: 'El mensaje es obligatorio.' }, 400);
+  }
+
+  // El correo del destinatario SIEMPRE se lee de la base, nunca del body de
+  // la request — así el frontend no puede mandar un destinatario arbitrario
+  // aunque lo intente.
+  const { data: visibleLead } = await callerClient.from('leads').select('id').eq('id', leadId).maybeSingle();
+  if (!visibleLead) {
+    return json({ code: 'FORBIDDEN', error: 'No tienes acceso a esta solicitud.' }, 403);
+  }
+
+  const { data: lead, error: leadError } = await serviceClient
+    .from('leads')
+    .select('id, name, email, status')
+    .eq('id', leadId)
+    .maybeSingle();
+
+  if (leadError) {
+    console.error('send-proposal: error leyendo el lead', leadError);
+    return json({ code: 'INTERNAL_ERROR', error: 'No se pudo cargar la solicitud.' }, 500);
+  }
+  if (!lead) {
+    return json({ code: 'NOT_FOUND', error: 'La solicitud no existe.' }, 404);
+  }
+  if (!lead.email) {
+    return json({ code: 'BAD_REQUEST', error: 'Esta solicitud no tiene un correo válido.' }, 400);
+  }
+
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) {
+    console.error('send-proposal: RESEND_API_KEY no configurado.');
+    return json({ code: 'EMAIL_NOT_CONFIGURED', error: 'El envío de correos no está configurado todavía.' }, 502);
+  }
+
+  const fromEmail = await fetchResendFromEmail(serviceClient);
+  const email = buildProposalEmail(lead.name, subject, message);
+  const result = await sendViaResend(resendApiKey, fromEmail, {
+    to: [lead.email],
+    subject: email.subject,
+    html: email.html,
+    text: email.text
+  });
+
+  if (!result.sent) {
+    // No se toca proposal_subject/proposal_message/proposal_sent_at/
+    // proposal_sent_by — si ya había una propuesta enviada antes, ese
+    // registro se conserva intacto; solo se refleja que ESTE intento falló.
+    await serviceClient
+      .from('leads')
+      .update({ proposal_email_status: 'failed', proposal_email_error: result.error ?? 'Resend rechazó el envío.' })
+      .eq('id', leadId);
+
+    return json({ code: 'EMAIL_SEND_FAILED', error: 'No se pudo enviar la propuesta. Intenta de nuevo.' }, 502);
+  }
+
+  const sentAt = new Date().toISOString();
+
+  // 'nueva'/'contactada' -> 'propuesta_enviada' es un avance natural del
+  // pipeline; si el lead ya estaba más adelante (propuesta_enviada de antes,
+  // o cerrado) no se mueve el estado hacia atrás ni se toca uno cerrado.
+  const nextStatus = lead.status === 'nueva' || lead.status === 'contactada' ? 'propuesta_enviada' : lead.status;
+
+  const { error: updateError } = await serviceClient
+    .from('leads')
+    .update({
+      proposal_subject: subject,
+      proposal_message: message,
+      proposal_sent_at: sentAt,
+      proposal_sent_by: userData.user.id,
+      proposal_email_status: 'sent',
+      proposal_email_error: null,
+      status: nextStatus
+    })
+    .eq('id', leadId);
+
+  if (updateError) {
+    console.error('send-proposal: el correo se envió pero no se pudo actualizar el lead', updateError);
+    return json({ code: 'INTERNAL_ERROR', error: 'La propuesta se envió, pero no se pudo registrar. Refresca la página.' }, 500);
+  }
+
+  const { error: auditError } = await serviceClient.from('audit_log').insert({
+    entity_type: 'lead',
+    entity_id: leadId,
+    actor_id: userData.user.id,
+    action: 'proposal_sent',
+    summary: 'Propuesta enviada por correo al cliente'
+  });
+  if (auditError) {
+    // Best-effort — el envío y la actualización del lead ya son la fuente de
+    // verdad; un fallo solo de auditoría no debe reportarse como error al UI.
+    console.error('send-proposal: no se pudo registrar en audit_log', auditError);
+  }
+
+  return json({ ok: true, proposalSentAt: sentAt, status: nextStatus }, 200);
+}

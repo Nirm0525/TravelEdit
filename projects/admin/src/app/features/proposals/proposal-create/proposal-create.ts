@@ -47,13 +47,15 @@ export class ProposalCreate {
     try {
       const raw = this.form.getRawValue();
       const proposal = await this.proposalsService.createDraft({
+        // Explícito: Propuesta → 'proposal', Itinerario → 'itinerary' (nunca el DEFAULT de la base).
+        kind: this.mode,
         clientName: raw.clientName,
         destinationText: raw.destinationText || undefined
       });
       await this.router.navigate(travelPaths.edit(this.mode, proposal.id));
     } catch (err) {
       console.error('No se pudo crear la propuesta.', err);
-      this.error.set(`No se pudo crear la ${this.labels.singular}. Intenta de nuevo.`);
+      this.error.set(this.labels.createError);
     } finally {
       this.saving.set(false);
     }

@@ -6,6 +6,7 @@ import { SERVICE_FILES_BUCKET } from '../_shared/service-attachment-rules.ts';
 import type { AttachmentRow, Deps, InsertResult, ProposalForUser } from './handler.ts';
 
 const TABLE = 'proposal_service_attachments';
+const PROPOSAL_COLUMNS = 'id, content, updated_at, kind, advisor_id';
 
 export function createRealDeps(): Deps {
   const url = Deno.env.get('SUPABASE_URL')!;
@@ -30,13 +31,18 @@ export function createRealDeps(): Deps {
       return error || !data.user ? null : { id: data.user.id };
     },
 
-    async canManageProposals(token) {
-      const { data } = await userClient(token).rpc('can_manage_proposals');
+    async canTravel(token, kind, action) {
+      const { data } = await userClient(token).rpc('can_travel', { p_kind: kind, p_action: action });
+      return data === true;
+    },
+
+    async isOwnOrFull(token, advisorId) {
+      const { data } = await userClient(token).rpc('is_own_or_full', { p_owner: advisorId });
       return data === true;
     },
 
     async getProposalAsUser(token, proposalId) {
-      const { data } = await userClient(token).from('proposals').select('id, content, updated_at').eq('id', proposalId).maybeSingle();
+      const { data } = await userClient(token).from('proposals').select(PROPOSAL_COLUMNS).eq('id', proposalId).maybeSingle();
       return (data as ProposalForUser | null) ?? null;
     },
 
@@ -46,16 +52,11 @@ export function createRealDeps(): Deps {
         .update({ content })
         .eq('id', proposalId)
         .eq('updated_at', expectedUpdatedAt)
-        .select('id, content, updated_at');
+        .select(PROPOSAL_COLUMNS);
       if (error) {
         return fail('update content', error);
       }
       return ((data as ProposalForUser[] | null) ?? [])[0] ?? null;
-    },
-
-    async isAdmin(userId) {
-      const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
-      return (data as { role?: string } | null)?.role === 'admin';
     },
 
     async getAttachment(id) {

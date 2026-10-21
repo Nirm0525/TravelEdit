@@ -14,8 +14,10 @@ import { PublishProblem, pendingLabel } from '../../../../core/models/publish-re
 export class PublishChecklist {
   readonly problems = input.required<PublishProblem[]>();
   readonly selected = output<PublishProblem>();
+  /** «publicar» en una propuesta, «compartir» en un itinerario. */
+  readonly verb = input<'publicar' | 'compartir'>('publicar');
 
-  readonly title = computed(() => pendingLabel(this.problems().length));
+  readonly title = computed(() => pendingLabel(this.problems().length, this.verb()));
 
   trackKey(problem: PublishProblem): string {
     return `${problem.code}:${problem.line_id ?? problem.service_id ?? problem.day_id ?? ''}`;

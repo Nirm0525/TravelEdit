@@ -3,18 +3,15 @@
     @case ('loading') {
       <div class="private-proposal__center private-proposal__center--loading" role="status" aria-live="polite">
         <img src="images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
-        <p class="private-proposal__loading-copy">Preparando tu propuesta…</p>
+        <p class="private-proposal__loading-copy">{{ copy().loading }}</p>
       </div>
     }
 
     @case ('unavailable') {
       <div class="private-proposal__center">
         <img src="images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="private-proposal__wordmark-img" />
-        <h1 class="private-proposal__center-title">Esta propuesta no está disponible</h1>
-        <p class="private-proposal__center-copy">
-          El enlace puede haber expirado o la propuesta todavía no está lista para verse. Contacta a tu asesora de
-          viajes si crees que esto es un error.
-        </p>
+        <h1 class="private-proposal__center-title">{{ copy().unavailableTitle }}</h1>
+        <p class="private-proposal__center-copy">{{ copy().unavailableCopy }}</p>
       </div>
     }
 
@@ -32,7 +29,7 @@
                 <p class="private-proposal__gate-tagline">Experiencias de viaje curadas</p>
               </div>
 
-              <h1 class="private-proposal__gate-headline">Ingresa para ver tu propuesta de viaje</h1>
+              <h1 class="private-proposal__gate-headline">{{ copy().gateHeadline }}</h1>
 
               <form class="private-proposal__gate-form" (submit)="$event.preventDefault(); submitCode()">
                 @if (accessError() !== 'expired') {
@@ -60,9 +57,9 @@
                     @switch (err) {
                       @case ('invalid_code') { Código incorrecto. Inténtalo nuevamente. }
                       @case ('locked') { El acceso está temporalmente bloqueado. Intenta más tarde. }
-                      @case ('expired') { Tu acceso a esta propuesta venció. Pide a tu asesora que lo renueve. }
-                      @case ('not_found') { Esta propuesta no está disponible. }
-                      @case ('access_not_configured') { Esta propuesta no está disponible. }
+                      @case ('expired') { {{ copy().expired }} }
+                      @case ('not_found') { {{ copy().notAvailable }} }
+                      @case ('access_not_configured') { {{ copy().notAvailable }} }
                       @default { No pudimos validar el acceso en este momento. }
                     }
                   </p>
@@ -70,12 +67,12 @@
 
                 @if (accessError() !== 'expired') {
                   <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
-                    {{ verifying() ? 'Verificando…' : 'Ver mi propuesta' }}
+                    {{ verifying() ? 'Verificando…' : copy().submit }}
                   </button>
                 }
               </form>
 
-              <p class="private-proposal__gate-footnote">Esta propuesta es privada y personal.</p>
+              <p class="private-proposal__gate-footnote">{{ copy().footnote }}</p>
             </div>
           </aside>
 
@@ -91,7 +88,7 @@
               <div class="private-proposal__gate-hero-content">
                 <div class="private-proposal__gate-hero-heading">
                   <p class="private-proposal__gate-eyebrow">Una experiencia diseñada para ti</p>
-                  <h2 class="private-proposal__gate-proposal-title">Propuesta</h2>
+                  <h2 class="private-proposal__gate-proposal-title">{{ copy().gateTitle }}</h2>
                 </div>
 
                 <dl class="private-proposal__gate-facts">
@@ -135,7 +132,7 @@
 
             <header class="proposal__topbar">
               <img src="images/logos/thetraveleditlogo1.png" alt="The Travel Edit" class="private-proposal__wordmark-img private-proposal__wordmark-img--topbar" />
-              <span class="proposal__topbar-tag">Propuesta privada</span>
+              <span class="proposal__topbar-tag">{{ copy().topbarTag }}</span>
             </header>
 
             <div class="proposal__hero-content">
@@ -178,7 +175,7 @@
               id="proposal-sidebar"
               class="proposal__sidebar no-print"
               [class.is-open]="navOpen()"
-              aria-label="Menú de la propuesta"
+              [attr.aria-label]="copy().menuAria"
             >
               <button type="button" class="proposal__sidebar-close" (click)="closeNav()" aria-label="Cerrar menú">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
@@ -188,7 +185,7 @@
               <p class="proposal__sidebar-heading">Menú</p>
 
               <div class="proposal__sidebar-scroll">
-                <nav aria-label="Secciones de la propuesta">
+                <nav [attr.aria-label]="copy().sectionsAria">
                   <ul class="proposal__sidebar-list">
                     <span class="proposal__sidebar-indicator" aria-hidden="true"></span>
                     @for (item of navItems(); track item.id) {
@@ -457,7 +454,7 @@
                               @if (service.time) {
                                 <span class="proposal__service-clock">{{ service.time }}</span>
                               }
-                              @if (canChooseServices() || serviceChoices()[service.id]) {
+                              @if (!isItinerary() && (canChooseServices() || serviceChoices()[service.id])) {
                                 <button
                                   type="button"
                                   class="proposal__service-choice no-print"
@@ -663,7 +660,7 @@
             </section>
           }
 
-          @if (d.content.pricing.lines.length > 0 || d.content.pricing.feesLines.length > 0) {
+          @if (!isItinerary() && (d.content.pricing.lines.length > 0 || d.content.pricing.feesLines.length > 0)) {
             <section id="inversion" class="proposal__section proposal__pricing" appRevealOnScroll>
               <div class="proposal__band"><h2>Inversión</h2></div>
 
@@ -807,7 +804,7 @@
             </section>
           }
 
-          @if (safeTermsBody()) {
+          @if (!isItinerary() && safeTermsBody()) {
             <section id="terminos" class="proposal__section proposal__terms" appRevealOnScroll>
               <div class="proposal__band"><h2>{{ d.content.terms.title || 'Términos y condiciones' }}</h2></div>
               <a class="proposal__terms-link" [routerLink]="['/private', token(), 'terminos']">
@@ -826,7 +823,9 @@
           }
 
           <section id="aceptar" class="proposal__section proposal__accept no-print" appRevealOnScroll>
-            @if (d.status === 'accepted') {
+            <!-- Aceptar la propuesta: solo en propuestas. Un itinerario termina con su cierre, sin aceptación ni comentarios. -->
+            @if (isItinerary()) {
+            } @else if (d.status === 'accepted') {
               <div class="proposal__accept-box">
                 <p class="proposal__accepted-check" aria-hidden="true">✓</p>
                 <h2 class="proposal__accept-title">Propuesta aceptada</h2>
@@ -904,10 +903,7 @@
                 alt="The Travel Edit"
                 class="private-proposal__wordmark-img proposal__closing-logo"
               />
-              <p class="proposal__closing-text">
-                Tu propuesta ha sido creada especialmente para ti. Si tienes alguna pregunta, comunícate con tu asesora
-                de viajes.
-              </p>
+              <p class="proposal__closing-text">{{ copy().closing }}</p>
             </div>
           </section>
           </div>

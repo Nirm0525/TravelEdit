@@ -290,6 +290,52 @@ export class ProposalsService {
     return ((data ?? []) as unknown as PublishProblem[]).slice().sort((a, b) => a.position - b.position);
   }
 
+  // ------------------------------------------------------------------ itinerarios: compartir (migración 0056)
+  // NUNCA se reutilizan publish/unpublish ni send-proposal: un itinerario se comparte con sus propias RPC y su propia Edge Function.
+
+  /**
+   * Lista de pendientes para compartir un itinerario (get_itinerary_share_readiness): la misma que revisa share_itinerary en el
+   * servidor. null si no se pudo saber: quien llama no debe bloquear por eso, la base decide al compartir.
+   */
+  async getItineraryShareReadiness(id: string, forEmail = false): Promise<PublishProblem[] | null> {
+    const { data, error } = await this.supabase.client.rpc('get_itinerary_share_readiness', { p_id: id, p_for_email: forEmail });
+    if (error) {
+      console.error('No se pudo consultar qué falta para compartir.', error);
+      return null;
+    }
+    return ((data ?? []) as unknown as PublishProblem[]).slice().sort((a, b) => a.position - b.position);
+  }
+
+  async shareItinerary(id: string): Promise<void> {
+    const { error } = await this.supabase.client.rpc('share_itinerary', { p_id: id });
+    if (error) {
+      throw error;
+    }
+  }
+
+  async unshareItinerary(id: string): Promise<void> {
+    const { error } = await this.supabase.client.rpc('unshare_itinerary', { p_id: id });
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** «Enviar al cliente» de un itinerario COMPARTIDO: send-itinerary resuelve destinatario y enlace en el servidor; solo se manda el id. */
+  async sendItineraryToClient(id: string): Promise<{ sentTo: string; sentAt: string }> {
+    const { data, error } = await this.supabase.client.functions.invoke<{ ok?: boolean; sentTo?: string; sentAt?: string; error?: string }>(
+      'send-itinerary',
+      { body: { itineraryId: id } }
+    );
+    if (error) {
+      const parsed = await this.tryParseErrorBody(error, 'Este envío es solo para itinerarios.');
+      throw new Error(parsed ?? 'No se pudo enviar el itinerario. Inténtalo nuevamente.');
+    }
+    if (!data?.ok || !data.sentTo || !data.sentAt) {
+      throw new Error(data?.error ?? 'No se pudo enviar el itinerario. Inténtalo nuevamente.');
+    }
+    return { sentTo: data.sentTo, sentAt: data.sentAt };
+  }
+
   async unpublish(id: string): Promise<void> {
     const { error } = await this.supabase.client.rpc('unpublish_proposal', { p_id: id });
     if (error) {
@@ -358,7 +404,7 @@ export class ProposalsService {
     return { sentTo: data.sentTo, sentAt: data.sentAt };
   }
 
-  private async tryParseErrorBody(error: unknown): Promise<string | null> {
+  private async tryParseErrorBody(error: unknown, kindMessage = KIND_NOT_SUPPORTED_MESSAGE): Promise<string | null> {
     const context = (error as { context?: Response })?.context;
     if (!context || typeof context.json !== 'function') {
       return null;
@@ -367,8 +413,9 @@ export class ProposalsService {
       const body = await context.json();
       // Un itinerario no se envía por aquí (409): mensaje propio, sin el texto técnico del servidor.
       if (body?.code === 'KIND_NOT_SUPPORTED') {
-        return KIND_NOT_SUPPORTED_MESSAGE;
+        return kindMessage;
       }
+      // Los mensajes de send-itinerary ya vienen en español y pensados para la asesora (primero compartir, falta correo, acceso vencido…).
       return typeof body?.error === 'string' ? body.error : null;
     } catch {
       return null;

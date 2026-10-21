@@ -265,3 +265,26 @@ Deno.test('proposal-documents: un kind desconocido cierra por defecto', async ()
   w.proposals.get(I1)!.kind = 'proposal'; // y un itinerario «shared» disfrazado de propuesta tampoco abre
   assertEquals((await listI(w)).status, 404);
 });
+
+Deno.test('proposal-documents: al dejar de compartir un itinerario (borrador + sesiones revocadas) el enlace deja de entregar documentos', async () => {
+  const w = new World();
+  assertEquals((await listI(w)).status, 200);
+  assertEquals((await urlI(w, DOC_I)).status, 200);
+  // unshare_itinerary: vuelve a draft y borra las sesiones.
+  w.proposals.get(I1)!.status = 'draft';
+  w.sessions.delete(SI);
+  assertEquals((await listI(w)).status, 404);
+  assertEquals((await urlI(w, DOC_I)).status, 404);
+  // Aunque se volviera a compartir, la sesión vieja (revocada) sigue sin servir.
+  w.proposals.get(I1)!.status = 'shared';
+  assertEquals((await listI(w)).status, 404);
+  assertEquals(w.signed.length, 1, 'solo se firmó el documento de ANTES de dejar de compartir');
+});
+
+Deno.test('proposal-documents: un itinerario compartido solo entrega documentos visibles y nunca la ruta de Storage', async () => {
+  const w = new World();
+  const res = await listI(w);
+  assertFalse(res.text.includes('secreto'));
+  assertFalse(res.text.includes('storage_path'));
+  assertEquals((await urlI(w, DOC_I_INTERNAL)).status, 404);
+});

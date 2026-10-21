@@ -8,7 +8,11 @@ const PROPOSAL_IMAGES_BUCKET = 'proposal-images';
  *  página de términos lee la misma, ver PrivateProposalTerms). */
 export const PROPOSAL_SESSION_PREFIX = 'te-proposal-session:';
 
-export type ProposalStatus = 'draft' | 'published' | 'viewed' | 'accepted' | 'expired';
+/** Tipo de registro (proposals.kind). Lo decide la base: la pantalla pública nunca lo deduce de la URL. */
+export type TravelKind = 'proposal' | 'itinerary';
+
+/** 'shared' es el estado de un itinerario compartido (0056); 'published' el de una propuesta. */
+export type ProposalStatus = 'draft' | 'shared' | 'published' | 'viewed' | 'accepted' | 'expired';
 
 // Mismos 5 valores que verify_proposal_access() devuelve en la columna
 // `result` (supabase/migrations/0035_proposal_access_credentials.sql) — el
@@ -19,6 +23,8 @@ export type ProposalStatus = 'draft' | 'published' | 'viewed' | 'accepted' | 'ex
 export type ProposalAccessResult = 'ok' | 'not_found' | 'access_not_configured' | 'locked' | 'invalid_code' | 'expired';
 
 export interface ProposalGateResponse {
+  /** Ausente en respuestas anteriores a 0055: se trata como propuesta. */
+  kind?: TravelKind;
   accessRequired: boolean;
   clientName: string;
   coverTitle: string | null;
@@ -33,6 +39,8 @@ export interface ProposalAccessResponse {
 }
 
 export interface PublicProposalData {
+  /** Ausente en respuestas anteriores a 0055: se trata como propuesta. */
+  kind?: TravelKind;
   content: ProposalContent;
   pricingSubtotal: number;
   pricingFees: number;
@@ -83,6 +91,7 @@ function toServiceChoices(value: Record<string, unknown> | null | undefined): Re
 }
 
 interface GateRpcRow {
+  kind?: TravelKind;
   access_required: boolean;
   client_name: string;
   cover_title: string | null;
@@ -97,6 +106,7 @@ interface AccessRpcRow {
 }
 
 interface ContentRpcRow {
+  kind?: TravelKind;
   content: unknown;
   pricing_subtotal: number;
   pricing_fees: number;
@@ -141,6 +151,7 @@ export class PublicProposalService {
       return null;
     }
     return {
+      kind: row.kind === 'itinerary' ? 'itinerary' : 'proposal',
       accessRequired: row.access_required,
       clientName: row.client_name,
       coverTitle: row.cover_title,
@@ -178,6 +189,7 @@ export class PublicProposalService {
       throw new Error('session_invalid');
     }
     return {
+      kind: row.kind === 'itinerary' ? 'itinerary' : 'proposal',
       content: this.resolveImagePaths(toProposalContent(row.content)),
       pricingSubtotal: Number(row.pricing_subtotal),
       pricingFees: Number(row.pricing_fees),

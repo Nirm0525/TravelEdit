@@ -7,6 +7,9 @@ export class FakeSupabase {
   tables: Record<string, Row[]> = {};
   /** Escrituras intentadas: «insert|update|delete tabla». Una función que debe rechazar sin mutar deja esto vacío. */
   writes: string[] = [];
+  /** Filas realmente insertadas (tabla + contenido), para comprobar QUÉ se escribió, no solo que se escribió. */
+  inserted: { table: string; row: unknown }[] = [];
+  rpcArgs: { name: string; args: unknown }[] = [];
   rpcCalls: string[] = [];
   authAdminCalls: string[] = [];
   rpcResults: Record<string, unknown> = {};
@@ -26,8 +29,9 @@ export class FakeSupabase {
         const row = (db.tables[table] ?? []).find((r) => filters.every(([c, v]) => r[c] === v)) ?? null;
         return Promise.resolve({ data: row ? { ...row } : null, error: null });
       },
-      insert(_row: unknown) {
+      insert(row: unknown) {
         db.writes.push(`insert ${table}`);
+        db.inserted.push({ table, row });
         return Promise.resolve({ data: null, error: null });
       },
       update(_patch: unknown) {
@@ -46,8 +50,9 @@ export class FakeSupabase {
     return builder;
   }
 
-  rpc(name: string) {
+  rpc(name: string, args?: unknown) {
     this.rpcCalls.push(name);
+    this.rpcArgs.push({ name, args });
     return Promise.resolve({ data: this.rpcResults[name] ?? null, error: null });
   }
 

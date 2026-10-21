@@ -58,7 +58,7 @@ export interface TravelCapabilities {
   serviceChoices: boolean;
   /** Comentarios de cotización del cliente por servicio. */
   quoteComments: boolean;
-  /** Dar acceso/compartir con el cliente SIN publicación comercial (futuro; sin acción real en Fase 1). */
+  /** Compartir con el cliente SIN publicación comercial: «Compartir itinerario», «Dejar de compartir», copiar enlace, WhatsApp y correo. */
   shareAccess: boolean;
   documents: boolean;
   aiAssistant: boolean;
@@ -117,6 +117,8 @@ export interface TravelModeConfig {
     create: PermissionCode;
     edit: PermissionCode;
     remove: PermissionCode;
+    /** Publicar (propuesta) o compartir (itinerario): la acción que entrega el viaje al cliente. */
+    share: PermissionCode;
     documents: PermissionCode;
   };
 }
@@ -181,6 +183,7 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       create: 'propuestas.crear',
       edit: 'propuestas.editar',
       remove: 'propuestas.eliminar',
+      share: 'propuestas.publicar',
       documents: 'propuestas.gestionar_documentos'
     }
   },
@@ -222,7 +225,7 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
     // Itinerario = viaje confirmado/operativo: privado (código, expiración, documentos) pero sin nada comercial/contractual.
     capabilities: {
       publish: false,
-      // «Compartir / Dar acceso al cliente»: capacidad separada de la publicación comercial. Sin acción real hasta la Fase 2.
+      // «Compartir / Dar acceso al cliente»: capacidad separada de la publicación comercial (share_itinerary / unshare_itinerary, 0056).
       shareAccess: true,
       pricing: false,
       terms: false,
@@ -247,6 +250,7 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       create: 'itinerarios.crear',
       edit: 'itinerarios.editar',
       remove: 'itinerarios.eliminar',
+      share: 'itinerarios.compartir',
       documents: 'itinerarios.gestionar_documentos'
     }
   }

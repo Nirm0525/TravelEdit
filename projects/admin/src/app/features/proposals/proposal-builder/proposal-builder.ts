@@ -5,7 +5,7 @@ import { ProposalsService } from '../../../core/services/proposals';
 import { LeadsService } from '../../../core/services/leads';
 import { AuthService } from '../../../core/services/auth';
 import { Proposal } from '../../../core/models/proposal.model';
-import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
+import { statusLabelOf } from '../../../core/models/proposal-enums';
 import { PublishProblem, isPublishTab, pendingLabel, problemAnchorId, scrollToAnchor } from '../../../core/models/publish-readiness';
 import { environment } from '../../../../environments/environment';
 import { ClientTripStep } from './client-trip-step/client-trip-step';
@@ -39,6 +39,17 @@ type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
 /** Mensajes que publish_proposal() lanza a propósito (en español, pensados para la asesora). */
 const PUBLISH_USER_MESSAGES = ['Faltan datos para publicar', 'Solo se puede publicar', 'No autorizado', 'Propuesta no encontrada'];
 
+/** Mensajes que share_itinerary() / unshare_itinerary() lanzan a propósito (en español, pensados para la asesora). */
+const SHARE_USER_MESSAGES = ['Faltan datos para compartir', 'Solo se puede compartir', 'No autorizado', 'Itinerario no encontrado', 'No se pudo compartir el itinerario'];
+
+function shareErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { message?: unknown } | null)?.message;
+  if (typeof message === 'string' && SHARE_USER_MESSAGES.some((prefix) => message.startsWith(prefix))) {
+    return message;
+  }
+  return fallback;
+}
+
 /** Supabase devuelve los errores de la base como objetos simples (no `Error`): el motivo está en `.message`. */
 function publishErrorMessage(error: unknown): string {
   const message = (error as { message?: unknown } | null)?.message;
@@ -71,7 +82,13 @@ export class ProposalBuilder {
   readonly canRemove = computed(() => can(this.auth.profile()?.role, this.config.permissions.remove));
   readonly routeBase = this.config.routeBase;
   readonly tabs = computed(() => this.config.tabs.filter((tab) => !tab.permission || can(this.auth.profile()?.role, tab.permission)));
-  readonly statusLabel = PROPOSAL_STATUS_LABEL;
+  /** Etiqueta del estado según el tipo de la fila (un itinerario habla de «compartido» y «visto»). */
+  readonly statusText = (p: Proposal): string => statusLabelOf(p.kind, p.status);
+  /** Compartir/dejar de compartir/enviar un itinerario: el permiso es el de ESE tipo (itinerarios.compartir), nunca el de propuestas. */
+  readonly canShare = computed(() => this.caps.shareAccess && can(this.auth.profile()?.role, this.config.permissions.share));
+  readonly sharing = signal(false);
+  readonly unsharePending = signal(false);
+  readonly sentLabel = computed(() => (this.caps.shareAccess ? 'Itinerario enviado a' : 'Propuesta enviada a'));
   readonly proposalId = this.route.snapshot.paramMap.get('id')!;
 
   readonly proposal = signal<Proposal | null>(null);
@@ -88,7 +105,7 @@ export class ProposalBuilder {
   readonly readiness = signal<PublishProblem[] | null>(null);
   readonly pendingCount = computed(() => this.readiness()?.length ?? 0);
   readonly publishBlocked = computed(() => this.pendingCount() > 0);
-  readonly pendingLabel = computed(() => pendingLabel(this.pendingCount()));
+  readonly pendingLabel = computed(() => pendingLabel(this.pendingCount(), this.caps.shareAccess ? 'compartir' : 'publicar'));
   private readinessSeq = 0;
   readonly linkCopied = signal(false);
 
@@ -118,6 +135,20 @@ export class ProposalBuilder {
     const firstName = (p.clientName ?? '').trim().split(' ')[0];
     const advisor = this.auth.profile()?.fullName ?? 'tu asesora';
     const code = this.whatsappCode().trim();
+    if (p.kind === 'itinerary') {
+      // Itinerario: sin «propuesta», sin precios. El enlace es el privado oficial (privateLink): el cliente pasa por el acceso y el código.
+      const destination = (p.destinationText ?? '').trim();
+      const itineraryLines = [
+        `Hola${firstName ? ' ' + firstName : ''}, soy ${advisor} de The Travel Edit. Te compartimos el itinerario de tu viaje${destination ? ' a ' + destination : ''}:`,
+        '',
+        link
+      ];
+      if (this.whatsappNeedsCode()) {
+        itineraryLines.push('', `Tu código de acceso: ${code || '(escríbelo aquí)'}`);
+      }
+      itineraryLines.push('', 'Si tienes alguna duda, respóndeme por este medio.');
+      return itineraryLines.join('\n');
+    }
     const lines = [
       `Hola${firstName ? ' ' + firstName : ''}, soy ${advisor} de The Travel Edit. Tu propuesta de viaje está lista ✨`,
       '',
@@ -215,7 +246,13 @@ export class ProposalBuilder {
   readonly isFullPagePreview = computed(() => this.currentStep() === 'preview');
 
   readonly privateLink = computed(() => {
-    const token = this.proposal()?.publicToken;
+    const p = this.proposal();
+    // Un itinerario solo tiene enlace utilizable cuando está COMPARTIDO o visto: en borrador el enlace no entrega nada, así que
+    // no se ofrece copiarlo, mandarlo por WhatsApp ni por correo (primero se comparte, después se distribuye).
+    if (p?.kind === 'itinerary' && p.status !== 'shared' && p.status !== 'viewed') {
+      return null;
+    }
+    const token = p?.publicToken;
     // En producción publicSiteUrl es "" (admin y sitio comparten dominio), lo que daba
     // una ruta relativa ("/private/…"): al copiarla y pegarla en el navegador no
     // abre nada. El enlace que se comparte siempre tiene que ser absoluto.
@@ -298,11 +335,15 @@ export class ProposalBuilder {
   /** Vuelve a pedir a la base qué falta para publicar. Solo la última respuesta cuenta. */
   async refreshReadiness(): Promise<void> {
     const seq = ++this.readinessSeq;
-    if (!this.caps.publish || this.proposal()?.status !== 'draft') {
+    // Propuesta: pendientes para publicar. Itinerario: pendientes para COMPARTIR (otra RPC, otras reglas: nada de precios ni términos).
+    const sharing = this.caps.shareAccess && this.canShare();
+    if ((!this.caps.publish && !sharing) || this.proposal()?.status !== 'draft') {
       this.readiness.set(null);
       return;
     }
-    const problems = await this.proposalsService.getPublishReadiness(this.proposalId);
+    const problems = sharing
+      ? await this.proposalsService.getItineraryShareReadiness(this.proposalId)
+      : await this.proposalsService.getPublishReadiness(this.proposalId);
     if (seq === this.readinessSeq) {
       this.readiness.set(problems);
     }
@@ -497,6 +538,58 @@ export class ProposalBuilder {
     }
   }
 
+  /** Compartir un itinerario: draft → shared (share_itinerary). La lista de pendientes se vuelve a revisar en el servidor. */
+  async share(): Promise<void> {
+    if (this.sharing() || !this.canShare()) {
+      return;
+    }
+    if (this.publishBlocked()) {
+      this.showChecklist();
+      return;
+    }
+    this.sharing.set(true);
+    this.publishError.set(null);
+    try {
+      await this.proposalsService.shareItinerary(this.proposalId);
+      await this.onSaved();
+    } catch (error) {
+      console.error('No se pudo compartir el itinerario.', error);
+      this.publishError.set(shareErrorMessage(error, 'No se pudo compartir el itinerario. Inténtalo nuevamente.'));
+    } finally {
+      this.sharing.set(false);
+      this.menuOpen.set(false);
+    }
+  }
+
+  requestUnshare(): void {
+    this.menuOpen.set(false);
+    this.unsharePending.set(true);
+  }
+
+  cancelUnshare(): void {
+    this.unsharePending.set(false);
+  }
+
+  /** Dejar de compartir: vuelve a borrador y el enlace deja de entregar contenido (la base revoca las sesiones). No borra nada. */
+  async confirmUnshare(): Promise<void> {
+    if (this.sharing()) {
+      return;
+    }
+    this.unsharePending.set(false);
+    this.sharing.set(true);
+    this.publishError.set(null);
+    this.sendSuccess.set(null);
+    try {
+      await this.proposalsService.unshareItinerary(this.proposalId);
+      await this.onSaved();
+    } catch (error) {
+      console.error('No se pudo dejar de compartir el itinerario.', error);
+      this.publishError.set(shareErrorMessage(error, 'No se pudo dejar de compartir el itinerario. Inténtalo nuevamente.'));
+    } finally {
+      this.sharing.set(false);
+    }
+  }
+
   /** Crear el draft, publicar o copiar el link NUNCA tocan el lead — según
    *  la sección N de la spec, el único disparador real de "propuesta
    *  enviada" es este método, y solo cuando el correo se manda con éxito
@@ -510,11 +603,14 @@ export class ProposalBuilder {
     this.sendSuccess.set(null);
     this.menuOpen.set(false);
     try {
-      const result = await this.proposalsService.sendToClient(this.proposalId);
+      // Un itinerario se envía con SU Edge Function (send-itinerary); send-proposal es solo de propuestas.
+      const result = this.caps.shareAccess
+        ? await this.proposalsService.sendItineraryToClient(this.proposalId)
+        : await this.proposalsService.sendToClient(this.proposalId);
       this.sendSuccess.set({ sentTo: result.sentTo });
     } catch (error) {
-      console.error('No se pudo enviar la propuesta al cliente.', error);
-      this.sendError.set(error instanceof Error ? error.message : 'No se pudo enviar la propuesta.');
+      console.error('No se pudo enviar el viaje al cliente.', error);
+      this.sendError.set(error instanceof Error ? error.message : this.caps.shareAccess ? 'No se pudo enviar el itinerario.' : 'No se pudo enviar la propuesta.');
     } finally {
       this.sendingToClient.set(false);
     }

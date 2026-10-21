@@ -429,6 +429,29 @@ export interface Database {
           line_id: string | null;
         }[];
       };
+      /** Pendientes para compartir un itinerario (migración 0056), de solo lectura. */
+      get_itinerary_share_readiness: {
+        Args: { p_id: string; p_for_email?: boolean };
+        Returns: {
+          position: number;
+          code: string;
+          message: string;
+          tab: string;
+          day_id: string | null;
+          service_id: string | null;
+          line_id: string | null;
+        }[];
+      };
+      /** draft → shared (migración 0056). Solo itinerarios. */
+      share_itinerary: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      /** shared | viewed → draft y revoca el acceso (migración 0056). Solo itinerarios. */
+      unshare_itinerary: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
       publish_proposal: {
         Args: { p_id: string };
         Returns: undefined;

@@ -30,7 +30,8 @@ const ANCHOR_BY_CODE: Record<string, string> = {
   cover_title_missing: 'cover-title',
   days_missing: 'journey-add-day',
   price_lines_missing: 'pricing-lines',
-  access_code_missing: 'access-section'
+  access_code_missing: 'access-section',
+  services_missing: 'journey-add-day'
 };
 
 /** id del elemento al que debe llevar un problema: el más concreto que se sepa (línea > servicio > día > regla). */
@@ -47,9 +48,9 @@ export function problemAnchorId(problem: Pick<PublishProblem, 'code' | 'day_id' 
   return ANCHOR_BY_CODE[problem.code] ?? null;
 }
 
-/** Texto del botón de publicar mientras hay pendientes. */
-export function pendingLabel(count: number): string {
-  return count === 1 ? 'Falta 1 dato para publicar' : `Faltan ${count} datos para publicar`;
+/** Texto del botón de publicar (o de compartir, en un itinerario) mientras hay pendientes. */
+export function pendingLabel(count: number, verb: 'publicar' | 'compartir' = 'publicar'): string {
+  return count === 1 ? `Falta 1 dato para ${verb}` : `Faltan ${count} datos para ${verb}`;
 }
 
 export interface ScrollOptions {

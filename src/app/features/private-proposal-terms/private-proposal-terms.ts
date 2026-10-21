@@ -69,6 +69,11 @@ export class PrivateProposalTerms implements OnInit, OnDestroy {
     }
     try {
       const data = await this.publicProposal.getContent(this.token(), sessionToken);
+      // Un itinerario no tiene términos (el servidor además los proyecta fuera): esta página no existe para él.
+      if (data.kind === 'itinerary') {
+        this.phase.set('unavailable');
+        return;
+      }
       const rawBody = data.content.terms.body;
       if (!rawBody || !rawBody.replace(/<[^>]*>/g, '').trim()) {
         this.phase.set('unavailable');

@@ -55,6 +55,7 @@ export const ITINERARY_PERMISSION_CODES = [
   'itinerarios.crear',
   'itinerarios.editar',
   'itinerarios.eliminar',
+  'itinerarios.compartir',
   'itinerarios.gestionar_documentos'
 ] as const;
 

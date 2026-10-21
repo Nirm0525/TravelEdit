@@ -16,7 +16,7 @@
           <div class="proposal-builder__title-row">
             <h1 class="page-title">{{ p.clientName }}</h1>
             <span class="proposal-builder__status-badge" [class]="'is-' + p.status">
-              <span class="proposal-builder__status-dot" aria-hidden="true"></span>{{ statusLabel[p.status] }}
+              <span class="proposal-builder__status-dot" aria-hidden="true"></span>{{ statusText(p) }}
             </span>
           </div>
           <p class="proposal-builder__updated">Última actualización: {{ p.updatedAt | date: 'd MMM y, HH:mm' }}</p>
@@ -26,7 +26,28 @@
         </div>
 
         <div class="proposal-builder__actions">
-          @if (caps.publish && p.status === 'draft') {
+          @if (caps.shareAccess) {
+            <!-- Itinerario: primero se COMPARTE y solo entonces se habilitan las acciones de distribución (enlace, WhatsApp, correo). -->
+            @if (canShare() && p.status === 'draft') {
+              <button
+                type="button"
+                class="btn btn--primary"
+                [class.is-blocked]="publishBlocked()"
+                [attr.aria-disabled]="publishBlocked() ? 'true' : null"
+                [attr.aria-describedby]="publishBlocked() ? 'publish-checklist' : null"
+                [disabled]="sharing()"
+                (click)="share()"
+              >
+                {{ publishBlocked() ? pendingLabel() : sharing() ? 'Compartiendo…' : 'Compartir itinerario' }}
+              </button>
+            } @else if (canShare() && (p.status === 'shared' || p.status === 'viewed')) {
+              <button type="button" class="btn btn--primary" [disabled]="sendingToClient()" (click)="sendToClient()">
+                {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
+              </button>
+              <button type="button" class="btn btn--secondary" (click)="openWhatsapp()">WhatsApp</button>
+              <button type="button" class="btn btn--secondary" (click)="copyLink()">{{ linkCopied() ? 'Enlace copiado ✓' : 'Copiar enlace' }}</button>
+            }
+          } @else if (caps.publish && p.status === 'draft') {
             <button
               type="button"
               class="btn btn--primary"
@@ -62,7 +83,7 @@
             <button type="button" class="proposal-builder__menu-trigger" aria-label="Más acciones" (click)="toggleMenu()">⋮</button>
             @if (menuOpen()) {
               <div class="proposal-builder__menu-panel" role="menu">
-                @if (caps.publish && privateLink()) {
+                @if ((caps.publish || caps.shareAccess) && privateLink()) {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" (click)="copyLink()">
                     {{ linkCopied() ? 'Enlace copiado ✓' : 'Copiar enlace privado' }}
                   </button>
@@ -85,6 +106,22 @@
                     Enviar por WhatsApp
                   </button>
                 }
+                @if (caps.shareAccess && canShare()) {
+                  @if (p.status === 'draft') {
+                    <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="sharing()" (click)="share()">
+                      {{ publishBlocked() ? pendingLabel() : sharing() ? 'Compartiendo…' : 'Compartir itinerario' }}
+                    </button>
+                  }
+                  @if (p.status === 'shared' || p.status === 'viewed') {
+                    <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="sendingToClient()" (click)="sendToClient()">
+                      {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
+                    </button>
+                    <button type="button" role="menuitem" class="proposal-builder__menu-item" (click)="openWhatsapp()">Enviar por WhatsApp</button>
+                    <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="sharing()" (click)="requestUnshare()">
+                      Dejar de compartir
+                    </button>
+                  }
+                }
                 @if (canRemove()) {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item proposal-builder__menu-item--danger" (click)="requestDelete()">
                     {{ config.labels.deleteTitle }}
@@ -96,8 +133,16 @@
         </div>
       </header>
 
-      @if (caps.publish && p.status === 'draft' && readiness(); as pending) {
-        <app-publish-checklist [problems]="pending" (selected)="goToProblem($event)" />
+      @if ((caps.publish || (caps.shareAccess && canShare())) && p.status === 'draft' && readiness(); as pending) {
+        <app-publish-checklist [problems]="pending" [verb]="caps.shareAccess ? 'compartir' : 'publicar'" (selected)="goToProblem($event)" />
+      }
+      @if (caps.shareAccess && canShare() && p.status === 'draft') {
+        <p class="proposal-builder__updated">Comparte el itinerario para habilitar el enlace, WhatsApp y el envío por correo.</p>
+      }
+      @if (caps.shareAccess && (p.status === 'shared' || p.status === 'viewed')) {
+        <p class="proposal-builder__inline-success" role="status">
+          ✓ Itinerario compartido{{ p.sharedAt ? ' el ' + (p.sharedAt | date: 'd MMM y, HH:mm') : '' }}. El enlace ya está activo para el cliente.
+        </p>
       }
       @if (publishError(); as message) {
         <p class="proposal-builder__inline-error" role="alert">{{ message }}</p>
@@ -109,7 +154,7 @@
         </p>
       }
       @if (sendSuccess(); as result) {
-        <p class="proposal-builder__inline-success" role="status">✓ Propuesta enviada a {{ result.sentTo }}</p>
+        <p class="proposal-builder__inline-success" role="status">✓ {{ sentLabel() }} {{ result.sentTo }}</p>
       }
       @if (deleteError(); as message) {
         <p class="proposal-builder__inline-error" role="alert">{{ message }}</p>
@@ -304,9 +349,18 @@
 
 <app-confirm-dialog
   [open]="deletePending()"
-  title="Eliminar propuesta"
-  message="¿Eliminar esta propuesta y todo su contenido? Esta acción no se puede deshacer."
+  [title]="config.labels.deleteTitle"
+  [message]="'¿Eliminar ' + (caps.shareAccess ? 'este itinerario' : 'esta propuesta') + ' y todo su contenido? Esta acción no se puede deshacer.'"
   confirmLabel="Eliminar"
   (confirmed)="confirmDelete()"
   (cancelled)="cancelDelete()"
+/>
+
+<app-confirm-dialog
+  [open]="unsharePending()"
+  title="Dejar de compartir"
+  message="El enlace dejará de funcionar y el cliente perderá el acceso hasta que lo vuelvas a compartir. El itinerario y sus documentos no se borran."
+  confirmLabel="Dejar de compartir"
+  (confirmed)="confirmUnshare()"
+  (cancelled)="cancelUnshare()"
 />

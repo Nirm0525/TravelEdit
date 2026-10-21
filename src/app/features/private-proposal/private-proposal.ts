@@ -164,6 +164,70 @@ const SCROLL_SETTLE_TOLERANCE_PX = 2;
 /** Respaldo si el navegador no emite `scrollend` (Safari antiguo): cuánto se espera a que termine el scroll suave. */
 const SCROLL_SETTLE_TIMEOUT_MS = 900;
 
+/** Textos que dependen del tipo de registro. Propuesta e itinerario comparten la pantalla; cada uno habla de lo suyo. */
+interface PrivateCopy {
+  loading: string;
+  unavailableTitle: string;
+  unavailableCopy: string;
+  gateHeadline: string;
+  expired: string;
+  notAvailable: string;
+  submit: string;
+  footnote: string;
+  gateTitle: string;
+  topbarTag: string;
+  menuAria: string;
+  sectionsAria: string;
+  closing: string;
+  pageTitle: string;
+}
+
+const PROPOSAL_COPY: PrivateCopy = {
+  loading: 'Preparando tu propuesta…',
+  unavailableTitle: 'Esta propuesta no está disponible',
+  unavailableCopy:
+    'El enlace puede haber expirado o la propuesta todavía no está lista para verse. Contacta a tu asesora de viajes si crees que esto es un error.',
+  gateHeadline: 'Ingresa para ver tu propuesta de viaje',
+  expired: 'Tu acceso a esta propuesta venció. Pide a tu asesora que lo renueve.',
+  notAvailable: 'Esta propuesta no está disponible.',
+  submit: 'Ver mi propuesta',
+  footnote: 'Esta propuesta es privada y personal.',
+  gateTitle: 'Propuesta',
+  topbarTag: 'Propuesta privada',
+  menuAria: 'Menú de la propuesta',
+  sectionsAria: 'Secciones de la propuesta',
+  closing: 'Tu propuesta ha sido creada especialmente para ti. Si tienes alguna pregunta, comunícate con tu asesora de viajes.',
+  pageTitle: 'Propuesta privada | The Travel Edit'
+};
+
+const ITINERARY_COPY: PrivateCopy = {
+  loading: 'Preparando tu itinerario…',
+  unavailableTitle: 'Este itinerario no está disponible',
+  unavailableCopy:
+    'El enlace puede haber expirado o el itinerario todavía no está listo para verse. Contacta a tu asesora de viajes si crees que esto es un error.',
+  gateHeadline: 'Ingresa para ver tu itinerario de viaje',
+  expired: 'Tu acceso a este itinerario venció. Pide a tu asesora que lo renueve.',
+  notAvailable: 'Este itinerario no está disponible.',
+  submit: 'Ver mi itinerario',
+  footnote: 'Este itinerario es privado y personal.',
+  gateTitle: 'Itinerario',
+  topbarTag: 'Itinerario privado',
+  menuAria: 'Menú del itinerario',
+  sectionsAria: 'Secciones del itinerario',
+  closing: 'Tu itinerario ha sido preparado especialmente para ti. Si tienes alguna pregunta, comunícate con tu asesora de viajes.',
+  pageTitle: 'Itinerario privado | The Travel Edit'
+};
+
+/** Mientras el tipo es desconocido (cargando, o enlace sin gate: borrador, no compartido, vencido…): sin decir «propuesta» ni «itinerario». */
+const NEUTRAL_COPY: PrivateCopy = {
+  ...PROPOSAL_COPY,
+  loading: 'Preparando tu viaje…',
+  unavailableTitle: 'Este enlace no está disponible',
+  unavailableCopy:
+    'El enlace puede haber expirado o el contenido todavía no está listo para verse. Contacta a tu asesora de viajes si crees que esto es un error.',
+  pageTitle: 'Viaje privado | The Travel Edit'
+};
+
 @Component({
   selector: 'app-private-proposal',
   imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments],
@@ -215,6 +279,16 @@ export class PrivateProposal implements OnDestroy {
   readonly phase = signal<Phase>('loading');
   readonly gate = signal<ProposalGateResponse | null>(null);
   readonly data = signal<PublicProposalData | null>(null);
+
+  /**
+   * Itinerario: experiencia propia (sin inversión, términos ni aceptación). El tipo lo entrega la base (gate y contenido), nunca
+   * la URL. Para el contenido el servidor además lo proyecta SIN precios, términos, elecciones ni comentarios: esto es la segunda
+   * barrera de la pantalla.
+   */
+  readonly isItinerary = computed(() => (this.data()?.kind ?? this.gate()?.kind) === 'itinerary');
+  /** Con el tipo todavía desconocido (cargando o enlace no disponible) los textos son neutros: no se dice «propuesta» de un itinerario. */
+  readonly kindKnown = computed(() => this.data() !== null || this.gate() !== null);
+  readonly copy = computed<PrivateCopy>(() => (this.isItinerary() ? ITINERARY_COPY : this.kindKnown() ? PROPOSAL_COPY : NEUTRAL_COPY));
   /** Fade/reveal sutil al desbloquear (ver sección 4 de la spec) — arranca
    *  en false y se prende un tick después de entrar a 'content', nunca al
    *  revés, así CSS puede animar de 0→1 con una sola transición simple sin
@@ -271,6 +345,10 @@ export class PrivateProposal implements OnDestroy {
   /** Las elecciones solo se editan mientras la propuesta siga abierta — una
    *  vez aceptada quedan fijas (el RPC también lo rechaza). */
   readonly canChooseServices = computed(() => {
+    // Un itinerario NO se elige ni se comenta: 'viewed' también existe en él y no debe abrir «Sí, por favor».
+    if (this.isItinerary()) {
+      return false;
+    }
     const status = this.data()?.status;
     return status === 'published' || status === 'viewed';
   });
@@ -521,6 +599,10 @@ export class PrivateProposal implements OnDestroy {
     if (d.content.travelTips.length > 0) {
       sections.push({ id: 'consejos', label: 'Consejos' });
     }
+    if (this.isItinerary()) {
+      // Un itinerario no tiene inversión, términos ni aceptación.
+      return sections;
+    }
     if (d.content.pricing.lines.length > 0 || d.content.pricing.feesLines.length > 0) {
       sections.push({ id: 'inversion', label: 'Inversión' });
     }
@@ -568,6 +650,8 @@ export class PrivateProposal implements OnDestroy {
     this.document.documentElement.classList.add('no-scrollbar');
     this.title.setTitle('Propuesta privada | The Travel Edit');
     this.meta.updateTag({ name: 'robots', content: 'noindex, nofollow' });
+    // El título de la pestaña sigue al tipo cuando ya se conoce.
+    effect(() => this.title.setTitle(this.copy().pageTitle));
 
     // El token viene del router (withComponentInputBinding) y todavía no
     // tiene valor en el primer tick del constructor — leerlo fuera de un
@@ -650,8 +734,10 @@ export class PrivateProposal implements OnDestroy {
     try {
       const data = await this.publicProposal.getContent(token, sessionToken);
       this.data.set(data);
-      this.serviceChoices.set(data.serviceChoices);
-      this.serviceComments.set(data.serviceComments);
+      // Un itinerario no tiene elecciones ni comentarios: aunque la respuesta los trajera, la pantalla parte de cero.
+      const itinerary = data.kind === 'itinerary';
+      this.serviceChoices.set(itinerary ? {} : data.serviceChoices);
+      this.serviceComments.set(itinerary ? {} : data.serviceComments);
       this.sessionToken = sessionToken;
       this.phase.set('content');
       // Un clic en el menú antes de que cargara la propuesta: se cumple ahora que el contenido existe.

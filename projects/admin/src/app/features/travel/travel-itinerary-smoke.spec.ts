@@ -10,6 +10,7 @@ import { ProposalBuilder } from '../proposals/proposal-builder/proposal-builder'
 import { AuthService } from '../../core/services/auth';
 import { LeadsService } from '../../core/services/leads';
 import { ProposalImagesService } from '../../core/services/proposal-images';
+import { ProposalServiceAttachmentsService } from '../../core/services/proposal-service-attachments';
 import { SupabaseService } from '../../core/services/supabase';
 import { InMemorySupabase } from '../../core/testing/in-memory-supabase';
 import { ITINERARIES_ENABLED, TRAVEL_FEATURES, TravelMode } from './travel-config';
@@ -234,4 +235,114 @@ describe('Humo — Itinerarios de punta a punta (base en memoria)', () => {
       }
     });
   });
+  describe('documentos de un itinerario (proposal-service-files)', () => {
+    const SERVICE = 'svc-1';
+    beforeEach(() => {
+      db.tables['proposals'].push({ id: 'itin-1', kind: 'itinerary', client_name: 'Ana Pérez', status: 'draft', content: {}, updated_at: '2027-01-01T00:00:00Z' });
+      db.tables['proposal_service_attachments'].push({
+        id: 'att-1', proposal_id: 'itin-1', service_id: SERVICE, file_name: 'Entrada.pdf', mime_type: 'application/pdf', file_size: 10,
+        visible_to_client: false, created_at: 't', updated_at: 't'
+      });
+      db.tables['proposal_service_attachments'].push({
+        id: 'att-2', proposal_id: 'prop-1', service_id: 'otro', file_name: 'De una propuesta.pdf', mime_type: 'application/pdf', file_size: 10,
+        visible_to_client: false, created_at: 't', updated_at: 't'
+      });
+    });
+
+    async function attachments() {
+      await mount(ProposalsList, 'itinerary'); // configura el módulo con la base en memoria
+      return TestBed.inject(ProposalServiceAttachmentsService);
+    }
+    const pdf = () => new File([new Uint8Array(1)], 'Entrada.pdf', { type: 'application/pdf' });
+
+    it('lista SOLO los documentos del itinerario (por proposal_id), sin mezclar los de una propuesta', async () => {
+      const service = await attachments();
+      expect((await service.listForProposal('itin-1')).map((a) => a.fileName)).toEqual(['Entrada.pdf']);
+    });
+
+    it('prepara la subida con el id del itinerario y SIN enviar el tipo (lo decide el servidor)', async () => {
+      const service = await attachments();
+      db.functionResults['proposal-service-files'] = (body) =>
+        body.action === 'prepare-upload'
+          ? { data: { storagePath: 'itin-1/svc-1/x.pdf', token: 'tok', contentType: 'application/pdf' }, error: null }
+          : { data: { attachment: { id: 'new', proposalId: 'itin-1', serviceId: SERVICE, fileName: 'Entrada.pdf', mimeType: 'application/pdf', fileSize: 1, visibleToClient: false, createdAt: 't', updatedAt: 't' } }, error: null };
+      const uploaded = await service.upload('itin-1', SERVICE, pdf());
+      expect(uploaded.proposalId).toBe('itin-1');
+      const prepare = db.functionCalls.find((c) => (c.body as any).action === 'prepare-upload')!;
+      expect(prepare.name).toBe('proposal-service-files');
+      expect(prepare.body).toMatchObject({ proposalId: 'itin-1', serviceId: SERVICE });
+      expect(prepare.body).not.toHaveProperty('kind');
+    });
+
+    it('403 → «No tienes permiso para gestionar estos documentos.»', async () => {
+      const service = await attachments();
+      db.functionResults['proposal-service-files'] = () => ({ data: null, error: { context: { status: 403, json: async () => ({ code: 'forbidden', error: 'texto técnico' }) } } });
+      const err = await service.upload('itin-1', SERVICE, pdf()).catch((e) => e);
+      expect([err.message, err.code]).toEqual(['No tienes permiso para gestionar estos documentos.', 'forbidden']);
+    });
+
+    it('404 → recurso no disponible, sin revelar propiedad', async () => {
+      const service = await attachments();
+      db.functionResults['proposal-service-files'] = () => ({ data: null, error: { context: { status: 404, json: async () => ({ code: 'not_found', error: 'No se encontró la propuesta.' }) } } });
+      const err = await service.getUrl('att-1').catch((e) => e);
+      expect([err.message, err.code]).toEqual(['No se encontró este documento o ya no está disponible.', 'not_found']);
+      expect(err.message).not.toMatch(/asesora|propietar|ajen/i);
+    });
+  });
+
+  describe('regresión de Propuestas con Itinerarios activo', () => {
+    const open = (query: Record<string, string> = {}) => mount(ProposalBuilder, 'proposal', { id: 'prop-1', query });
+
+    beforeEach(() => {
+      db.tables['proposals'].push({
+        id: 'prop-1', kind: 'proposal', client_name: 'Cliente Propuesta', client_email: 'c@example.com', destination_text: 'Perú', status: 'draft', access_required: true,
+        currency: 'USD', content: { cover: { title: 'Perú', subtitle: '', imagePath: null } }, updated_at: '2027-01-01T00:00:00Z', title: 'Perú'
+      });
+    });
+
+    it('crear una propuesta inserta kind = proposal con sus términos de partida', async () => {
+      const create = (await mount(ProposalCreate, 'proposal')) as ProposalCreate;
+      create.form.setValue({ clientName: 'Nuevo Cliente', destinationText: '' });
+      await create.save();
+      const insert = db.writes.find((w) => w.op === 'insert')!;
+      expect(insert.payload).toMatchObject({ kind: 'proposal', client_name: 'Nuevo Cliente' });
+      const created = db.tables['proposals'].find((r) => r['client_name'] === 'Nuevo Cliente')!;
+      expect(created['content'].terms.body.length).toBeGreaterThan(0);
+      expect(navigate).toHaveBeenCalledWith(['/viajes/propuestas', created['id'], 'edit']);
+    });
+
+    it('la lista de Propuestas ofrece «Nueva desde PDF», sus cinco estados y no muestra itinerarios', async () => {
+      db.tables['proposals'].push({ id: 'itin-1', kind: 'itinerary', client_name: 'Cliente Itinerario', status: 'draft', content: {}, updated_at: '2027-02-01T00:00:00Z' });
+      await mount(ProposalsList, 'proposal');
+      expect(text()).toContain('Nueva desde PDF');
+      expect(text()).toContain('Nueva propuesta');
+      expect(rows()).toEqual(['Cliente Propuesta']);
+      const chips = Array.from(el().querySelectorAll('.proposals-list__filters button')).map((b) => b.textContent?.replace(/\s+\d+$/, '').trim());
+      expect(chips).toEqual(['Todas', 'Borrador', 'Publicada', 'Vista por el cliente', 'Aceptada', 'Expirada']);
+    });
+
+    it('el editor de una propuesta conserva Precios, Términos, Moneda, Publicar y el readiness', async () => {
+      await open();
+      expect(tabs()).toEqual(['Client & Trip', 'Portada', 'Itinerario', 'Precios', 'Travel Tips', 'Términos', 'The Edit Assistant']);
+      expect(text()).toContain('Publicar');
+      expect(text()).toContain('Moneda');
+      expect(db.rpcCalls.map((c) => c.name)).toContain('get_publish_readiness');
+    });
+
+    it('Precios y Términos siguen abriendo en una propuesta', async () => {
+      await mount(ProposalBuilder, 'proposal', { id: 'prop-1', query: { step: 'terms' } });
+      expect(text()).toContain('Términos y condiciones');
+      await mount(ProposalBuilder, 'proposal', { id: 'prop-1', query: { step: 'pricing' } });
+      expect(text()).toContain('Precios');
+    });
+
+    it('la vista previa contractual sigue en la propuesta y no existe en el itinerario', async () => {
+      await open();
+      expect(el().querySelector('.proposal-builder__preview-col')).not.toBeNull();
+      db.tables['proposals'].push({ id: 'itin-9', kind: 'itinerary', client_name: 'I', status: 'draft', content: {}, updated_at: '2027-01-01T00:00:00Z' });
+      await mount(ProposalBuilder, 'itinerary', { id: 'itin-9' });
+      expect(el().querySelector('.proposal-builder__preview-col')).toBeNull();
+    });
+  });
+
 });

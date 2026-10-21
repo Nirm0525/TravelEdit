@@ -17,7 +17,7 @@ export type BuilderStep = 'client-trip' | 'cover' | 'journey' | 'pricing' | 'tra
  * Itinerarios ya funciona de punta a punta en borrador. Sigue apagado hasta que exista el flujo de compartir (0056): con el
  * flag en `false` el modo no se ofrece en ninguna parte (ni menú, ni rutas). Es el ÚNICO cambio que activa Itinerarios.
  */
-export const ITINERARIES_ENABLED = false;
+export const ITINERARIES_ENABLED = true;
 
 export interface TravelFeatures {
   itinerariesEnabled: boolean;

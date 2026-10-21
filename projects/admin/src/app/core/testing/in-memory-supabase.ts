@@ -15,6 +15,8 @@ export interface RecordedCall {
 export class InMemorySupabase {
   tables: Record<string, Row[]> = { proposals: [], proposal_service_attachments: [], leads: [] };
   functionCalls: RecordedCall[] = [];
+  /** Respuesta de una Edge Function por nombre (para simular prepare-upload, 403, 404…). Sin handler: {}. */
+  functionResults: Record<string, (body: any) => { data: unknown; error: unknown }> = {};
   rpcCalls: RecordedCall[] = [];
   rpcResults: Record<string, unknown> = {};
   /** Orden de los efectos sobre la tabla de propuestas: «insert», «update», «delete» (para comprobar qué se escribió). */
@@ -167,7 +169,8 @@ export class InMemorySupabase {
     functions: {
       invoke: (name: string, options?: { body?: unknown }) => {
         this.functionCalls.push({ name, body: options?.body });
-        return Promise.resolve({ data: {}, error: null });
+        const handler = this.functionResults[name];
+        return Promise.resolve(handler ? handler(options?.body) : { data: {}, error: null });
       }
     },
     storage: { from: () => ({ uploadToSignedUrl: async () => ({ data: {}, error: null }) }) }

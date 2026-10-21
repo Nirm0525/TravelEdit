@@ -85,3 +85,27 @@ describe('Viajes — rutas por modo', () => {
     expect(travelPaths.list('proposal')).toBe('/viajes/propuestas');
   });
 });
+
+describe('Viajes — rutas con el flag REAL (Itinerarios activo)', () => {
+  it('sin sobrescribir TRAVEL_FEATURES: /viajes/itinerarios, /new y /:id/edit resuelven; /import no existe', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([...travelRoutes('proposal'), ...travelRoutes('itinerary'), { path: 'dashboard', component: Stub }, { path: '**', component: Stub }]),
+        { provide: AuthService, useValue: { ready: async () => undefined, profile: () => ({ role: 'staff' }) } }
+      ]
+    });
+    const router = TestBed.inject(Router);
+    for (const url of ['/viajes/itinerarios', '/viajes/itinerarios/new', '/viajes/itinerarios/abc/edit?step=cover']) {
+      await router.navigateByUrl(url);
+      expect(router.url, url).toBe(url);
+      expect(leaf(router).data['mode'], url).toBe('itinerary');
+    }
+    await router.navigateByUrl('/viajes/itinerarios/import');
+    expect(leaf(router).routeConfig?.path).toBe('**');
+    for (const url of ['/viajes/propuestas', '/viajes/propuestas/new', '/viajes/propuestas/import', '/viajes/propuestas/abc/edit']) {
+      await router.navigateByUrl(url);
+      expect(router.url, url).toBe(url);
+      expect(leaf(router).data['mode'], url).toBe('proposal');
+    }
+  });
+});

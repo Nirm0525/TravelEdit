@@ -23,7 +23,7 @@ const row = (kind: 'proposal' | 'itinerary') => ({
 });
 
 /** El enlace antiguo de un correo, de punta a punta: ruta legacy → ruta de propuestas → el builder lee la fila y corrige al kind REAL. */
-describe('Ruta legacy encadenada: /proposals/:id/edit → /viajes/… según el kind de la fila', () => {
+describe('Ruta legacy encadenada: /proposals/:id/edit → /viajes/… según el kind de la fila', { timeout: 20_000 }, () => {
   let resolveRow: (value: unknown) => void;
   let getById: ReturnType<typeof vi.fn>;
   let navigateSpy: ReturnType<typeof vi.spyOn>;

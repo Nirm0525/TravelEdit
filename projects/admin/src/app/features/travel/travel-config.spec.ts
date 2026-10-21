@@ -1,12 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ITINERARIES_ENABLED, TRAVEL_CONFIG, isTravelModeEnabled, travelPaths } from './travel-config';
+import { ITINERARIES_ENABLED, TRAVEL_CONFIG, TRAVEL_FEATURES, isTravelModeEnabled, travelPaths } from './travel-config';
 import { LEGACY_PROPOSAL_REDIRECTS, travelRoutes } from './travel-routes';
 import { ROLE_PERMISSION_CODES, can } from '../../core/data/permissions';
 
 describe('Viajes — configuración por modo', () => {
-  it('Itinerarios está apagado por defecto y Propuestas siempre activo', () => {
-    expect(ITINERARIES_ENABLED).toBe(false);
+  it('Itinerarios está ACTIVO (ITINERARIES_ENABLED) y se ofrece por defecto; Propuestas siempre activo', () => {
+    expect(ITINERARIES_ENABLED).toBe(true);
+    expect(TestBed.inject(TRAVEL_FEATURES).itinerariesEnabled).toBe(true);
+    expect(isTravelModeEnabled('proposal', TestBed.inject(TRAVEL_FEATURES))).toBe(true);
+    expect(isTravelModeEnabled('itinerary', TestBed.inject(TRAVEL_FEATURES))).toBe(true);
+    // El mecanismo del flag sigue funcionando (apagar el modo lo oculta).
     expect(isTravelModeEnabled('proposal', { itinerariesEnabled: false })).toBe(true);
     expect(isTravelModeEnabled('itinerary', { itinerariesEnabled: false })).toBe(false);
     expect(isTravelModeEnabled('itinerary', { itinerariesEnabled: true })).toBe(true);

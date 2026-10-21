@@ -142,7 +142,7 @@ describe('ProposalImport (pantalla "Nueva desde PDF")', () => {
     await settle();
 
     expect(service.apply).toHaveBeenCalledWith('imp-1', 'whatsapp', null);
-    expect(router.navigate).toHaveBeenCalledWith(['/proposals', 'prop-9', 'edit']);
+    expect(router.navigate).toHaveBeenCalledWith(['/viajes/propuestas', 'prop-9', 'edit']);
   });
 
   it('con solicitud vinculada, crea con canal "web" y el lead', async () => {

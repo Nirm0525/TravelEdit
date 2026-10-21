@@ -460,3 +460,8 @@
   border: 1px solid var(--line-200);
   cursor: help;
 }
+
+/* Modos sin vista previa (Itinerarios): el formulario ocupa todo el ancho. */
+.proposal-builder__body--no-preview {
+  grid-template-columns: minmax(0, 1fr);
+}

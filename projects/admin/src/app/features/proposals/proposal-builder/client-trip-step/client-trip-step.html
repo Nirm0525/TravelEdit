@@ -16,6 +16,7 @@
             <input type="text" formControlName="clientName" (blur)="saveField('clientName')" />
           </label>
 
+          @if (capabilities().clientEmail) {
           <label class="field">
             <span>Correo del cliente{{ leadEmail() ? ' (opcional)' : '' }}</span>
             <input
@@ -36,6 +37,7 @@
               <span class="field__hint">A este correo se envía la propuesta (no hay una solicitud vinculada).</span>
             }
           </label>
+          }
 
           <label class="field">
             <span>Destino</span>
@@ -57,6 +59,7 @@
             <input type="number" min="1" formControlName="travelersCount" (blur)="saveField('travelersCount')" />
           </label>
 
+          @if (capabilities().pricing) {
           <label class="field">
             <span>Moneda</span>
             <select formControlName="currency" (change)="onCurrencyChange($event)">
@@ -65,16 +68,20 @@
               }
             </select>
           </label>
+          }
 
+          @if (capabilities().expiration) {
           <label class="field">
             <span>Expiración (opcional)</span>
             <input type="datetime-local" formControlName="expiresAt" (change)="saveField('expiresAt')" />
             <span class="field__hint">Después de esta fecha el enlace sigue abriendo, pero el cliente ya no puede entrar con su código: verá un aviso para pedirte que renueves el acceso. Para renovarlo, cambia o borra esta fecha.</span>
             <span class="field__hint" [class.field__hint--error]="expiryStatus().expired" aria-live="polite">{{ expiryStatus().text }}</span>
           </label>
+          }
         </div>
       </section>
 
+      @if (capabilities().privateAccess) {
       <section class="client-trip-step__section" id="access-section">
         <h2 class="section-title">Acceso privado</h2>
         <label class="client-trip-step__toggle">
@@ -82,7 +89,7 @@
           <span>Requiere código de acceso (recomendado para clientes VIP)</span>
         </label>
 
-        @if (form.controls.accessRequired.value) {
+        @if (form.controls.accessRequired.value && capabilities().accessCode) {
           <div class="client-trip-step__access-code">
             @if (generatedCode(); as code) {
               <div class="client-trip-step__code-reveal">
@@ -124,12 +131,13 @@
           }
         }
       </section>
+      }
     }
 
     @if (activeSection() === 'cover') {
       <section class="client-trip-step__section">
         <div class="client-trip-step__card-intro">
-          <h2 class="section-title">Portada de la propuesta</h2>
+          <h2 class="section-title">Portada {{ subject() === 'itinerario' ? 'del itinerario' : 'de la propuesta' }}</h2>
           <p class="client-trip-step__card-hint">Esta será la primera impresión que verá tu cliente.</p>
         </div>
 

@@ -49,6 +49,8 @@ async function setup(): Promise<{ db: PGlite; sql: SqlLike }> {
     create table public.leads (id uuid primary key);
     create table public.proposals (
       id uuid primary key default gen_random_uuid(),
+      -- Como 0055: la columna existe con DEFAULT 'proposal', y el CHECK la limita a los dos tipos.
+      kind text not null default 'proposal' check (kind in ('proposal', 'itinerary')),
       status text not null default 'draft',
       client_name text not null,
       client_email text check (client_email is null or client_email ~* '^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$'),
@@ -255,4 +257,14 @@ Deno.test('tx: content y extracted se guardan como objeto jsonb, no como string 
     [IMPORT]
   )).rows[0];
   assertEquals(imp, { type: 'object', redacted: 'true' });
+});
+
+Deno.test('la importación crea SIEMPRE kind=proposal, escrito explícitamente (no depende del DEFAULT)', async () => {
+  const { db, sql } = await setup();
+  // Si alguien cambiara el DEFAULT de la columna, la importación seguiría creando propuestas.
+  await db.exec(`alter table public.proposals alter column kind set default 'itinerary'`);
+  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+  assert(id !== 'conflict');
+  const row = (await db.query<{ kind: string }>(`select kind from proposals where id = $1`, [id])).rows[0];
+  assertEquals(row.kind, 'proposal');
 });

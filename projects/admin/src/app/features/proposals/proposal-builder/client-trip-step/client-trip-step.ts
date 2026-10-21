@@ -1,3 +1,4 @@
+import { TRAVEL_CONFIG, TravelCapabilities } from '../../../travel/travel-config';
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProposalsService } from '../../../../core/services/proposals';
@@ -31,6 +32,10 @@ export class ClientTripStep implements OnInit {
 
   readonly proposalId = input.required<string>();
   readonly activeSection = input<ClientTripSection>('client-trip');
+  /** Qué piezas del formulario ofrece el modo (Propuesta o Itinerario): correo, moneda, expiración y acceso privado. */
+  readonly capabilities = input<TravelCapabilities>(TRAVEL_CONFIG.proposal.capabilities);
+  /** «propuesta» o «itinerario», para los títulos visibles. */
+  readonly subject = input<string>('propuesta');
   readonly saved = output<void>();
   /** El codigo en texto plano solo existe en esta sesion: se avisa al padre para precargarlo en el mensaje de WhatsApp. */
   readonly codeGenerated = output<string>();
@@ -162,7 +167,9 @@ export class ClientTripStep implements OnInit {
           .then((lead) => this.leadEmail.set(lead?.email ?? null))
           .catch(() => this.leadEmail.set(null));
       }
-      this.hasAccessCode.set(await this.proposalsService.hasAccessCode(this.proposalId()));
+      if (this.capabilities().privateAccess && this.capabilities().accessCode) {
+        this.hasAccessCode.set(await this.proposalsService.hasAccessCode(this.proposalId()));
+      }
     } catch (error) {
       console.error('No se pudo cargar la propuesta.', error);
       this.loadError.set('No se pudo cargar la propuesta. Inténtalo nuevamente.');

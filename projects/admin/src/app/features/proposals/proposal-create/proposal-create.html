@@ -1,4 +1,4 @@
-<app-admin-page-header [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/proposals' }, { label: 'Nueva propuesta' }]" title="Nueva propuesta" />
+<app-admin-page-header [breadcrumb]="breadcrumb" [title]="labels.createTitle" />
 
 <form class="proposal-create" [formGroup]="form" (ngSubmit)="save()">
   <label class="field">
@@ -15,8 +15,13 @@
   </label>
 
   <p class="field__hint">
-    La propuesta se crea como borrador — el resto del contenido (portada, itinerario, precios) se completa en el
-    siguiente paso.
+    @if (config.capabilities.pricing) {
+      La propuesta se crea como borrador — el resto del contenido (portada, itinerario, precios) se completa en el
+      siguiente paso.
+    } @else {
+      El {{ labels.singular }} se crea como borrador — el resto del contenido (portada, itinerario) se completa en el
+      siguiente paso.
+    }
   </p>
 
   @if (error()) {
@@ -24,9 +29,9 @@
   }
 
   <div class="proposal-create__footer">
-    <a class="btn btn--secondary" routerLink="/proposals">Cancelar</a>
+    <a class="btn btn--secondary" [routerLink]="listPath">Cancelar</a>
     <button type="submit" class="btn btn--primary" [disabled]="saving()">
-      {{ saving() ? 'Creando…' : 'Crear propuesta' }}
+      {{ saving() ? 'Creando…' : 'Crear ' + labels.singular }}
     </button>
   </div>
 </form>

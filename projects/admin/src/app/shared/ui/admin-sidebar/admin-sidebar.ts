@@ -1,15 +1,40 @@
-import { Component, ElementRef, HostListener, computed, effect, inject, model, signal, viewChild } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, model, signal, viewChild } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth';
-import { PermissionKey, canAccess } from '../../../core/data/permissions';
+import { PermissionCode, PermissionKey, can, canAccess } from '../../../core/data/permissions';
+import { TRAVEL_FEATURES, TravelMode, isTravelModeEnabled, travelConfigOf } from '../../../features/travel/travel-config';
 import { STAFF_ROLE_LABEL, StaffRole } from '../../../core/models/staff-role';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+type NavIcon = 'dashboard' | 'home' | 'book' | 'compass' | 'inbox' | 'document' | 'trips' | 'users' | 'settings';
 
 interface NavItem {
   label: string;
   path: string;
-  icon: 'dashboard' | 'home' | 'book' | 'compass' | 'inbox' | 'document' | 'users' | 'settings';
+  icon: NavIcon;
   permission: PermissionKey;
 }
+
+/** Subitem de un grupo: se muestra solo si su modo está habilitado Y la persona tiene el permiso. */
+interface NavChild {
+  label: string;
+  path: string;
+  mode: TravelMode;
+  permission: PermissionCode;
+}
+
+/** Grupo desplegable. Sin hijos visibles, el grupo no aparece. */
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: NavIcon;
+  /** Prefijo de URL: estar dentro de cualquier ruta que empiece así mantiene el grupo abierto y activo. */
+  pathPrefix: string;
+  children: NavChild[];
+}
+
+export type NavEntry = ({ kind: 'link' } & NavItem) | ({ kind: 'group' } & Omit<NavGroup, 'children'> & { children: NavChild[] });
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'dashboard', permission: 'dashboard' },
@@ -17,16 +42,27 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Blog', path: '/blog', icon: 'book', permission: 'blog' },
   { label: 'Destinos', path: '/destinos', icon: 'compass', permission: 'destinos' },
   { label: 'Solicitudes', path: '/solicitudes', icon: 'inbox', permission: 'solicitudes' },
-  { label: 'Propuestas', path: '/proposals', icon: 'document', permission: 'proposals' },
   { label: 'Usuarios', path: '/usuarios', icon: 'users', permission: 'usuarios' },
   { label: 'Configuración', path: '/configuracion', icon: 'settings', permission: 'configuracion' }
 ];
+
+/** Viajes agrupa Propuestas e Itinerarios; se coloca justo después de Solicitudes. */
+const TRAVEL_GROUP: NavGroup = {
+  id: 'viajes',
+  label: 'Viajes',
+  icon: 'trips',
+  pathPrefix: '/viajes',
+  children: (['proposal', 'itinerary'] as const).map((mode) => {
+    const config = travelConfigOf(mode);
+    return { label: config.labels.plural, path: config.routeBase, mode, permission: config.permissions.view };
+  })
+};
 
 const COLLAPSE_STORAGE_KEY = 'travel-edit-admin-sidebar-collapsed';
 
 @Component({
   selector: 'app-admin-sidebar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
   templateUrl: './admin-sidebar.html',
   styleUrl: './admin-sidebar.css'
 })
@@ -38,20 +74,63 @@ export class AdminSidebar {
   readonly profile = this.auth.profile;
   readonly userMenuOpen = signal(false);
 
-  readonly navItems = computed(() => {
+  private readonly features = inject(TRAVEL_FEATURES);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Entradas del menú en orden: enlaces simples y el grupo «Viajes» (tras Solicitudes) con los hijos que corresponden. */
+  readonly navEntries = computed<NavEntry[]>(() => {
     const role = this.auth.profile()?.role;
-    return NAV_ITEMS.filter((item) => canAccess(role, item.permission));
+    const entries: NavEntry[] = [];
+    for (const item of NAV_ITEMS) {
+      if (canAccess(role, item.permission)) {
+        entries.push({ kind: 'link', ...item });
+      }
+      if (item.path === '/solicitudes') {
+        const children = TRAVEL_GROUP.children.filter((child) => isTravelModeEnabled(child.mode, this.features) && can(role, child.permission));
+        if (children.length > 0) {
+          entries.push({ kind: 'group', ...TRAVEL_GROUP, children });
+        }
+      }
+    }
+    return entries;
   });
+
+  /** URL actual (se actualiza en cada navegación): decide si un grupo está activo, y por tanto abierto. */
+  private readonly currentUrl = signal(this.router.url);
+  private readonly manuallyOpen = signal(false);
+  readonly isGroupActive = (group: { pathPrefix: string }) => (this.currentUrl().split('?')[0] ?? '').startsWith(group.pathPrefix);
+  /** Abierto si estás dentro de alguno de sus hijos (no se puede cerrar desde dentro) o si lo abriste a mano. */
+  readonly isGroupOpen = (group: { pathPrefix: string }) => this.isGroupActive(group) || this.manuallyOpen();
 
   readonly mobileOpen = model(false);
   readonly collapsed = signal(this.readStoredCollapsed());
 
   constructor() {
+    this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.currentUrl.set(event.urlAfterRedirects);
+      }
+    });
+
     // El sidebar móvil es un overlay de pantalla completa — sin esto, la
     // página de atrás sigue siendo scrolleable debajo del overlay.
     effect(() => {
       document.body.classList.toggle('mobile-sidebar-open', this.mobileOpen());
     });
+  }
+
+  /**
+   * Abre o cierra el grupo. Con el menú contraído (solo iconos) no hay dónde mostrar los hijos: el clic lo expande.
+   * Dentro del grupo (una de sus rutas activa) permanece abierto.
+   */
+  toggleGroup(): void {
+    if (this.collapsed()) {
+      this.collapsed.set(false);
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, 'false');
+      this.manuallyOpen.set(true);
+      return;
+    }
+    this.manuallyOpen.update((open) => !open);
   }
 
   toggleCollapsed(): void {

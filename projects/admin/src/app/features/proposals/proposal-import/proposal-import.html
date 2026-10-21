@@ -1,5 +1,5 @@
 <app-admin-page-header
-  [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/proposals' }, { label: 'Nueva desde PDF' }]"
+  [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/viajes/propuestas' }, { label: 'Nueva desde PDF' }]"
   title="Nueva propuesta desde PDF"
 />
 
@@ -65,7 +65,7 @@
         }
 
         <div class="proposal-import__footer">
-          <a class="btn btn--secondary" routerLink="/proposals">Cancelar</a>
+          <a class="btn btn--secondary" routerLink="/viajes/propuestas">Cancelar</a>
           <button type="submit" class="btn btn--primary" [disabled]="!canContinue()">Continuar</button>
         </div>
       </form>

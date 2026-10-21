@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
 import { permissionGuard } from './core/guards/permission-guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes-guard';
+import { LEGACY_PROPOSAL_REDIRECTS, travelRoutes } from './features/travel/travel-routes';
 
 export const routes: Routes = [
   {
@@ -102,37 +103,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard('solicitudes')],
         loadComponent: () => import('./features/leads/lead-detail/lead-detail').then((m) => m.LeadDetail)
       },
-      {
-        path: 'proposals',
-        data: { title: 'Propuestas' },
-        canActivate: [permissionGuard('proposals')],
-        loadComponent: () =>
-          import('./features/proposals/proposals-list/proposals-list').then((m) => m.ProposalsList)
-      },
-      {
-        path: 'proposals/new',
-        data: { title: 'Nueva propuesta' },
-        canActivate: [permissionGuard('proposals')],
-        loadComponent: () =>
-          import('./features/proposals/proposal-create/proposal-create').then((m) => m.ProposalCreate)
-      },
-      {
-        path: 'proposals/import',
-        data: { title: 'Nueva desde PDF' },
-        canActivate: [permissionGuard('proposals')],
-        loadComponent: () =>
-          import('./features/proposals/proposal-import/proposal-import').then((m) => m.ProposalImport)
-      },
-      {
-        // Sin unsavedChangesGuard: cada paso autoguarda por campo/acción,
-        // mismo criterio que itinerario/galería de Destinos (no el de
-        // General, que sí usa guard porque ahí se guarda con botón explícito).
-        path: 'proposals/:id/edit',
-        data: { title: 'Editar propuesta' },
-        canActivate: [permissionGuard('proposals')],
-        loadComponent: () =>
-          import('./features/proposals/proposal-builder/proposal-builder').then((m) => m.ProposalBuilder)
-      },
+      // Viajes: Propuestas e Itinerarios comparten pantallas (ver features/travel). Itinerarios queda detrás de
+      // ITINERARIES_ENABLED hasta que exista `kind` en la base. Las rutas /proposals/... antiguas redirigen para siempre.
+      ...travelRoutes('proposal'),
+      ...travelRoutes('itinerary'),
+      ...LEGACY_PROPOSAL_REDIRECTS,
       {
         path: 'contenido',
         data: { title: 'Página principal' },

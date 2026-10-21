@@ -4,17 +4,23 @@
       <p class="proposals-list__breadcrumb">
         <a routerLink="/dashboard">Panel</a>
         <span aria-hidden="true"> / </span>
-        <span>Propuestas</span>
+        <span>Viajes</span>
+        <span aria-hidden="true"> / </span>
+        <span>{{ labels.plural }}</span>
       </p>
-      <h1 class="page-title proposals-list__title">Propuestas</h1>
-      <p class="proposals-list__subtitle">Crea y gestiona propuestas personalizadas para tus clientes.</p>
+      <h1 class="page-title proposals-list__title">{{ labels.plural }}</h1>
+      <p class="proposals-list__subtitle">{{ labels.subtitle }}</p>
     </div>
 
     <div class="proposals-list__actions">
-      <a class="proposals-list__pdf-btn" routerLink="/proposals/import">Nueva desde PDF</a>
-      <a class="proposals-list__new-btn" routerLink="/proposals/new">
-        <span aria-hidden="true">+</span> Nueva propuesta <span aria-hidden="true">+</span>
-      </a>
+      @if (showPdfImport()) {
+        <a class="proposals-list__pdf-btn" [routerLink]="importPath">Nueva desde PDF</a>
+      }
+      @if (canCreate()) {
+        <a class="proposals-list__new-btn" [routerLink]="createPath">
+          <span aria-hidden="true">+</span> {{ labels.create }} <span aria-hidden="true">+</span>
+        </a>
+      }
     </div>
   </header>
 
@@ -78,16 +84,16 @@
   } @else if (items().length === 0) {
     <div class="proposals-list__empty">
       @if (hasActiveFilters()) {
-        <p>No hay propuestas que coincidan con estos filtros.</p>
+        <p>{{ labels.emptyFiltered }}</p>
       } @else {
-        <p>Todavía no hay propuestas.</p>
+        <p>{{ labels.empty }}</p>
       }
     </div>
   } @else {
     <div class="proposals-list__rows">
       @for (item of items(); track item.id) {
         <div class="proposals-list__row">
-          <a class="proposals-list__row-link" [routerLink]="['/proposals', item.id, 'edit']">
+          <a class="proposals-list__row-link" [routerLink]="editPath(item.id)">
             <div class="proposals-list__thumb">
               @if (thumbnailUrl(item); as url) {
                 <img [src]="url" alt="" loading="lazy" />
@@ -152,29 +158,33 @@
             </button>
             @if (openMenuId() === item.id) {
               <div class="proposals-list__menu-panel" role="menu">
-                <a role="menuitem" [routerLink]="['/proposals', item.id, 'edit']" (click)="openMenuId.set(null)">Editar</a>
-                <a role="menuitem" [routerLink]="['/proposals', item.id, 'edit']" [queryParams]="{ step: 'preview' }" (click)="openMenuId.set(null)">
-                  Vista previa
-                </a>
-                @if (item.status === 'draft') {
+                <a role="menuitem" [routerLink]="editPath(item.id)" (click)="openMenuId.set(null)">Editar</a>
+                @if (config.capabilities.previewPanel) {
+                  <a role="menuitem" [routerLink]="editPath(item.id)" [queryParams]="{ step: 'preview' }" (click)="openMenuId.set(null)">
+                    Vista previa
+                  </a>
+                }
+                @if (config.capabilities.publish && item.status === 'draft') {
                   <button type="button" role="menuitem" [disabled]="togglingId() === item.id" (click)="publish(item)">
                     {{ togglingId() === item.id ? 'Publicando…' : 'Publicar' }}
                   </button>
                 }
-                @if (item.status === 'published' || item.status === 'viewed' || item.status === 'accepted') {
+                @if (config.capabilities.publish && (item.status === 'published' || item.status === 'viewed' || item.status === 'accepted')) {
                   <button type="button" role="menuitem" [disabled]="togglingId() === item.id" (click)="unpublish(item)">
                     {{ togglingId() === item.id ? 'Despublicando…' : 'Despublicar' }}
                   </button>
                 }
-                <button
-                  type="button"
-                  role="menuitem"
-                  class="proposals-list__menu-item--danger"
-                  [disabled]="deletingId() === item.id"
-                  (click)="requestDelete(item)"
-                >
-                  {{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}
-                </button>
+                @if (canRemove()) {
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="proposals-list__menu-item--danger"
+                    [disabled]="deletingId() === item.id"
+                    (click)="requestDelete(item)"
+                  >
+                    {{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}
+                  </button>
+                }
               </div>
             }
           </div>
@@ -186,7 +196,7 @@
   @if (!loading() && !loadError() && items().length > 0 && totalPages() > 1) {
     <div class="proposals-list__pagination">
       <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">← Anterior</button>
-      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} propuestas</span>
+      <span>Página {{ page() }} de {{ totalPages() }} · {{ total() }} {{ labels.plural.toLowerCase() }}</span>
       <button type="button" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">Siguiente →</button>
     </div>
   }
@@ -194,8 +204,8 @@
 
 <app-confirm-dialog
   [open]="!!proposalPendingDelete()"
-  title="Eliminar propuesta"
-  [message]="'¿Eliminar la propuesta de ' + (proposalPendingDelete()?.clientName ?? '') + '? Esta acción no se puede deshacer.'"
+  [title]="labels.deleteTitle"
+  [message]="labels.deleteConfirm(proposalPendingDelete()?.clientName ?? '')"
   (confirmed)="confirmDelete()"
   (cancelled)="cancelDelete()"
 />

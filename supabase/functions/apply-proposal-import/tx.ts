@@ -56,12 +56,14 @@ export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<stri
         throw new ConflictError();
       }
 
+      // `kind` va explícito (no se confía en el DEFAULT): la importación de PDF es EXCLUSIVA de Propuestas y nunca debe
+      // poder crear un itinerario. Requiere la migración 0055 (columna `kind`) aplicada ANTES de desplegar esta función.
       const inserted = await tx`
         insert into public.proposals (
-          status, client_name, client_email, client_phone, destination_text, start_date, end_date,
+          kind, status, client_name, client_email, client_phone, destination_text, start_date, end_date,
           travelers_count, currency, advisor_id, created_by, origin_channel, lead_id, content
         ) values (
-          'draft', ${mapped.clientName}, ${mapped.clientEmail}, ${mapped.clientPhone}, ${mapped.destinationText},
+          'proposal', 'draft', ${mapped.clientName}, ${mapped.clientEmail}, ${mapped.clientPhone}, ${mapped.destinationText},
           ${mapped.startDate}::date, ${mapped.endDate}::date, ${mapped.travelersCount}::int, ${mapped.currency},
           ${userId}::uuid, ${userId}::uuid, ${originChannel}, ${leadId}::uuid, ${tx.json(mapped.content)}::jsonb
         )

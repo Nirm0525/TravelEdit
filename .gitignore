@@ -49,3 +49,7 @@ Thumbs.db
 /projects/admin/src/environments/environment.development.ts
 
 .vercel
+
+# Resultado del preflight de produccion (definiciones y ACL reales): evidencia local, no se versiona.
+/supabase/migration-scripts/*_preflight_production.csv
+/supabase/migration-scripts/*_preflight_production.json

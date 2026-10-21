@@ -1,3 +1,4 @@
+import { travelPaths } from '../../travel/travel-config';
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -258,7 +259,7 @@ export class LeadDetail {
     }
     const existing = this.linkedProposal();
     if (existing) {
-      await this.router.navigate(['/proposals', existing.id, 'edit']);
+      await this.router.navigate(travelPaths.edit('proposal', existing.id));
       return;
     }
 
@@ -271,7 +272,7 @@ export class LeadDetail {
     try {
       const created = await this.proposalsService.createDraft(this.buildProposalPayloadFromLead(current));
       this.linkedProposal.set(created);
-      await this.router.navigate(['/proposals', created.id, 'edit']);
+      await this.router.navigate(travelPaths.edit('proposal', created.id));
     } catch (error) {
       console.error('No se pudo crear la propuesta.', error);
       this.proposalActionError.set('No se pudo crear la propuesta. Inténtalo nuevamente.');

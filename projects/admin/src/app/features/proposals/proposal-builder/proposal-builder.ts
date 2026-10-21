@@ -17,6 +17,8 @@ import { PreviewStep } from './preview-step/preview-step';
 import { PublishChecklist } from './publish-checklist/publish-checklist';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
 import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
+import { can } from '../../../core/data/permissions';
+import { BuilderStep, injectTravelMode, travelConfigOf } from '../../travel/travel-config';
 
 /** 'preview' no es una pestaña visible — la vista previa en vivo es la
  *  columna persistente de la derecha, siempre montada sin importar qué
@@ -32,23 +34,7 @@ import { AdminModal } from '../../../shared/ui/admin-modal/admin-modal';
  *  "Términos" porque ClientTripStep comparte esas tres secciones — con un
  *  solo currentStep gobernando tanto el contenido como el resaltado de la
  *  pestaña, eso ya no puede pasar. */
-type BuilderStep = 'client-trip' | 'cover' | 'journey' | 'pricing' | 'travel-tips' | 'terms' | 'assistant' | 'preview';
 type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
-
-interface TabDef {
-  key: BuilderStep;
-  label: string;
-}
-
-const TABS: TabDef[] = [
-  { key: 'client-trip', label: 'Client & Trip' },
-  { key: 'cover', label: 'Portada' },
-  { key: 'journey', label: 'Itinerario' },
-  { key: 'pricing', label: 'Precios' },
-  { key: 'travel-tips', label: 'Travel Tips' },
-  { key: 'terms', label: 'Términos' },
-  { key: 'assistant', label: 'The Edit Assistant' }
-];
 
 /** Mensajes que publish_proposal() lanza a propósito (en español, pensados para la asesora). */
 const PUBLISH_USER_MESSAGES = ['Faltan datos para publicar', 'Solo se puede publicar', 'No autorizado', 'Propuesta no encontrada'];
@@ -77,7 +63,14 @@ export class ProposalBuilder {
   private readonly auth = inject(AuthService);
   private readonly menuRef = viewChild<ElementRef<HTMLElement>>('menu');
 
-  readonly tabs = TABS;
+  /** Propuesta o Itinerario según la ruta: pestañas, acciones de cabecera y vista previa salen de la configuración del modo. */
+  readonly mode = injectTravelMode();
+  readonly config = travelConfigOf(this.mode);
+  readonly caps = this.config.capabilities;
+  /** Eliminar es solo de admin (igual que la RLS). */
+  readonly canRemove = computed(() => can(this.auth.profile()?.role, this.config.permissions.remove));
+  readonly routeBase = this.config.routeBase;
+  readonly tabs = computed(() => this.config.tabs.filter((tab) => !tab.permission || can(this.auth.profile()?.role, tab.permission)));
   readonly statusLabel = PROPOSAL_STATUS_LABEL;
   readonly proposalId = this.route.snapshot.paramMap.get('id')!;
 
@@ -242,7 +235,8 @@ export class ProposalBuilder {
 
   private readStepFromUrl(): BuilderStep {
     const value = this.route.snapshot.queryParamMap.get('step');
-    const valid: BuilderStep[] = ['client-trip', 'cover', 'journey', 'pricing', 'travel-tips', 'terms', 'assistant', 'preview'];
+    // Solo pasos que el modo ofrece (y que la persona puede ver): un ?step=pricing en un itinerario cae en el primero.
+    const valid: BuilderStep[] = [...this.tabs().map((tab) => tab.key), ...(this.caps.previewPanel ? (['preview'] as const) : [])];
     return (valid as string[]).includes(value ?? '') ? (value as BuilderStep) : 'client-trip';
   }
 
@@ -282,7 +276,7 @@ export class ProposalBuilder {
   /** Vuelve a pedir a la base qué falta para publicar. Solo la última respuesta cuenta. */
   async refreshReadiness(): Promise<void> {
     const seq = ++this.readinessSeq;
-    if (this.proposal()?.status !== 'draft') {
+    if (!this.caps.publish || this.proposal()?.status !== 'draft') {
       this.readiness.set(null);
       return;
     }
@@ -401,10 +395,10 @@ export class ProposalBuilder {
     this.deleteError.set(null);
     try {
       await this.proposalsService.remove(this.proposalId);
-      await this.router.navigateByUrl('/proposals');
+      await this.router.navigateByUrl(this.routeBase);
     } catch (error) {
       console.error('No se pudo eliminar la propuesta.', error);
-      this.deleteError.set('No se pudo eliminar la propuesta. Inténtalo nuevamente.');
+      this.deleteError.set(this.config.labels.deleteError);
     } finally {
       this.deleting.set(false);
     }

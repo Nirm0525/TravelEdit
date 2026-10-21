@@ -6,13 +6,13 @@
     <button type="button" class="btn btn--secondary" (click)="load()">Reintentar</button>
   </div>
 } @else if (proposal(); as p) {
-  @if (isFullPagePreview()) {
+  @if (caps.previewPanel && isFullPagePreview()) {
     <app-preview-step class="proposal-builder__fullpage-preview" [proposalId]="proposalId" [refreshTick]="refreshTick()" />
   } @else {
     <div class="proposal-builder">
       <header class="proposal-builder__header">
         <div class="proposal-builder__heading">
-          <p class="eyebrow"><a routerLink="/proposals">Panel</a> / <a routerLink="/proposals">Propuestas</a> / Editar</p>
+          <p class="eyebrow"><a routerLink="/dashboard">Panel</a> / Viajes / <a [routerLink]="routeBase">{{ config.labels.plural }}</a> / Editar</p>
           <div class="proposal-builder__title-row">
             <h1 class="page-title">{{ p.clientName }}</h1>
             <span class="proposal-builder__status-badge" [class]="'is-' + p.status">
@@ -26,7 +26,7 @@
         </div>
 
         <div class="proposal-builder__actions">
-          @if (p.status === 'draft') {
+          @if (caps.publish && p.status === 'draft') {
             <button
               type="button"
               class="btn btn--primary"
@@ -38,15 +38,17 @@
             >
               {{ publishBlocked() ? pendingLabel() : publishing() ? 'Publicando…' : sendingToClient() ? 'Enviando…' : 'Publicar y enviar al cliente' }}
             </button>
-          } @else if (p.status === 'published' || p.status === 'viewed') {
+          } @else if (caps.publish && (p.status === 'published' || p.status === 'viewed')) {
             <button type="button" class="btn btn--primary" [disabled]="sendingToClient()" (click)="sendToClient()">
               {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
             </button>
             <button type="button" class="btn btn--secondary" (click)="openWhatsapp()">Enviar por WhatsApp</button>
           }
-          <button type="button" class="btn btn--secondary proposal-builder__preview-toggle" (click)="togglePreviewDrawer()">
-            Vista previa <span aria-hidden="true">👁</span>
-          </button>
+          @if (caps.previewPanel) {
+            <button type="button" class="btn btn--secondary proposal-builder__preview-toggle" (click)="togglePreviewDrawer()">
+              Vista previa <span aria-hidden="true">👁</span>
+            </button>
+          }
           <span
             class="proposal-builder__save-indicator"
             role="status"
@@ -60,22 +62,22 @@
             <button type="button" class="proposal-builder__menu-trigger" aria-label="Más acciones" (click)="toggleMenu()">⋮</button>
             @if (menuOpen()) {
               <div class="proposal-builder__menu-panel" role="menu">
-                @if (privateLink()) {
+                @if (caps.publish && privateLink()) {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" (click)="copyLink()">
                     {{ linkCopied() ? 'Enlace copiado ✓' : 'Copiar enlace privado' }}
                   </button>
                 }
-                @if (p.status === 'draft') {
+                @if (caps.publish && p.status === 'draft') {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="publishing()" (click)="publish()">
                     {{ publishBlocked() ? pendingLabel() : publishing() ? 'Publicando…' : 'Publicar propuesta' }}
                   </button>
                 }
-                @if (p.status === 'published' || p.status === 'viewed' || p.status === 'accepted') {
+                @if (caps.publish && (p.status === 'published' || p.status === 'viewed' || p.status === 'accepted')) {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="publishing()" (click)="unpublish()">
                     {{ publishing() ? 'Despublicando…' : 'Despublicar' }}
                   </button>
                 }
-                @if (p.status === 'published' || p.status === 'viewed') {
+                @if (caps.publish && (p.status === 'published' || p.status === 'viewed')) {
                   <button type="button" role="menuitem" class="proposal-builder__menu-item" [disabled]="sendingToClient()" (click)="sendToClient()">
                     {{ sendingToClient() ? 'Enviando…' : 'Enviar al cliente' }}
                   </button>
@@ -83,16 +85,18 @@
                     Enviar por WhatsApp
                   </button>
                 }
-                <button type="button" role="menuitem" class="proposal-builder__menu-item proposal-builder__menu-item--danger" (click)="requestDelete()">
-                  Eliminar propuesta
-                </button>
+                @if (canRemove()) {
+                  <button type="button" role="menuitem" class="proposal-builder__menu-item proposal-builder__menu-item--danger" (click)="requestDelete()">
+                    {{ config.labels.deleteTitle }}
+                  </button>
+                }
               </div>
             }
           </div>
         </div>
       </header>
 
-      @if (p.status === 'draft' && readiness(); as pending) {
+      @if (caps.publish && p.status === 'draft' && readiness(); as pending) {
         <app-publish-checklist [problems]="pending" (selected)="goToProblem($event)" />
       }
       @if (publishError(); as message) {
@@ -111,7 +115,7 @@
         <p class="proposal-builder__inline-error" role="alert">{{ message }}</p>
       }
 
-      @if (p.status === 'accepted') {
+      @if (caps.accept && p.status === 'accepted') {
         <div class="proposal-builder__accepted-banner" role="status">
           ✓ El cliente aceptó esta propuesta{{ p.acceptedByName ? ' — ' + p.acceptedByName : '' }}
           @if (p.acceptedAt) {
@@ -121,7 +125,7 @@
       }
 
       <nav class="proposal-builder__tabs" aria-label="Secciones del editor">
-        @for (tab of tabs; track tab.key) {
+        @for (tab of tabs(); track tab.key) {
           <button
             type="button"
             class="proposal-builder__tab"
@@ -186,7 +190,7 @@
         }
       </nav>
 
-      <div class="proposal-builder__body">
+      <div class="proposal-builder__body" [class.proposal-builder__body--no-preview]="!caps.previewPanel">
         <div class="proposal-builder__edit">
           @switch (currentStep()) {
             @case ('journey') {
@@ -210,6 +214,8 @@
               <app-client-trip-step
                 [proposalId]="proposalId"
                 [activeSection]="currentStep() === 'cover' ? 'cover' : currentStep() === 'terms' ? 'terms' : 'client-trip'"
+                [capabilities]="caps"
+                [subject]="config.labels.singular"
                 (saved)="onSaved()"
                 (codeGenerated)="onCodeGenerated($event)"
                 (openAssistant)="activateAssistant($event)"
@@ -218,6 +224,7 @@
           }
         </div>
 
+        @if (caps.previewPanel) {
         <aside #previewCol class="proposal-builder__preview-col" [class.is-open]="previewDrawerOpen()" [class.is-flash]="previewFlash()">
           <div class="proposal-builder__preview-toolbar">
             <span class="proposal-builder__preview-label">Vista previa para el cliente</span>
@@ -254,6 +261,7 @@
             <app-preview-step [proposalId]="proposalId" [refreshTick]="refreshTick()" />
           </div>
         </aside>
+        }
       </div>
     </div>
   }

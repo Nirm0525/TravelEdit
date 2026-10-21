@@ -47,7 +47,7 @@
         <ul class="dashboard__list">
           @for (item of a.feedbackProposals; track item.id) {
             <li>
-              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
+              <a [routerLink]="['/viajes/propuestas', item.id, 'edit']">{{ item.clientName }}</a>
               <span class="dashboard__list-meta">
                 {{ item.commentCount }} comentario(s) · {{ item.title || 'Sin título' }}
                 @if (item.feedbackSentAt) {
@@ -93,14 +93,14 @@
         <ul class="dashboard__list">
           @for (item of a.recentProposals; track item.id) {
             <li>
-              <a [routerLink]="['/proposals', item.id, 'edit']">{{ item.clientName }}</a>
+              <a [routerLink]="['/viajes/propuestas', item.id, 'edit']">{{ item.clientName }}</a>
               <span class="dashboard__list-meta">{{ statusLabel(item.status) }} · {{ relativeTime(item.updatedAt) }}</span>
             </li>
           }
         </ul>
       }
 
-      <a class="dashboard__see-all" routerLink="/proposals">Ver mis propuestas →</a>
+      <a class="dashboard__see-all" routerLink="/viajes/propuestas">Ver mis propuestas →</a>
     </section>
   </div>
 } @else if (data(); as d) {

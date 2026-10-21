@@ -8,6 +8,9 @@ import { ProposalStatus } from '../../../core/models/proposal-enums';
 import { PROPOSAL_STATUS_LABEL } from '../../../core/models/proposal-enums';
 import { PROPOSAL_STATUS_OPTIONS } from '../../../core/data/proposal-options';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog/confirm-dialog';
+import { AuthService } from '../../../core/services/auth';
+import { can } from '../../../core/data/permissions';
+import { injectTravelMode, travelConfigOf, travelPaths } from '../../travel/travel-config';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -21,6 +24,19 @@ const SEARCH_DEBOUNCE_MS = 300;
 export class ProposalsList {
   private readonly proposalsService = inject(ProposalsService);
   private readonly proposalImages = inject(ProposalImagesService);
+  private readonly auth = inject(AuthService);
+
+  /** Modo de la ruta (Propuestas o Itinerarios): la misma lista, configurada por modo (ver features/travel). */
+  readonly mode = injectTravelMode();
+  readonly config = travelConfigOf(this.mode);
+  readonly labels = this.config.labels;
+  readonly listPath = travelPaths.list(this.mode);
+  readonly createPath = travelPaths.create(this.mode);
+  readonly importPath = travelPaths.import(this.mode);
+  readonly editPath = (id: string) => travelPaths.edit(this.mode, id);
+  readonly canCreate = computed(() => can(this.auth.profile()?.role, this.config.permissions.create));
+  readonly canRemove = computed(() => can(this.auth.profile()?.role, this.config.permissions.remove));
+  readonly showPdfImport = computed(() => this.config.capabilities.pdfImport && this.canCreate());
 
   readonly statusLabel = PROPOSAL_STATUS_LABEL;
 
@@ -211,7 +227,7 @@ export class ProposalsList {
     } catch (error) {
       console.error('No se pudo eliminar la propuesta.', error);
       this.actionError.set(
-        error instanceof ProposalDocumentsPurgedError ? error.message : 'No se pudo eliminar la propuesta. Inténtalo nuevamente.'
+        error instanceof ProposalDocumentsPurgedError ? error.message : this.labels.deleteError
       );
       if (error instanceof ProposalDocumentsPurgedError) {
         // La propuesta sigue, pero ya sin documentos: la lista debe reflejar el estado real.

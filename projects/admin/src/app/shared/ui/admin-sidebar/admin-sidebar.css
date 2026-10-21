@@ -312,3 +312,55 @@
     transition: none;
   }
 }
+
+/* Grupo desplegable «Viajes» */
+.admin-sidebar__group-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-sidebar__group-chevron {
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.admin-sidebar__group-chevron--open {
+  transform: rotate(180deg);
+}
+
+.admin-sidebar__sublist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  margin: var(--space-3xs) 0 0;
+  padding: 0 0 0 calc(var(--space-xs) + 1.5rem + var(--space-sm) - 0.25rem);
+  list-style: none;
+}
+
+.admin-sidebar__sublink {
+  display: block;
+  padding: var(--space-xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.admin-sidebar__sublink:hover {
+  background: var(--canvas-100);
+  color: var(--ink-900);
+}
+
+.admin-sidebar__sublink.is-active {
+  background: color-mix(in srgb, var(--brand-600) 8%, transparent);
+  color: var(--brand-600);
+  font-weight: 600;
+}

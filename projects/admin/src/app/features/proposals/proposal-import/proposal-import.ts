@@ -1,3 +1,4 @@
+import { travelPaths } from '../../travel/travel-config';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { LeadOption, OriginChannel, ProposalImportService } from '../../../core/services/proposal-import';
@@ -175,7 +176,7 @@ export class ProposalImport implements OnInit {
         this.extracted.set(result.extracted);
         this.stage.set('ready');
       } else if (result.status === 'applied' && result.proposal_id) {
-        await this.router.navigate(['/proposals', result.proposal_id, 'edit']);
+        await this.router.navigate(travelPaths.edit('proposal', result.proposal_id));
       } else {
         this.failureMessage.set(result.error ?? 'No se pudo leer el PDF. Inténtalo de nuevo.');
         this.stage.set('failed');
@@ -213,7 +214,7 @@ export class ProposalImport implements OnInit {
     this.applyError.set(null);
     try {
       const proposalId = await this.importService.apply(this.importId, channel, this.leadId() || null);
-      await this.router.navigate(['/proposals', proposalId, 'edit']);
+      await this.router.navigate(travelPaths.edit('proposal', proposalId));
     } catch (error) {
       console.error('No se pudo crear la propuesta.', error);
       this.applyError.set(error instanceof Error ? error.message : 'No se pudo crear la propuesta. Inténtalo de nuevo.');

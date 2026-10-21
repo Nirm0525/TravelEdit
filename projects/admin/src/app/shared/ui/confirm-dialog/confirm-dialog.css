@@ -1,1 +1,12 @@
 /* Usa AdminModal + los botones globales .btn — sin estilos propios. */
+
+/* El botón destructivo usa el rojo de marca (el del encabezado del modal), no el rojo de error global. */
+.btn--danger {
+  background: var(--brand-600);
+}
+
+/* El div proyectado es el único hijo del footer del modal, así que su gap no separa los botones. */
+[adminModalFooter] {
+  display: flex;
+  gap: var(--space-md);
+}

@@ -31,6 +31,15 @@
 
               <h1 class="private-proposal__gate-headline">{{ copy().gateHeadline }}</h1>
 
+              <!-- Solo móvil: cabecera de la tarjeta de acceso (en escritorio se ve el titular de arriba). -->
+              <div class="private-proposal__gate-card-head">
+                <span class="private-proposal__gate-ornament" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 15.5v-1.7l-8-4.8V3.5a1.5 1.5 0 0 0-3 0V9l-8 4.8v1.7l8-2.2V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.7l8 2.2z" /></svg>
+                </span>
+                <h2 class="private-proposal__gate-card-title">{{ copy().gateCardTitle }}</h2>
+                <p class="private-proposal__gate-card-help">{{ copy().gateCardHelp }}</p>
+              </div>
+
               <form class="private-proposal__gate-form" (submit)="$event.preventDefault(); submitCode()">
                 @if (accessError() !== 'expired') {
                   <label class="private-proposal__field" for="gate-access-code">
@@ -68,11 +77,17 @@
                 @if (accessError() !== 'expired') {
                   <button type="submit" class="private-proposal__gate-submit" [disabled]="verifying() || !codeInput().trim()">
                     {{ verifying() ? 'Verificando…' : copy().submit }}
+                    <svg class="private-proposal__gate-submit-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                   </button>
                 }
               </form>
 
               <p class="private-proposal__gate-footnote">{{ copy().footnote }}</p>
+              <!-- Solo móvil: la misma idea con un candado, más discreta. -->
+              <p class="private-proposal__gate-privacy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                {{ copy().gatePrivacy }}
+              </p>
             </div>
           </aside>
 
@@ -93,18 +108,18 @@
 
                 <dl class="private-proposal__gate-facts">
                   @if (g.clientName) {
-                    <div class="private-proposal__gate-fact">
+                    <div class="private-proposal__gate-fact private-proposal__gate-fact--para">
                       <dt>Para</dt>
                       <dd>{{ g.clientName }}</dd>
                     </div>
                   }
                   @if (g.coverTitle) {
-                    <div class="private-proposal__gate-fact">
+                    <div class="private-proposal__gate-fact private-proposal__gate-fact--trip">
                       <dt>Viaje</dt>
                       <dd>{{ g.coverTitle }}</dd>
                     </div>
                   }
-                  <div class="private-proposal__gate-fact">
+                  <div class="private-proposal__gate-fact private-proposal__gate-fact--from">
                     <dt>De</dt>
                     <dd>Travel Edit</dd>
                   </div>

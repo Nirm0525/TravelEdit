@@ -124,7 +124,8 @@
   gap: 0.4rem;
 }
 
-.private-proposal__field span {
+.private-proposal__field span,
+.private-proposal__gate-fact dt {
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: var(--track-label);
@@ -231,7 +232,8 @@
   color: var(--color-white);
 }
 
-.private-proposal__gate-hero-image {
+.private-proposal__gate-hero-image,
+.proposal__hero-image {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -300,13 +302,6 @@
   grid-column: 1 / -1;
 }
 
-.private-proposal__gate-fact dt {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--color-warm-beige);
-}
 
 .private-proposal__gate-fact dd {
   margin: 0.15rem 0 0;
@@ -338,6 +333,12 @@
    absorbe el espacio sobrante (min-height: 0), la franja con el logo se compacta y, si la ventana es muy baja,
    solo el panel del formulario desplaza por dentro — nunca la página. */
 @media (min-width: 48.01rem) {
+  .private-proposal__gate-card-head,
+  .private-proposal__gate-privacy,
+  .private-proposal__gate-submit svg {
+    display: none;
+  }
+
   .private-proposal__gate {
     flex-direction: row;
     height: 100vh;
@@ -480,13 +481,6 @@
   overflow: hidden;
 }
 
-.proposal__hero-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
 .proposal__hero-overlay {
   position: absolute;
@@ -760,7 +754,8 @@
     margin-left: 22rem;
   }
 
-  .proposal.has-sidebar .proposal__band {
+  .proposal.has-sidebar .proposal__band,
+  .proposal.has-sidebar .proposal__bleed {
     width: calc(100vw - 22rem);
     margin-left: calc(-50vw + 11rem);
   }
@@ -899,13 +894,6 @@
   margin-left: -50vw;
 }
 
-@media (min-width: 64.01rem) {
-  .proposal.has-sidebar .proposal__bleed {
-    width: calc(100vw - 22rem);
-    margin-left: calc(-50vw + 11rem);
-  }
-}
-
 .proposal__day-number {
   font-family: var(--font-display);
   font-size: clamp(3.5rem, 1.5rem + 8vw, 8rem);
@@ -986,13 +974,15 @@
   gap: var(--space-sm);
 }
 
-.proposal__service-icon {
+.proposal__service-icon,
+.proposal__itinerary-icon {
   flex: none;
   display: inline-flex;
   color: var(--color-burgundy);
 }
 
-.proposal__service-icon svg {
+.proposal__service-icon svg,
+.proposal__terms-link-icon svg {
   width: 2rem;
   height: 2rem;
 }
@@ -1038,7 +1028,8 @@
   transition: background-color 0.25s ease, opacity 0.25s ease;
 }
 
-.proposal__service-choice:hover:not(:disabled) {
+.proposal__service-choice:hover:not(:disabled),
+.proposal__accept-button:hover:not(:disabled) {
   background: var(--color-wine);
 }
 
@@ -1262,7 +1253,8 @@
   color: var(--color-burgundy);
 }
 
-.proposal__itinerary-summary-icon svg {
+.proposal__itinerary-summary-icon svg,
+.proposal__itinerary-icon svg {
   width: 1.75rem;
   height: 1.75rem;
 }
@@ -1401,16 +1393,7 @@
   padding-bottom: 0;
 }
 
-.proposal__itinerary-icon {
-  flex: none;
-  display: inline-flex;
-  color: var(--color-burgundy);
-}
 
-.proposal__itinerary-icon svg {
-  width: 1.75rem;
-  height: 1.75rem;
-}
 
 .proposal__itinerary-service {
   display: flex;
@@ -1479,7 +1462,9 @@
   color: var(--color-burgundy);
 }
 
-.proposal__tip-icon svg {
+.proposal__tip-icon svg,
+.proposal__tip-chevron svg,
+.proposal__pricing-icon svg {
   width: 100%;
   height: 100%;
 }
@@ -1501,10 +1486,6 @@
   transition: transform 0.25s ease;
 }
 
-.proposal__tip-chevron svg {
-  width: 100%;
-  height: 100%;
-}
 
 .proposal__tip-type[open] .proposal__tip-chevron {
   transform: rotate(90deg);
@@ -1662,11 +1643,6 @@
   color: var(--color-burgundy);
 }
 
-.proposal__pricing-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
 .proposal__pricing-mix-bar {
   grid-column: 1 / -1;
   order: 5;
@@ -1815,10 +1791,6 @@
   color: var(--color-cream);
 }
 
-.proposal__terms-link-icon svg {
-  width: 2rem;
-  height: 2rem;
-}
 
 .proposal__terms-link-arrow {
   width: 1.5rem;
@@ -1870,11 +1842,9 @@
   transition: background-color 0.25s ease, opacity 0.25s ease;
 }
 
-.proposal__accept-button:hover:not(:disabled) {
-  background: var(--color-wine);
-}
 
-.proposal__accept-button:disabled {
+.proposal__accept-button:disabled,
+.proposal__feedback-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -2156,10 +2126,6 @@
   background: var(--color-burgundy);
 }
 
-.proposal__feedback-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .proposal__feedback-sent {
   margin: 0;
@@ -2171,10 +2137,7 @@
    transparente). Sobre fondos rojos/oscuros se reversa a blanco. */
 .private-proposal__gate-logo,
 .private-proposal__wordmark-img--topbar,
-.proposal__sidebar-logo {
-  filter: brightness(0) invert(1);
-}
-
+.proposal__sidebar-logo,
 .private-proposal__center--loading .private-proposal__wordmark-img {
   filter: brightness(0) invert(1);
 }
@@ -2372,4 +2335,176 @@
 /* El foco programático que recibe el destino de un scroll interno no lleva anillo (el teclado sigue desde ahí). */
 [tabindex='-1']:focus {
   outline: none;
+}
+
+/* Acceso móvil (≤48rem): foto compacta → marca discreta → UNA tarjeta clara; el vino queda como acento (el botón).
+   Los nodos «solo móvil» se ocultan en el split-screen (ver @media min-width 48.01rem). Solo estilos. */
+@media (max-width: 48rem) {
+  .private-proposal__gate {
+    background: var(--color-cream);
+  }
+
+  .private-proposal__gate-hero-photo {
+    min-height: 0;
+    height: clamp(13.75rem, 64vw, 15rem);
+  }
+
+  .private-proposal__gate-hero-content {
+    padding: var(--space-md);
+  }
+
+  .private-proposal__gate-hero-heading,
+  .private-proposal__gate-fact--from,
+  .private-proposal__gate-facts:has(.private-proposal__gate-fact--trip) .private-proposal__gate-fact--para,
+  .private-proposal__gate-panel-inner > div:first-child,
+  .private-proposal__gate-headline,
+  .private-proposal__gate-footnote {
+    display: none;
+  }
+
+  .private-proposal__gate-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .private-proposal__gate-fact dd,
+  .private-proposal__gate-card-title {
+    font-style: italic;
+    line-height: 1.2;
+  }
+
+  .private-proposal__gate-fact dd {
+    font-size: clamp(1.25rem, 0.95rem + 1.6vw, 1.6rem);
+    text-wrap: balance;
+    text-shadow: 0 2px 12px #16110f8c;
+  }
+
+  .private-proposal__gate-hero-footer {
+    padding: 0.85rem var(--space-md) 0.5rem;
+
+    .private-proposal__wordmark-img {
+      width: 4.5rem;
+    }
+  }
+
+  .private-proposal__gate-panel {
+    flex: 0 0 auto;
+    background: transparent;
+    padding: 0 var(--space-md) max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+
+  .private-proposal__gate-panel-inner {
+    gap: 0;
+    padding: 1.4rem 1.25rem 1.25rem;
+    background: #fbf8f4;
+    border: 1px solid #caae978c;
+    border-radius: 1.25rem;
+    box-shadow: 0 6px 22px -14px rgba(22, 17, 15, 0.28);
+  }
+
+  .private-proposal__gate-card-head {
+    text-align: center;
+
+    span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      color: var(--color-gold);
+    }
+
+    span::before,
+    span::after {
+      content: '';
+      width: 1.75rem;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.7;
+    }
+
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    h2 {
+      margin-top: 0.5rem;
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: clamp(1.55rem, 1.2rem + 1.8vw, 1.9rem);
+      color: var(--color-burgundy);
+    }
+
+    p {
+      margin: 0.5rem auto 0;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--color-stone);
+    }
+  }
+
+  .private-proposal__gate-form {
+    margin-top: 1.1rem;
+    gap: 0.75rem;
+
+    .private-proposal__field span {
+      font-size: 0.68rem;
+      color: var(--color-stone);
+    }
+
+    input {
+      min-height: 3rem;
+      padding: 0.7rem 1rem;
+      font-size: 1rem; /* 16px: iOS no hace zoom */
+      background: var(--color-white);
+      border-color: var(--color-warm-beige);
+      border-radius: 0.6rem;
+    }
+  }
+
+  .private-proposal__gate-error {
+    color: #9b2c2c;
+    font-size: 0.82rem;
+  }
+
+  .private-proposal__gate-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-burgundy);
+    color: var(--color-white);
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    &:hover:not(:disabled) {
+      background: var(--color-wine);
+    }
+
+    &:focus-visible {
+      outline-color: var(--color-gold);
+    }
+
+    svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+  }
+
+  .private-proposal__gate-privacy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.9rem;
+    font-size: 0.75rem;
+    color: var(--color-stone);
+
+    svg {
+      width: 0.9rem;
+      height: 0.9rem;
+      color: var(--color-gold);
+    }
+  }
 }

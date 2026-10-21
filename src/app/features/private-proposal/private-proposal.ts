@@ -170,6 +170,10 @@ interface PrivateCopy {
   unavailableTitle: string;
   unavailableCopy: string;
   gateHeadline: string;
+  /** Pantalla de acceso en móvil: título, ayuda y línea de privacidad de la tarjeta. */
+  gateCardTitle: string;
+  gateCardHelp: string;
+  gatePrivacy: string;
   expired: string;
   notAvailable: string;
   submit: string;
@@ -188,6 +192,9 @@ const PROPOSAL_COPY: PrivateCopy = {
   unavailableCopy:
     'El enlace puede haber expirado o la propuesta todavía no está lista para verse. Contacta a tu asesora de viajes si crees que esto es un error.',
   gateHeadline: 'Ingresa para ver tu propuesta de viaje',
+  gateCardTitle: 'Accede a tu propuesta',
+  gateCardHelp: 'Ingresa tu código de acceso para ver tu propuesta de viaje.',
+  gatePrivacy: 'Propuesta privada y personal.',
   expired: 'Tu acceso a esta propuesta venció. Pide a tu asesora que lo renueve.',
   notAvailable: 'Esta propuesta no está disponible.',
   submit: 'Ver mi propuesta',
@@ -206,6 +213,9 @@ const ITINERARY_COPY: PrivateCopy = {
   unavailableCopy:
     'El enlace puede haber expirado o el itinerario todavía no está listo para verse. Contacta a tu asesora de viajes si crees que esto es un error.',
   gateHeadline: 'Ingresa para ver tu itinerario de viaje',
+  gateCardTitle: 'Accede a tu itinerario',
+  gateCardHelp: 'Ingresa tu código de acceso para ver tu itinerario de viaje.',
+  gatePrivacy: 'Itinerario privado y personal.',
   expired: 'Tu acceso a este itinerario venció. Pide a tu asesora que lo renueve.',
   notAvailable: 'Este itinerario no está disponible.',
   submit: 'Ver mi itinerario',

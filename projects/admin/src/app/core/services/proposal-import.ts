@@ -3,6 +3,7 @@ import { AuthService } from './auth';
 import { SupabaseService } from './supabase';
 import { StoredExtraction } from '../models/proposal-extraction.types';
 import { importStoragePath } from '../utils/pdf-import';
+import { TravelKind } from '../models/proposal-enums';
 
 export type OriginChannel = 'web' | 'whatsapp' | 'email' | 'phone' | 'referral' | 'other';
 
@@ -12,6 +13,8 @@ export interface ImportStatusRow {
   error: string | null;
   extracted: StoredExtraction | null;
   proposal_id: string | null;
+  /** Tipo de la importación, tal como lo guardó la base al subir. */
+  kind: TravelKind;
 }
 
 export interface LeadOption {
@@ -33,8 +36,11 @@ export class ProposalImportService {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthService);
 
-  /** Sube el PDF como <uid>/<uuid>.pdf y crea la fila de la importación; devuelve su id. */
-  async upload(file: File): Promise<string> {
+  /**
+   * Sube el PDF como <uid>/<uuid>.pdf y crea la fila de la importación con su TIPO; devuelve su id. El tipo se envía solo aquí
+   * (la RLS exige can_travel(kind, 'crear')): después las Edge Functions lo LEEN de la fila, el cliente no vuelve a mandarlo.
+   */
+  async upload(file: File, kind: TravelKind): Promise<string> {
     const userId = this.auth.profile()?.id;
     if (!userId) {
       throw new Error('Tu sesión expiró. Vuelve a iniciar sesión.');
@@ -51,7 +57,7 @@ export class ProposalImportService {
 
     const { data, error } = await this.supabase.client
       .from('proposal_imports')
-      .insert({ file_path: path, mode: 'new', created_by: userId })
+      .insert({ file_path: path, mode: 'new', kind, created_by: userId })
       .select('id')
       .single();
     if (error || !data) {
@@ -77,7 +83,7 @@ export class ProposalImportService {
   async getStatus(importId: string): Promise<ImportStatusRow> {
     const { data, error } = await this.supabase.client
       .from('proposal_imports')
-      .select('id, status, error, extracted, proposal_id')
+      .select('id, status, error, extracted, proposal_id, kind')
       .eq('id', importId)
       .single();
     if (error || !data) {
@@ -86,7 +92,7 @@ export class ProposalImportService {
     return data as unknown as ImportStatusRow;
   }
 
-  /** Crea la propuesta en borrador a partir de lo extraído; devuelve el id de la propuesta. */
+  /** Crea el registro en borrador (del tipo de la importación) a partir de lo extraído; devuelve su id. No manda el tipo: lo lee el servidor. */
   async apply(importId: string, originChannel: OriginChannel, leadId: string | null): Promise<string> {
     const body: Record<string, unknown> = { import_id: importId, origin_channel: originChannel };
     if (leadId) {

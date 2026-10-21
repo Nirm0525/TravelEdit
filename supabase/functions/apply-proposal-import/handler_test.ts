@@ -14,6 +14,7 @@ const PATH = `${USER}/cccccccc-cccc-cccc-cccc-cccccccccccc.pdf`;
 const readyRow = (over: Partial<ImportRow> = {}): ImportRow => ({
   id: IMPORT_ID,
   mode: 'new',
+  kind: 'proposal',
   status: 'ready',
   file_path: PATH,
   created_by: USER,
@@ -40,7 +41,7 @@ function harness(over: Partial<Deps> = {}, row: ImportRow | null = readyRow()): 
     env: () => undefined,
     getUser: (token) => Promise.resolve(token === 'good' ? { id: USER } : null),
     getImportAsUser: () => Promise.resolve(row),
-    canManageProposals: () => Promise.resolve(true),
+    canTravel: () => Promise.resolve(true),
     canSeeLead: () => Promise.resolve(true),
     applyImport: (args) => {
       h.order.push('apply');
@@ -112,7 +113,7 @@ Deno.test('409: la importación no está en ready (uploaded, processing, failed,
 });
 
 Deno.test('403: sin permiso para crear propuestas', async () => {
-  const h = harness({ canManageProposals: () => Promise.resolve(false) });
+  const h = harness({ canTravel: () => Promise.resolve(false) });
   assertEquals((await handleRequest(req(), h.deps)).status, 403);
   assertEquals(h.applied.length, 0);
 });
@@ -251,4 +252,108 @@ Deno.test('apply: las notas del PDF llegan a Travel Tips; las inclusiones y excl
   // Solo las notas: la asistencia al viajero del voucher (servicio general) no se convierte en consejo ni va a un día.
   assertEquals(h.applied[0].tips, ['Lleve su pasaporte durante el viaje.', 'El clima es variable: lleve abrigo.']);
   assertFalse(JSON.stringify(h.applied[0]).includes('Traslados indicados'));
+});
+
+// ---------------------------------------------------------------- kind: proposal | itinerary (0055b)
+
+/** Harness que además registra el kind y el contenido que llegan a la transacción, y los permisos pedidos. */
+function kindHarness(row: ImportRow, over: Partial<Deps> = {}) {
+  const seen: { kind: string; currency: string | null; pricingLines: number; feeLines: number; terms: { title: string; body: string }; prices: boolean; hadPricing: unknown }[] = [];
+  const asked: string[] = [];
+  const h = harness(
+    {
+      canTravel: (_token, kind, action) => {
+        asked.push(`${kind}:${action}`);
+        return Promise.resolve(true);
+      },
+      applyImport: (args) => {
+        const content = args.mapped.content;
+        seen.push({
+          kind: args.kind,
+          currency: args.mapped.currency,
+          pricingLines: content.pricing.lines.length,
+          feeLines: content.pricing.feesLines.length,
+          terms: content.terms,
+          prices: content.days.some((d) => d.services.some((s) => 'price' in s)),
+          hadPricing: (args.retained.summary as { had_pricing: boolean }).had_pricing
+        });
+        return Promise.resolve(PROPOSAL_ID);
+      },
+      ...over
+    },
+    row
+  );
+  return { h, seen, asked };
+}
+
+Deno.test('kind: aplicar una importación de ITINERARIO crea un itinerario SIN precios, moneda ni términos aunque el extraído los traiga', async () => {
+  const { h, seen, asked } = kindHarness(readyRow({ kind: 'itinerary' }));
+  const res = await handleRequest(req(), h.deps);
+  assertEquals(res.status, 200);
+  assertEquals(seen.length, 1);
+  assertEquals(seen[0].kind, 'itinerary');
+  assertEquals([seen[0].currency, seen[0].pricingLines, seen[0].feeLines, seen[0].terms, seen[0].prices], [null, 0, 0, { title: '', body: '' }, false]);
+  assertEquals(seen[0].hadPricing, false, 'el resumen que se conserva tampoco guarda que hubiera precios');
+  assertEquals(asked, ['itinerary:crear'], 'el permiso es el del tipo de la importación');
+});
+
+Deno.test('kind: aplicar una importación de PROPUESTA sigue creando propuesta con precios, moneda y términos de partida (regresión)', async () => {
+  const { h, seen, asked } = kindHarness(readyRow({ kind: 'proposal' }));
+  assertEquals((await handleRequest(req(), h.deps)).status, 200);
+  assertEquals(seen[0].kind, 'proposal');
+  assert(seen[0].pricingLines > 0);
+  assertEquals(seen[0].currency?.length, 3);
+  assertEquals(seen[0].terms.title, 'Términos y condiciones');
+  assertEquals(seen[0].hadPricing, true);
+  assertEquals(asked, ['proposal:crear']);
+});
+
+Deno.test('kind: el tipo lo decide la FILA — un cuerpo que pide otro se rechaza (409 kind_mismatch) y no se crea nada', async () => {
+  for (const [rowKind, bodyKind] of [['proposal', 'itinerary'], ['itinerary', 'proposal']] as const) {
+    const { h, seen } = kindHarness(readyRow({ kind: rowKind }));
+    const res = await handleRequest(req({ import_id: IMPORT_ID, origin_channel: 'web', kind: bodyKind }), h.deps);
+    assertEquals([res.status, (await res.json()).code], [409, 'kind_mismatch']);
+    assertEquals([seen.length, h.deleted.length], [0, 0]);
+  }
+});
+
+Deno.test('kind: un cuerpo con el MISMO kind que la fila es aceptado (no cambia nada)', async () => {
+  const { h, seen } = kindHarness(readyRow({ kind: 'itinerary' }));
+  const res = await handleRequest(req({ import_id: IMPORT_ID, origin_channel: 'web', kind: 'itinerary' }), h.deps);
+  assertEquals(res.status, 200);
+  assertEquals(seen[0].kind, 'itinerary');
+});
+
+Deno.test('kind: una fila con kind inválido cierra por defecto (409) sin crear ni borrar nada', async () => {
+  for (const bad of ['trip', '', undefined, null]) {
+    const { h, seen } = kindHarness(readyRow({ kind: bad as never }));
+    const res = await handleRequest(req(), h.deps);
+    assertEquals([res.status, (await res.json()).code], [409, 'kind_invalid']);
+    assertEquals([seen.length, h.deleted.length], [0, 0]);
+  }
+});
+
+Deno.test('kind: sin permiso de crear ESE tipo → 403, aunque tenga el de otro', async () => {
+  for (const [kind, denied] of [['itinerary', 'itinerary:crear'], ['proposal', 'proposal:crear']] as const) {
+    const { h, seen } = kindHarness(readyRow({ kind }), {
+      canTravel: (_t, k, a) => Promise.resolve(`${k}:${a}` !== denied)
+    });
+    assertEquals((await handleRequest(req(), h.deps)).status, 403, kind);
+    assertEquals(seen.length, 0);
+  }
+});
+
+Deno.test('kind: un itinerario no se vincula a una solicitud (400 lead_not_supported); la propuesta sí', async () => {
+  const itinerary = kindHarness(readyRow({ kind: 'itinerary' }));
+  const res = await handleRequest(req({ import_id: IMPORT_ID, lead_id: LEAD_ID }), itinerary.h.deps);
+  assertEquals([res.status, (await res.json()).code], [400, 'lead_not_supported']);
+  assertEquals(itinerary.seen.length, 0);
+  const proposal = kindHarness(readyRow({ kind: 'proposal' }));
+  assertEquals((await handleRequest(req({ import_id: IMPORT_ID, lead_id: LEAD_ID }), proposal.h.deps)).status, 200);
+});
+
+Deno.test('kind: un itinerario en modo merge no se aplica aquí (409), como cualquier merge', async () => {
+  const { h, seen } = kindHarness(readyRow({ kind: 'itinerary', mode: 'merge' }));
+  assertEquals((await handleRequest(req(), h.deps)).status, 409);
+  assertEquals(seen.length, 0);
 });

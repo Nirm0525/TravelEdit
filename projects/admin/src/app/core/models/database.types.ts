@@ -368,6 +368,8 @@ export interface Database {
           proposal_id: string | null;
           file_path: string;
           mode: 'new' | 'merge';
+          /** Tipo de la importación — migración 0055b. Inmutable. */
+          kind: 'proposal' | 'itinerary';
           status: 'uploaded' | 'processing' | 'ready' | 'applied' | 'failed';
           extracted: Record<string, unknown> | null;
           diff: Record<string, unknown> | null;
@@ -381,6 +383,8 @@ export interface Database {
           proposal_id?: string | null;
           file_path: string;
           mode: 'new' | 'merge';
+          /** Se envía SIEMPRE explícito; la RLS exige can_travel(kind, 'crear'). */
+          kind?: 'proposal' | 'itinerary';
           created_by: string;
         };
         Update: Record<string, never>;

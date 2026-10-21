@@ -7,7 +7,7 @@
   </div>
 } @else if (proposal(); as p) {
   @if (caps.previewPanel && isFullPagePreview()) {
-    <app-preview-step class="proposal-builder__fullpage-preview" [proposalId]="proposalId" [refreshTick]="refreshTick()" />
+    <app-preview-step class="proposal-builder__fullpage-preview" [proposalId]="proposalId" [mode]="config.previewMode" [refreshTick]="refreshTick()" />
   } @else {
     <div class="proposal-builder">
       <header class="proposal-builder__header">
@@ -258,7 +258,7 @@
             <button type="button" class="proposal-builder__preview-close" (click)="togglePreviewDrawer()" aria-label="Cerrar vista previa">✕</button>
           </div>
           <div class="proposal-builder__preview-frame" [attr.data-device]="previewDevice()">
-            <app-preview-step [proposalId]="proposalId" [refreshTick]="refreshTick()" />
+            <app-preview-step [proposalId]="proposalId" [mode]="config.previewMode" [refreshTick]="refreshTick()" />
           </div>
         </aside>
         }

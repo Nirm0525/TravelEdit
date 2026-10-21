@@ -14,7 +14,7 @@
 
     <div class="proposals-list__actions">
       @if (showPdfImport()) {
-        <a class="proposals-list__pdf-btn" [routerLink]="importPath">Nueva desde PDF</a>
+        <a class="proposals-list__pdf-btn" [routerLink]="importPath">{{ labels.importButton }}</a>
       }
       @if (canCreate()) {
         <a class="proposals-list__new-btn" [routerLink]="createPath">

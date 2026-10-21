@@ -25,7 +25,7 @@ describe('ProposalsList — una lista, dos modos', () => {
     }
   };
 
-  async function render(mode: TravelMode, role = 'admin', items: unknown[] = [item(mode, 'draft')]): Promise<void> {
+  async function render(mode: TravelMode, role: string | null = 'admin', items: unknown[] = [item(mode, 'draft')]): Promise<void> {
     service = {
       list: vi.fn().mockResolvedValue({ items, total: items.length }),
       countsByStatus: vi.fn().mockResolvedValue({ draft: 1, shared: 2, published: 3, viewed: 4, accepted: 5, expired: 6 })
@@ -36,7 +36,7 @@ describe('ProposalsList — una lista, dos modos', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { data: { mode }, paramMap: { get: () => null } } } },
         { provide: ProposalsService, useValue: service },
         { provide: ProposalImagesService, useValue: { publicUrl: () => null } },
-        { provide: AuthService, useValue: { profile: () => ({ role }) } }
+        { provide: AuthService, useValue: { profile: () => ({ role: role ?? undefined }) } }
       ]
     });
     fixture = TestBed.createComponent(ProposalsList);
@@ -91,19 +91,34 @@ describe('ProposalsList — una lista, dos modos', () => {
     expect(text()).toContain('Nueva desde PDF');
   });
 
-  it('itinerarios: sin importar PDF, sin estado Aceptada ni precio', async () => {
+  it('itinerarios: ofrece «Nuevo desde PDF» hacia SU importador, y nada comercial (ni estado Aceptada, ni precio)', async () => {
     await render('itinerary', 'staff');
-    for (const banned of ['Nueva desde PDF', 'Aceptada', 'Publicada', 'Precio', 'USD', 'Total']) {
+    expect(text()).toContain('Nuevo desde PDF');
+    expect(text()).not.toContain('Nueva desde PDF');
+    expect(el().querySelector('a[href$="/viajes/itinerarios/import"]')).not.toBeNull();
+    expect(el().querySelector('a[href$="/viajes/propuestas/import"]')).toBeNull();
+    for (const banned of ['Aceptada', 'Publicada', 'Precio', 'USD', 'Total']) {
       expect(text(), banned).not.toContain(banned);
     }
-    expect(el().querySelector('a[href$="/import"]')).toBeNull();
   });
 
-  it('itinerarios: el menú no ofrece Publicar, Despublicar ni Vista previa de propuesta', async () => {
+  it('propuestas: «Nueva desde PDF» apunta a SU importador', async () => {
+    await render('proposal', 'staff');
+    expect(el().querySelector('a[href$="/viajes/propuestas/import"]')).not.toBeNull();
+    expect(el().querySelector('a[href$="/viajes/itinerarios/import"]')).toBeNull();
+  });
+
+  it('sin permiso de crear no hay botón de importar (con un rol desconocido)', async () => {
+    await render('itinerary', null);
+    expect(text()).not.toContain('Nuevo desde PDF');
+  });
+
+  it('itinerarios: el menú ofrece Editar y su Vista previa, pero no Publicar ni Despublicar', async () => {
     await render('itinerary', 'admin');
     const menu = await openMenu();
     expect(menu).toContain('Editar');
-    for (const banned of ['Publicar', 'Despublicar', 'Vista previa']) {
+    expect(menu).toContain('Vista previa');
+    for (const banned of ['Publicar', 'Despublicar']) {
       expect(menu, banned).not.toContain(banned);
     }
   });

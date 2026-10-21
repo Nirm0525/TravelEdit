@@ -10,6 +10,15 @@
 //   estado, duración, uso de tokens y rutas de validación.
 import { ExtractionSchema, extractionToolInputSchema, formatValidationIssues, type Extraction } from '../_shared/proposal-extraction.ts';
 import { UserError } from './pdf.ts';
+import type { TravelKind } from '../_shared/travel-kind.ts';
+
+/** Para un ITINERARIO (contenido operativo): el servidor además descarta todo lo comercial aunque el modelo lo devuelva. */
+export const ITINERARY_PROMPT =
+  'Este documento se importa como un ITINERARIO operativo, no como una cotización. Extrae solo cliente, destino, fechas, viajeros, ' +
+  'días, servicios y consejos. Deja `pricing` en null y el `price` de cada servicio en null, deja `inclusions` y `exclusions` ' +
+  'vacías, y no copies precios, tarifas, condiciones ni términos contractuales en ningún campo.';
+
+export const systemPromptFor = (kind: TravelKind | undefined): string => (kind === 'itinerary' ? `${SYSTEM_PROMPT}\n\n${ITINERARY_PROMPT}` : SYSTEM_PROMPT);
 
 export const SYSTEM_PROMPT = [
   'Eres The Edit Assistant. Extrae los datos del viaje tal como aparecen en el documento. ' +
@@ -218,6 +227,8 @@ export interface Usage {
 
 export interface OpenAIOptions {
   apiKey: string;
+  /** Tipo de la importación: 'itinerary' agrega al prompt que no extraiga lo comercial. Sin valor = propuesta. */
+  kind?: TravelKind;
   model: string;
   maxOutputTokens?: number;
   /** auto | low | high — calidad de las imágenes de las páginas (por defecto high, mejor para escaneos). */
@@ -272,7 +283,7 @@ function buildBody(opts: OpenAIOptions, input: InputItem[], effort: ReasoningEff
   const body: Record<string, unknown> = {
     model: opts.model,
     store: false,
-    instructions: SYSTEM_PROMPT,
+    instructions: systemPromptFor(opts.kind),
     input,
     text: { format: { type: 'json_schema', name: SCHEMA_NAME, strict: true, schema: strictResponseSchema() } },
     max_output_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS

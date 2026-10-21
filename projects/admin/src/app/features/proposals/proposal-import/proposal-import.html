@@ -1,17 +1,11 @@
-<app-admin-page-header
-  [breadcrumb]="[{ label: 'Panel', link: '/dashboard' }, { label: 'Propuestas', link: '/viajes/propuestas' }, { label: 'Nueva desde PDF' }]"
-  title="Nueva propuesta desde PDF"
-/>
+<app-admin-page-header [breadcrumb]="breadcrumb" [title]="labels.importTitle" />
 
 <div class="proposal-import" [class.proposal-import--centered]="stage() === 'working' || stage() === 'failed'">
   @switch (stage()) {
     <!-- ------------------------------------------------------------ 1. Formulario -->
     @case ('form') {
       <form class="proposal-import__form" (submit)="$event.preventDefault(); continue()">
-        <p class="proposal-import__intro">
-          Sube el PDF del viaje y The Edit Assistant leerá los datos del cliente, el itinerario y los precios. Verás lo que
-          encontró antes de crear la propuesta en borrador.
-        </p>
+        <p class="proposal-import__intro">{{ labels.importIntro }}</p>
 
         <div>
           <label
@@ -52,7 +46,7 @@
           }
         </label>
 
-        @if (leads().length > 0) {
+        @if (mode === 'proposal' && leads().length > 0) {
           <label class="field">
             <span>Vincular a una solicitud (opcional)</span>
             <select [value]="leadId()" (change)="onLeadChange($event)">
@@ -65,7 +59,7 @@
         }
 
         <div class="proposal-import__footer">
-          <a class="btn btn--secondary" routerLink="/viajes/propuestas">Cancelar</a>
+          <a class="btn btn--secondary" [routerLink]="listPath">Cancelar</a>
           <button type="submit" class="btn btn--primary" [disabled]="!canContinue()">Continuar</button>
         </div>
       </form>
@@ -199,10 +193,7 @@
         @if (p.generalServices.length > 0) {
           <section class="proposal-import__section">
             <h2 class="proposal-import__section-title">Servicios generales</h2>
-            <p class="proposal-import__hint">
-              Información detectada en el PDF. Revísala antes de crear la propuesta; actualmente no se incorpora automáticamente al
-              borrador.
-            </p>
+            <p class="proposal-import__hint">{{ labels.importGeneralHint }}</p>
             <ul class="proposal-import__services">
               @for (service of p.generalServices; track $index) {
                 <li>
@@ -228,6 +219,8 @@
           </section>
         }
 
+        <!-- Inversión: solo en propuestas. Un itinerario no importa ni muestra precios. -->
+        @if (mode === 'proposal') {
         <section class="proposal-import__section">
           <h2 class="proposal-import__section-title">Inversión</h2>
           @if (p.pricing; as pricing) {
@@ -262,11 +255,12 @@
             <p class="proposal-import__empty">El PDF no trae precios: agrégalos en el constructor.</p>
           }
         </section>
+        }
 
         @if (p.notes.length > 0) {
           <section class="proposal-import__section">
             <h2 class="proposal-import__section-title">Notas del viaje</h2>
-            <p class="proposal-import__hint">Estas notas se agregarán como consejos de viaje en la propuesta.</p>
+            <p class="proposal-import__hint">{{ labels.importNotesHint }}</p>
             <ul class="proposal-import__plain">
               @for (item of p.notes; track $index) {
                 <li>{{ item }}</li>
@@ -275,7 +269,7 @@
           </section>
         }
 
-        @if (p.inclusions.length > 0 || p.exclusions.length > 0) {
+        @if (mode === 'proposal' && (p.inclusions.length > 0 || p.exclusions.length > 0)) {
           <section class="proposal-import__section">
             <h2 class="proposal-import__section-title">Inclusiones y exclusiones generales</h2>
             <p class="proposal-import__hint">Solo lectura: esto no se copia automáticamente a la propuesta.</p>
@@ -305,7 +299,7 @@
         <div class="proposal-import__footer proposal-import__footer--sticky">
           <button type="button" class="btn btn--secondary" [disabled]="applying()" (click)="startOver()">Elegir otro archivo</button>
           <button type="button" class="btn btn--primary" [disabled]="applying()" (click)="createProposal()">
-            {{ applying() ? 'Creando…' : 'Crear propuesta en borrador' }}
+            {{ applying() ? 'Creando…' : labels.importCreate }}
           </button>
         </div>
       }

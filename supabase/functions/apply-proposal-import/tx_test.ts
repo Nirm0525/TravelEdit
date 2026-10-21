@@ -64,6 +64,7 @@ async function setup(): Promise<{ db: PGlite; sql: SqlLike }> {
       id uuid primary key default gen_random_uuid(),
       proposal_id uuid references proposals(id) on delete set null,
       file_path text not null, mode text not null, status text not null,
+      kind text not null default 'proposal' check (kind in ('proposal', 'itinerary')),
       extracted jsonb, diff jsonb, applied_at timestamptz, created_by uuid references profiles(id));
     create table public.audit (actor uuid, entity uuid);
     create function public.log_created() returns trigger language plpgsql as $$
@@ -98,7 +99,7 @@ const count = async (db: PGlite, table: string) => (await db.query<{ n: number }
 Deno.test('tx: crea la propuesta en borrador, marca la importación como aplicada y las enlaza', async () => {
   const { db, sql } = await setup();
   const m = mapped();
-  const proposalId = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'whatsapp', leadId: null, mapped: m, retained: retained() });
+  const proposalId = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'whatsapp', leadId: null, mapped: m, retained: retained() });
   assert(proposalId !== 'conflict');
 
   const imp = await importRow(db);
@@ -120,21 +121,21 @@ Deno.test('tx: crea la propuesta en borrador, marca la importación como aplicad
 
 Deno.test('tx: dentro de la transacción auth.uid() es la asesora (la auditoría la ve como autora)', async () => {
   const { db, sql } = await setup();
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'email', leadId: null, mapped: mapped(), retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'email', leadId: null, mapped: mapped(), retained: retained() });
   const audit = (await db.query<{ actor: string; entity: string }>(`select actor, entity from audit`)).rows;
   assertEquals(audit, [{ actor: USER, entity: id }]);
 });
 
 Deno.test('tx: con lead vinculado se guarda lead_id', async () => {
   const { db, sql } = await setup();
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: LEAD, mapped: mapped(), retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: LEAD, mapped: mapped(), retained: retained() });
   const p = (await db.query<{ lead_id: string; origin_channel: string }>(`select lead_id, origin_channel from proposals where id = $1`, [id])).rows[0];
   assertEquals(p, { lead_id: LEAD, origin_channel: 'web' });
 });
 
 Deno.test('tx: doble aplicación → la segunda devuelve conflict y no crea otra propuesta', async () => {
   const { db, sql } = await setup();
-  const args = { importId: IMPORT, userId: USER, originChannel: 'web' as const, leadId: null, mapped: mapped(), retained: retained() };
+  const args = { kind: 'proposal' as const, importId: IMPORT, userId: USER, originChannel: 'web' as const, leadId: null, mapped: mapped(), retained: retained() };
   assert((await applyImportTx(sql, args)) !== 'conflict');
   assertEquals(await applyImportTx(sql, args), 'conflict');
   assertEquals(await count(db, 'proposals'), 1);
@@ -145,7 +146,7 @@ Deno.test('tx: una importación en merge o que no está en ready → conflict si
   const { db, sql } = await setup();
   for (const [mode, status] of [['merge', 'ready'], ['new', 'processing'], ['new', 'failed']]) {
     await db.query(`update proposal_imports set mode = $1, status = $2, applied_at = null, proposal_id = null`, [mode, status]);
-    assertEquals(await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() }), 'conflict', `${mode}/${status}`);
+    assertEquals(await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() }), 'conflict', `${mode}/${status}`);
     assertEquals(await count(db, 'proposals'), 0);
   }
 });
@@ -153,7 +154,7 @@ Deno.test('tx: una importación en merge o que no está en ready → conflict si
 Deno.test('tx: si falla el insert (canal inválido) TODO se revierte: la importación sigue en ready', async () => {
   const { db, sql } = await setup();
   await assertRejects(() =>
-    applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() })
+    applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() })
   );
   const imp = await importRow(db);
   assertEquals(imp, { status: 'ready', applied_at: null, proposal_id: null });
@@ -164,7 +165,7 @@ Deno.test('tx: si falla el insert (canal inválido) TODO se revierte: la importa
 Deno.test('tx: si falla por una FK (lead inexistente) también se revierte todo', async () => {
   const { db, sql } = await setup();
   await assertRejects(() =>
-    applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: '99999999-9999-9999-9999-999999999999', mapped: mapped(), retained: retained() })
+    applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: '99999999-9999-9999-9999-999999999999', mapped: mapped(), retained: retained() })
   );
   assertEquals((await importRow(db)).status, 'ready');
   assertEquals(await count(db, 'proposals'), 0);
@@ -172,8 +173,8 @@ Deno.test('tx: si falla por una FK (lead inexistente) también se revierte todo'
 
 Deno.test('tx: tras un fallo se puede reintentar con datos correctos', async () => {
   const { db, sql } = await setup();
-  await assertRejects(() => applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() }));
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+  await assertRejects(() => applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() }));
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
   assert(id !== 'conflict');
   assertEquals((await importRow(db)).status, 'applied');
 });
@@ -182,7 +183,7 @@ Deno.test('tx: el texto del PDF va como parámetro — comillas y SQL en el nomb
   const { db, sql } = await setup();
   const evil = "Robert'); drop table proposals;--";
   const m = mapExtractionToProposal(postProcessExtraction(extraction({ client: { name: evil, email: null, phone: null }, days: [{ number: 1, date: null, base_city: evil, title: null, summary: evil, services: [] }] })).extraction);
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'other', leadId: null, mapped: m, retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'other', leadId: null, mapped: m, retained: retained() });
   const row = (await db.query<{ client_name: string; content: { days: { title: string }[] } }>(`select client_name, content from proposals where id = $1`, [id])).rows[0];
   assertEquals(row.client_name, evil);
   assertEquals(row.content.days[0].title, evil);
@@ -192,7 +193,7 @@ Deno.test('tx: el texto del PDF va como parámetro — comillas y SQL en el nomb
 Deno.test('tx: pricing null y datos faltantes se guardan vacíos (cliente sin nombre, sin fechas)', async () => {
   const { db, sql } = await setup();
   const m = mapExtractionToProposal(extraction());
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'other', leadId: null, mapped: m, retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'other', leadId: null, mapped: m, retained: retained() });
   const row = (await db.query<Record<string, unknown>>(`select client_name, start_date, travelers_count, currency, content from proposals where id = $1`, [id])).rows[0];
   assertEquals([row.client_name, row.start_date, row.travelers_count, row.currency], ['', null, null, 'USD']);
 });
@@ -205,7 +206,7 @@ const extractedOf = async (db: PGlite) =>
 Deno.test('tx: al aplicar, extracted pasa a ser un resumen SIN datos personales y diff queda en null', async () => {
   const { db, sql } = await setup();
   assert((await extractedOf(db)).text.includes('Persona Ejemplo')); // antes: la extracción completa
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'whatsapp', leadId: null, mapped: mapped(), retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'whatsapp', leadId: null, mapped: mapped(), retained: retained() });
   assert(id !== 'conflict');
 
   const row = await extractedOf(db);
@@ -225,7 +226,7 @@ Deno.test('tx: al aplicar, extracted pasa a ser un resumen SIN datos personales 
 Deno.test('tx: si algo falla, extracted NO se toca (la importación sigue en ready con la extracción completa)', async () => {
   const { db, sql } = await setup();
   await assertRejects(() =>
-    applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() })
+    applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'telegram' as never, leadId: null, mapped: mapped(), retained: retained() })
   );
   const row = await extractedOf(db);
   assertEquals(row.extracted, JSON.parse(JSON.stringify(FULL)));
@@ -234,7 +235,7 @@ Deno.test('tx: si algo falla, extracted NO se toca (la importación sigue en rea
 
 Deno.test('tx: en un conflicto (doble aplicación) el resumen de la primera no se pisa', async () => {
   const { db, sql } = await setup();
-  const args = { importId: IMPORT, userId: USER, originChannel: 'web' as const, leadId: null, mapped: mapped(), retained: retained() };
+  const args = { kind: 'proposal' as const, importId: IMPORT, userId: USER, originChannel: 'web' as const, leadId: null, mapped: mapped(), retained: retained() };
   await applyImportTx(sql, args);
   const first = (await extractedOf(db)).extracted;
   assertEquals(await applyImportTx(sql, { ...args, retained: { ...retained(), meta: { model: 'otro' } } }), 'conflict');
@@ -244,7 +245,7 @@ Deno.test('tx: en un conflicto (doble aplicación) el resumen de la primera no s
 Deno.test('tx: content y extracted se guardan como objeto jsonb, no como string JSON (doble codificación)', async () => {
   const { db, sql } = await setup();
   const m = mapped();
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: m, retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: m, retained: retained() });
   assert(id !== 'conflict');
   const p = (await db.query<{ type: string; days: number; cover_title: string }>(
     `select jsonb_typeof(content) as type, jsonb_array_length(content -> 'days') as days, content -> 'cover' ->> 'title' as cover_title
@@ -263,7 +264,7 @@ Deno.test('la importación crea SIEMPRE kind=proposal, escrito explícitamente (
   const { db, sql } = await setup();
   // Si alguien cambiara el DEFAULT de la columna, la importación seguiría creando propuestas.
   await db.exec(`alter table public.proposals alter column kind set default 'itinerary'`);
-  const id = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+  const id = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
   assert(id !== 'conflict');
   const row = (await db.query<{ kind: string }>(`select kind from proposals where id = $1`, [id])).rows[0];
   assertEquals(row.kind, 'proposal');
@@ -277,11 +278,56 @@ Deno.test('la importación solo INSERTA: un itinerario existente (y una importac
     insert into proposal_imports (id, file_path, mode, status, proposal_id, created_by) values ('${MERGE}', '${USER}/m.pdf', 'merge', 'ready', '${ITIN}', '${USER}')`);
   const before = (await db.query(`select * from proposals where id = '${ITIN}'`)).rows[0];
 
-  assertEquals(await applyImportTx(sql, { importId: MERGE, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() }), 'conflict');
-  const created = await applyImportTx(sql, { importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+  assertEquals(await applyImportTx(sql, { kind: 'proposal', importId: MERGE, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() }), 'conflict');
+  const created = await applyImportTx(sql, { kind: 'proposal', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
   assert(created !== 'conflict' && created !== ITIN);
 
   assertEquals((await db.query(`select * from proposals where id = '${ITIN}'`)).rows[0], before);
   assertEquals((await importRow(db, MERGE)).status, 'ready');
   assertEquals(await count(db, 'proposals'), 2);
+});
+
+// ---------------------------------------------------------------- kind: proposal | itinerary (0055b)
+
+const itineraryMapped = () => mapExtractionToProposal(postProcessExtraction(rawVoucherExtraction()).extraction, undefined, 'itinerary');
+const setKind = (db: PGlite, kind: string) => db.query(`update proposal_imports set kind = $1 where id = $2`, [kind, IMPORT]);
+
+Deno.test('tx itinerary: crea un registro kind=itinerary en borrador, sin lead, y enlaza la importación', async () => {
+  const { db, sql } = await setup();
+  await setKind(db, 'itinerary');
+  const id = await applyImportTx(sql, { kind: 'itinerary', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: itineraryMapped(), retained: retained() });
+  assert(id !== 'conflict');
+  const p = (await db.query<Record<string, any>>(`select * from proposals where id = $1`, [id])).rows[0];
+  assertEquals([p.kind, p.status, p.lead_id, p.client_name], ['itinerary', 'draft', null, 'Persona Ejemplo']);
+  assertEquals((await importRow(db)).proposal_id, id);
+  assertEquals((await importRow(db)).status, 'applied');
+});
+
+Deno.test('tx itinerary: no envía currency (queda el valor por defecto de la base) y su contenido no trae precios ni términos', async () => {
+  const { db, sql } = await setup();
+  await setKind(db, 'itinerary');
+  await db.exec(`alter table public.proposals alter column currency set default 'XXX'`); // si se enviara currency se vería otra
+  const id = await applyImportTx(sql, { kind: 'itinerary', importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: itineraryMapped(), retained: retained() });
+  const p = (await db.query<Record<string, any>>(`select currency, content from proposals where id = $1`, [id as string])).rows[0];
+  assertEquals(p.currency, 'XXX');
+  assertEquals(p.content.pricing, { lines: [], feesLines: [] });
+  assertEquals(p.content.terms, { title: '', body: '' });
+});
+
+Deno.test('tx itinerary: ignora el lead_id aunque llegara (un itinerario no se vincula a solicitudes)', async () => {
+  const { db, sql } = await setup();
+  await setKind(db, 'itinerary');
+  const id = await applyImportTx(sql, { kind: 'itinerary', importId: IMPORT, userId: USER, originChannel: 'web', leadId: LEAD, mapped: itineraryMapped(), retained: retained() });
+  assertEquals((await db.query<{ lead_id: string | null }>(`select lead_id from proposals where id = $1`, [id as string])).rows[0].lead_id, null);
+});
+
+Deno.test('tx: aplicar con el kind equivocado (propuesta sobre una importación de itinerario, o al revés) → conflict y NO se crea nada', async () => {
+  for (const [rowKind, applyKind] of [['itinerary', 'proposal'], ['proposal', 'itinerary']] as const) {
+    const { db, sql } = await setup();
+    await setKind(db, rowKind);
+    const result = await applyImportTx(sql, { kind: applyKind, importId: IMPORT, userId: USER, originChannel: 'web', leadId: null, mapped: mapped(), retained: retained() });
+    assertEquals(result, 'conflict', `${rowKind} importación aplicada como ${applyKind}`);
+    assertEquals(await count(db, 'proposals'), 0);
+    assertEquals((await importRow(db)).status, 'ready');
+  }
 });

@@ -10,7 +10,7 @@ import { closeImportFailed, closeImportReady, type CloseSql } from './import-clo
 import type { ProposalSnapshot } from '../_shared/proposal-diff.ts';
 
 const BUCKET = 'proposal-imports';
-const IMPORT_COLUMNS = 'id, proposal_id, file_path, mode, status, created_by';
+const IMPORT_COLUMNS = 'id, proposal_id, file_path, mode, kind, status, created_by';
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -91,7 +91,7 @@ export function createRealDeps(): RealDeps {
     // conservar los microsegundos de la base (se usa como token al guardar el resultado).
     async lockImport(importId) {
       const rows = await db()`
-        select r.id, r.proposal_id, r.file_path, r.mode, r.status, r.created_by,
+        select r.id, r.proposal_id, r.file_path, r.mode, r.kind, r.status, r.created_by,
                r.processing_started_at::text as processing_started_at
           from private.claim_proposal_import(${importId}::uuid) r`;
       // Sin bloqueo, la función devuelve UNA fila con todo en null (ver claim.ts).

@@ -230,7 +230,7 @@
                         }
                       </span>
                       <strong>{{ service.title || 'Sin título' }}</strong>
-                      @if (p.serviceChoices[service.id]) {
+                      @if (!isItinerary() && p.serviceChoices[service.id]) {
                         <span class="preview__service-chosen">✓ Aceptado por el cliente</span>
                       }
                       @if (imageUrl(service.imagePath); as serviceImage) {
@@ -248,7 +248,7 @@
                           </dl>
                         }
                       }
-                      @if (p.serviceComments[service.id]; as comment) {
+                      @if (!isItinerary() && p.serviceComments[service.id]; as comment) {
                         <p class="preview__service-comment"><strong>Comentario del cliente:</strong> {{ comment }}</p>
                       }
                       @if (service.description) {
@@ -366,54 +366,57 @@
       </section>
     }
 
-    <section class="preview__section preview__pricing">
-      <div class="preview__band"><h2>Inversión</h2></div>
-
-      <div class="preview__pricing-summary">
-        <p class="preview__pricing-copy">
-          Esta propuesta incluye los servicios y experiencias detallados en el itinerario, con el respaldo de tu
-          asesora durante todo el viaje.
-        </p>
-        <div class="preview__pricing-card">
-          <p class="preview__pricing-card-label">Inversión total</p>
-          <p class="preview__pricing-card-total">{{ p.pricingTotal | currency: p.currency }}</p>
-          @if (travelersLabel(); as travelers) {
-            <p class="preview__pricing-card-meta">Para {{ travelers }}</p>
-          }
-          <button type="button" class="preview__pricing-toggle" (click)="togglePricingExpanded()">
-            {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      @if (pricingExpanded()) {
-        @if (pricingBreakdown(); as b) {
-          <table class="preview__pricing-table">
-            @for (group of b.groups.concat(b.fees ? [b.fees] : []); track group.key) {
-              <tr class="preview__pricing-group">
-                <td>{{ group.title }}@if (group.subtitle) { · {{ group.subtitle }} }</td>
-                <td>{{ group.subtotal | currency: p.currency }}</td>
-              </tr>
-              @for (row of group.rows; track row.id) {
-                <tr>
-                  <td>{{ row.label }} @if (row.quantity > 1) { · {{ row.quantity }} × {{ row.unitPrice | currency: p.currency }} }</td>
-                  <td>{{ row.amount | currency: p.currency }}</td>
-                </tr>
-              }
+    <!-- Inversión: solo en propuestas. La vista previa de un itinerario no muestra precios. -->
+    @if (!isItinerary()) {
+      <section class="preview__section preview__pricing">
+        <div class="preview__band"><h2>Inversión</h2></div>
+  
+        <div class="preview__pricing-summary">
+          <p class="preview__pricing-copy">
+            Esta propuesta incluye los servicios y experiencias detallados en el itinerario, con el respaldo de tu
+            asesora durante todo el viaje.
+          </p>
+          <div class="preview__pricing-card">
+            <p class="preview__pricing-card-label">Inversión total</p>
+            <p class="preview__pricing-card-total">{{ p.pricingTotal | currency: p.currency }}</p>
+            @if (travelersLabel(); as travelers) {
+              <p class="preview__pricing-card-meta">Para {{ travelers }}</p>
             }
-            <tr class="preview__pricing-total">
-              <td>Total</td>
-              <td>{{ p.pricingTotal | currency: p.currency }}</td>
-            </tr>
-          </table>
+            <button type="button" class="preview__pricing-toggle" (click)="togglePricingExpanded()">
+              {{ pricingExpanded() ? 'Ocultar detalle de costos' : 'Ver detalle de costos' }}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+  
+        @if (pricingExpanded()) {
+          @if (pricingBreakdown(); as b) {
+            <table class="preview__pricing-table">
+              @for (group of b.groups.concat(b.fees ? [b.fees] : []); track group.key) {
+                <tr class="preview__pricing-group">
+                  <td>{{ group.title }}@if (group.subtitle) { · {{ group.subtitle }} }</td>
+                  <td>{{ group.subtotal | currency: p.currency }}</td>
+                </tr>
+                @for (row of group.rows; track row.id) {
+                  <tr>
+                    <td>{{ row.label }} @if (row.quantity > 1) { · {{ row.quantity }} × {{ row.unitPrice | currency: p.currency }} }</td>
+                    <td>{{ row.amount | currency: p.currency }}</td>
+                  </tr>
+                }
+              }
+              <tr class="preview__pricing-total">
+                <td>Total</td>
+                <td>{{ p.pricingTotal | currency: p.currency }}</td>
+              </tr>
+            </table>
+          }
         }
-      }
-    </section>
+      </section>
+    }
 
-    @if (p.content.terms.body) {
+    @if (!isItinerary() && p.content.terms.body) {
       <section class="preview__section">
         <div class="preview__band"><h2>{{ p.content.terms.title || 'Términos y condiciones' }}</h2></div>
         <details class="preview__terms-toggle">
@@ -437,15 +440,18 @@
       </section>
     }
 
-    <section class="preview__section preview__cta">
-      <div class="preview__band"><h2>¿Listos para comenzar?</h2></div>
-      @if (p.status === 'accepted') {
-        <p class="preview__accepted">✓ Propuesta aceptada por {{ p.acceptedByName }}</p>
-      } @else {
-        <h3>Esta propuesta fue diseñada especialmente para tu viaje.</h3>
-        <button type="button" class="btn btn--primary" disabled aria-disabled="true">Aceptar propuesta</button>
-        <p class="preview__cta-hint">Disponible en la propuesta pública.</p>
-      }
-    </section>
+    <!-- Aceptar la propuesta: solo en propuestas. Un itinerario no se acepta. -->
+    @if (!isItinerary()) {
+      <section class="preview__section preview__cta">
+        <div class="preview__band"><h2>¿Listos para comenzar?</h2></div>
+        @if (p.status === 'accepted') {
+          <p class="preview__accepted">✓ Propuesta aceptada por {{ p.acceptedByName }}</p>
+        } @else {
+          <h3>Esta propuesta fue diseñada especialmente para tu viaje.</h3>
+          <button type="button" class="btn btn--primary" disabled aria-disabled="true">Aceptar propuesta</button>
+          <p class="preview__cta-hint">Disponible en la propuesta pública.</p>
+        }
+      </section>
+    }
   </article>
 }

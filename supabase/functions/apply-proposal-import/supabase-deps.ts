@@ -44,14 +44,14 @@ export function createRealDeps(): RealDeps {
     async getImportAsUser(token, importId) {
       const { data } = await userClient(token)
         .from('proposal_imports')
-        .select('id, mode, status, file_path, created_by, extracted')
+        .select('id, mode, kind, status, file_path, created_by, extracted')
         .eq('id', importId)
         .maybeSingle();
       return (data as ImportRow | null) ?? null;
     },
 
-    async canManageProposals(token) {
-      const { data } = await userClient(token).rpc('can_manage_proposals');
+    async canTravel(token, kind, action) {
+      const { data } = await userClient(token).rpc('can_travel', { p_kind: kind, p_action: action });
       return data === true;
     },
 

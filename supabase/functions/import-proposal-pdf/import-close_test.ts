@@ -18,6 +18,7 @@ const row = (): ImportRow => ({
   proposal_id: null,
   file_path: 'u/f.pdf',
   mode: 'new',
+  kind: 'proposal',
   status: 'processing',
   created_by: '11111111-1111-1111-1111-111111111111',
   processing_started_at: TOKEN

@@ -10,6 +10,7 @@ import {
   REFUSAL_MESSAGE,
   resetEffortCache,
   strictResponseSchema,
+  systemPromptFor,
   summarizeUsage,
   SYSTEM_PROMPT,
   type OpenAIOptions,
@@ -509,4 +510,21 @@ Deno.test('prompt: reglas de clasificación, asistencia al viajero, inclusiones 
 
 Deno.test('prompt: si omite datos personales, pide UNA entrada genérica en `missing` (sin decir cuáles)', () => {
   assert(SYSTEM_PROMPT.includes('agrega UNA sola entrada a `missing` con el texto exacto "Datos personales del documento", sin decir cuáles.'));
+});
+
+Deno.test('openai: kind=itinerary agrega al prompt que no extraiga lo comercial; sin kind o con proposal el prompt es el de siempre', async () => {
+  for (const kind of [undefined, 'proposal'] as const) {
+    resetEffortCache();
+    const { fetchImpl, calls } = makeFetch([ok()]);
+    await extractTrip(opts(fetchImpl, { kind }), 'QUJD');
+    assertEquals(calls[0].body.instructions, SYSTEM_PROMPT, String(kind));
+  }
+  resetEffortCache();
+  const { fetchImpl, calls } = makeFetch([ok()]);
+  await extractTrip(opts(fetchImpl, { kind: 'itinerary' }), 'QUJD');
+  const instructions = String(calls[0].body.instructions);
+  assert(instructions.startsWith(SYSTEM_PROMPT));
+  assert(instructions.includes('ITINERARIO'));
+  assert(instructions.includes('`pricing` en null'));
+  assertEquals(instructions, systemPromptFor('itinerary'));
 });

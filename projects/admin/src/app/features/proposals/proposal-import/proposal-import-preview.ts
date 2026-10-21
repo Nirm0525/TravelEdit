@@ -1,5 +1,5 @@
 import { StoredExtraction } from '../../../core/models/proposal-extraction.types';
-import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../core/models/proposal-enums';
+import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType, TravelKind } from '../../../core/models/proposal-enums';
 
 /** Modelo de vista previa: lo que se mostrará de lo extraído, ya formateado. Funciones puras (probadas en el .spec). */
 
@@ -246,7 +246,28 @@ export function serviceFacts(s: StoredExtraction['days'][number]['services'][num
   return facts;
 }
 
-export function buildPreview(data: StoredExtraction): ImportPreview {
+/** Códigos de aviso que solo tienen sentido con precios. */
+const PRICING_WARNING_CODES = new Set(['multiple_currencies', 'price_per_person_unknown_travelers', 'price_line_without_amount', 'price_total_mismatch', 'pricing_lines_dropped']);
+const CONTRACTUAL_MISSING = /precio|pricing|price|tarifa|cotizaci|costo|moneda|currency|t[eé]rminos|condiciones|terms/i;
+
+/**
+ * Lo que un ITINERARIO puede mostrar de una extracción: solo contenido operativo. El servidor ya lo descartó antes de guardarlo
+ * (import-proposal-pdf); aquí se repite como segunda barrera para que la pantalla nunca pinte precios ni condiciones.
+ */
+function operativeOnly(data: StoredExtraction): StoredExtraction {
+  return {
+    ...data,
+    pricing: null,
+    inclusions: [],
+    exclusions: [],
+    missing: data.missing.filter((m) => !CONTRACTUAL_MISSING.test(m)),
+    warnings: data.warnings.filter((w) => !PRICING_WARNING_CODES.has(w.code)),
+    days: data.days.map((day) => ({ ...day, services: day.services.map((service) => ({ ...service, price: null })) }))
+  };
+}
+
+export function buildPreview(input: StoredExtraction, kind: TravelKind = 'proposal'): ImportPreview {
+  const data = kind === 'itinerary' ? operativeOnly(input) : input;
   const adults = data.travelers.adults;
   const children = data.travelers.children;
   const total = adults == null && children == null ? null : (adults ?? 0) + (children ?? 0);

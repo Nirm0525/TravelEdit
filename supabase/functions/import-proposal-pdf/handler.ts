@@ -6,6 +6,7 @@ import { runCoherenceChecks } from '../_shared/proposal-checks.ts';
 import { postProcessExtraction } from '../_shared/proposal-postprocess.ts';
 import { computeDiff, type ProposalDiff, type ProposalSnapshot } from '../_shared/proposal-diff.ts';
 import { hasUsefulContent, type Extraction, type StoredExtraction } from '../_shared/proposal-extraction.ts';
+import { isTravelKind, sanitizeExtractionForKind, warningsForKind, type TravelKind } from '../_shared/travel-kind.ts';
 import { ImportCloseConflictError } from './import-close.ts';
 import { DEADLINE_MESSAGE, readProviderSettings, summarizeUsage, type ProviderSettings, type Usage } from './openai.ts';
 import { DEFAULT_MAX_PAGES, toBase64, UserError, validatePdf } from './pdf.ts';
@@ -22,6 +23,11 @@ export interface ImportRow {
   proposal_id: string | null;
   file_path: string;
   mode: 'new' | 'merge';
+  /**
+   * Tipo de la importación (proposal_imports.kind): lo decide la fila (validada por RLS al subir), NUNCA el cuerpo de la
+   * solicitud. Un itinerario solo importa contenido operativo y solo en modo 'new'.
+   */
+  kind: TravelKind;
   status: string;
   created_by: string;
   /** Inicio del proceso actual (texto con la precisión de la base); identifica a quién puede escribir el resultado. */
@@ -51,7 +57,7 @@ export interface Deps {
   /** Con su `kind`: la importación en modo merge es EXCLUSIVA de Propuestas (nunca modifica un itinerario). */
   getProposalSnapshot(proposalId: string): Promise<(ProposalSnapshot & { kind: string }) | null>;
   /** deadlineAt: instante (ms epoch) en que el proceso debe haber terminado. */
-  extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number; onUsage?: (usage: Usage) => void } & ProviderSettings): Promise<Extraction>;
+  extract(args: { pdfBase64: string; apiKey: string; deadlineAt: number; kind: TravelKind; onUsage?: (usage: Usage) => void } & ProviderSettings): Promise<Extraction>;
   /** Solo escribe si la fila sigue en 'processing' con el mismo processing_started_at (dueño del bloqueo). */
   finishReady(row: ImportRow, patch: { extracted: StoredExtraction; diff: ProposalDiff | null }): Promise<void>;
   finishFailed(row: ImportRow, message: string): Promise<void>;
@@ -116,6 +122,14 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
     const row = await deps.getImportAsUser(token, body.import_id);
     if (!row) {
       return json({ error: 'No se encontró la importación.' }, 404);
+    }
+
+    // El tipo sale de la fila: uno desconocido (o un itinerario en modo merge) se rechaza antes de gastar nada.
+    if (!isTravelKind(row.kind)) {
+      return json({ error: 'Esta importación no tiene un tipo válido.' }, 409);
+    }
+    if (row.kind === 'itinerary' && row.mode === 'merge') {
+      return json({ error: 'Los itinerarios solo se importan como nuevos.' }, 409);
     }
 
     // 2) Modo merge: el usuario todavía debe poder editar la propuesta.
@@ -189,11 +203,20 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     const { pages } = validatePdf(bytes, maxPages);
     checkDeadline();
 
+    // El tipo de la fila (la base lo guardó al subir): decide el prompt y qué se conserva. Cierra por defecto.
+    const kind = row.kind;
+    if (!isTravelKind(kind)) {
+      throw new UserError('Esta importación no tiene un tipo válido.', `kind no soportado: ${String(kind)}`);
+    }
+    if (kind === 'itinerary' && row.mode !== 'new') {
+      throw new UserError('Los itinerarios solo se importan como nuevos.', 'itinerary en modo merge');
+    }
+
     // 7) Extracción con el modelo.
     const usages: Usage[] = [];
     let raw: Extraction;
     try {
-      raw = await deps.extract({ pdfBase64: toBase64(bytes), apiKey, deadlineAt, ...provider, onUsage: (u) => void usages.push(u) });
+      raw = await deps.extract({ pdfBase64: toBase64(bytes), apiKey, deadlineAt, kind, ...provider, onUsage: (u) => void usages.push(u) });
     } finally {
       // Una línea por extracción, con éxito o sin él (un intento fallido también gasta tokens). Solo cifras:
       // nada del contenido del PDF ni datos del cliente.
@@ -201,7 +224,11 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
     }
     const usageSummary = summarizeUsage(model, usages, deps.now().getTime() - startedAt, deps.env);
     // Limpieza de datos sensibles, unión de días repetidos y red de seguridad de precios.
-    const { extraction, warnings: postWarnings } = postProcessExtraction(raw);
+    const processed = postProcessExtraction(raw);
+    // Lo comercial/contractual de un itinerario se descarta AQUÍ (servidor), antes de guardar nada en proposal_imports.extracted:
+    // la vista previa y el apply solo ven contenido operativo. Para una propuesta no cambia nada.
+    const extraction = sanitizeExtractionForKind(processed.extraction, kind);
+    const postWarnings = warningsForKind(processed.warnings, kind);
     if (!hasUsefulContent(extraction)) {
       throw new UserError(
         'No se encontró información del viaje en el PDF. Si es un escaneo, revisa que se lea con claridad.',
@@ -211,7 +238,7 @@ export async function processImport(deps: Deps, row: ImportRow): Promise<void> {
 
     const stored: StoredExtraction = {
       ...extraction,
-      warnings: [...postWarnings, ...runCoherenceChecks(extraction)],
+      warnings: warningsForKind([...postWarnings, ...runCoherenceChecks(extraction)], kind),
       meta: { model, extracted_at: deps.now().toISOString(), usage: usageSummary }
     };
 

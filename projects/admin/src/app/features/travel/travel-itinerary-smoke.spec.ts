@@ -20,7 +20,7 @@ import { ITINERARIES_ENABLED, TRAVEL_FEATURES, TravelMode } from './travel-confi
  * copia en memoria que imita lo que hace por defecto (kind = 'proposal' si no se envía). No hay credenciales ni datos de
  * producción. Lo que exige red (Edge Functions, Storage real, OpenAI) queda registrado como «llamada» pero no se ejecuta.
  */
-describe('Humo — Itinerarios de punta a punta (base en memoria)', () => {
+describe('Humo — Itinerarios de punta a punta (base en memoria)', { timeout: 20_000 }, () => {
   let db: InMemorySupabase;
   let fixture: ComponentFixture<unknown>;
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -336,12 +336,35 @@ describe('Humo — Itinerarios de punta a punta (base en memoria)', () => {
       expect(text()).toContain('Precios');
     });
 
-    it('la vista previa contractual sigue en la propuesta y no existe en el itinerario', async () => {
+    it('la vista previa contractual sigue en la propuesta; el itinerario tiene la SUYA, sin inversión, términos ni aceptación', async () => {
+      db.tables['proposals'][0]['content'] = {
+        cover: { title: 'Perú', subtitle: '', imagePath: null },
+        pricing: { lines: [{ id: 'l1', label: 'Línea de precio', quantity: 1, unitPrice: 500 }], feesLines: [] },
+        terms: { title: 'Condiciones', body: '<p>TÉRMINOS CONTRACTUALES</p>' },
+        days: [], travelTips: [], welcome: { body: '' }, intro: { headline: '', body: '' }
+      };
       await open();
       expect(el().querySelector('.proposal-builder__preview-col')).not.toBeNull();
-      db.tables['proposals'].push({ id: 'itin-9', kind: 'itinerary', client_name: 'I', status: 'draft', content: {}, updated_at: '2027-01-01T00:00:00Z' });
+      expect(el().querySelector('.preview__pricing')).not.toBeNull();
+      expect(text()).toContain('Aceptar propuesta');
+
+      db.tables['proposals'].push({
+        id: 'itin-9', kind: 'itinerary', client_name: 'I', status: 'draft', updated_at: '2027-01-01T00:00:00Z',
+        content: {
+          cover: { title: 'Itinerario Chile', subtitle: '', imagePath: null }, welcome: { body: '' }, intro: { headline: '', body: '' }, days: [],
+          travelTips: [{ id: 'g1', destination: 'Santiago', tips: [{ id: 't1', title: 'Clima', body: 'Lleva abrigo', category: '' }] }],
+          pricing: { lines: [{ id: 'l1', label: 'Línea secreta', quantity: 1, unitPrice: 500 }], feesLines: [] },
+          terms: { title: 'Condiciones', body: '<p>TÉRMINOS CONTRACTUALES</p>' }
+        }
+      });
       await mount(ProposalBuilder, 'itinerary', { id: 'itin-9' });
-      expect(el().querySelector('.proposal-builder__preview-col')).toBeNull();
+      expect(el().querySelector('.proposal-builder__preview-col')).not.toBeNull();
+      expect(text()).toContain('Itinerario Chile');
+      expect(text()).toContain('Lleva abrigo');
+      for (const banned of ['Línea secreta', 'TÉRMINOS CONTRACTUALES', 'Aceptar propuesta', 'Inversión']) {
+        expect(text(), banned).not.toContain(banned);
+      }
+      expect(el().querySelector('.preview__pricing')).toBeNull();
     });
   });
 

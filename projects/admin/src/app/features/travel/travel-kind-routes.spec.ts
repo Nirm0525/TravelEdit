@@ -35,11 +35,18 @@ describe('Viajes — rutas por modo', () => {
     return TestBed.inject(Router);
   }
 
-  it('/viajes/itinerarios/import NO existe: cae en el comodín (nunca en el importador de PDF)', async () => {
+  it('/viajes/itinerarios/import existe y resuelve con el modo itinerario (importador propio)', async () => {
     const router = await setup(true);
     await router.navigateByUrl('/viajes/itinerarios/import');
-    expect(leaf(router).routeConfig?.path).toBe('**');
-    expect(travelRoutes('itinerary').some((r) => String(r.path).includes('import'))).toBe(false);
+    expect(router.url).toBe('/viajes/itinerarios/import');
+    expect(leaf(router).routeConfig?.path).toBe('viajes/itinerarios/import');
+    expect(leaf(router).data['mode']).toBe('itinerary');
+  });
+
+  it('/viajes/itinerarios/import exige el permiso de CREAR itinerarios y con el modo apagado redirige a Propuestas', async () => {
+    const off = await setup(false);
+    await off.navigateByUrl('/viajes/itinerarios/import');
+    expect(off.url).toBe('/viajes/propuestas');
   });
 
   it('/viajes/propuestas/import sí existe', async () => {
@@ -87,7 +94,7 @@ describe('Viajes — rutas por modo', () => {
 });
 
 describe('Viajes — rutas con el flag REAL (Itinerarios activo)', () => {
-  it('sin sobrescribir TRAVEL_FEATURES: /viajes/itinerarios, /new y /:id/edit resuelven; /import no existe', async () => {
+  it('sin sobrescribir TRAVEL_FEATURES: /viajes/itinerarios, /new, /import y /:id/edit resuelven', async () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([...travelRoutes('proposal'), ...travelRoutes('itinerary'), { path: 'dashboard', component: Stub }, { path: '**', component: Stub }]),
@@ -95,13 +102,11 @@ describe('Viajes — rutas con el flag REAL (Itinerarios activo)', () => {
       ]
     });
     const router = TestBed.inject(Router);
-    for (const url of ['/viajes/itinerarios', '/viajes/itinerarios/new', '/viajes/itinerarios/abc/edit?step=cover']) {
+    for (const url of ['/viajes/itinerarios', '/viajes/itinerarios/new', '/viajes/itinerarios/import', '/viajes/itinerarios/abc/edit?step=cover']) {
       await router.navigateByUrl(url);
       expect(router.url, url).toBe(url);
       expect(leaf(router).data['mode'], url).toBe('itinerary');
     }
-    await router.navigateByUrl('/viajes/itinerarios/import');
-    expect(leaf(router).routeConfig?.path).toBe('**');
     for (const url of ['/viajes/propuestas', '/viajes/propuestas/new', '/viajes/propuestas/import', '/viajes/propuestas/abc/edit']) {
       await router.navigateByUrl(url);
       expect(router.url, url).toBe(url);

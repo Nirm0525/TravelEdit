@@ -327,12 +327,13 @@ Deno.test('rico/apply: la propuesta insertada conserva toda la información rica
       Promise.resolve({
         id: IMPORT_ID,
         mode: 'new',
+        kind: 'proposal',
         status: 'ready',
         file_path: `${USER}/x.pdf`,
         created_by: USER,
         extracted: { ...processed().extraction, warnings: [], meta: { model: 'gpt-6-luna', extracted_at: '2027-01-01T00:00:00Z' } }
       }),
-    canManageProposals: () => Promise.resolve(true),
+    canTravel: () => Promise.resolve(true),
     canSeeLead: () => Promise.resolve(true),
     applyImport: (args) => {
       inserted = args.mapped;

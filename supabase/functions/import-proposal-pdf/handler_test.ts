@@ -4,6 +4,7 @@ import {
   handleRequest,
   MAX_CONCURRENT_PER_USER,
   MAX_PER_DAY_PER_USER,
+  processImport,
   type Deps,
   type ImportRow
 } from './handler.ts';
@@ -25,6 +26,7 @@ const row = (over: Partial<ImportRow> = {}): ImportRow => ({
   proposal_id: null,
   file_path: PATH,
   mode: 'new',
+  kind: 'proposal',
   status: 'uploaded',
   created_by: USER,
   processing_started_at: null,
@@ -525,4 +527,92 @@ Deno.test('merge sobre una propuesta sigue calculando el diff', async () => {
   assertEquals((await call(h)).status, 202);
   assertEquals([h.ready.length, h.failed.length], [1, 0]);
   assert(h.ready[0].diff !== null);
+});
+
+// ---------------------------------------------------------------- kind: proposal | itinerary (0055b)
+
+/** Extracción con TODO lo contractual que un PDF de cotización puede traer. */
+function contractualExtraction() {
+  const base = matchingExtraction();
+  return {
+    ...base,
+    inclusions: ['Todo incluido'],
+    exclusions: ['Propinas'],
+    days: base.days.map((d) => ({ ...d, services: d.services.map((s) => ({ ...s, price: { amount: 100, per_person: false } })) }))
+  };
+}
+
+Deno.test('kind: una importación de ITINERARIO se extrae con kind=itinerary y se guarda SIN precios, inclusiones ni exclusiones', async () => {
+  let askedKind: string | undefined;
+  const h = harness({
+    extract: (args) => {
+      askedKind = args.kind;
+      return Promise.resolve(contractualExtraction());
+    }
+  }, row({ kind: 'itinerary' }));
+  assertEquals((await call(h)).status, 202);
+  assertEquals(askedKind, 'itinerary');
+  assertEquals(h.ready.length, 1);
+  const saved = h.ready[0].extracted;
+  assertEquals(saved.pricing, null);
+  assertEquals([saved.inclusions, saved.exclusions], [[], []]);
+  assert(saved.days.every((d) => d.services.every((s) => s.price === null)));
+  assert(saved.days.some((d) => d.services.length > 0), 'lo operativo sí se conserva');
+  assert(!JSON.stringify(saved).includes('Todo incluido'));
+  assertEquals(h.ready[0].diff, null);
+});
+
+Deno.test('kind: el itinerario no guarda avisos de precios', async () => {
+  const h = harness({ extract: () => Promise.resolve(contractualExtraction()) }, row({ kind: 'itinerary' }));
+  await call(h);
+  const codes = h.ready[0].extracted.warnings.map((w) => w.code);
+  for (const banned of ['price_total_mismatch', 'pricing_lines_dropped', 'multiple_currencies', 'price_line_without_amount', 'price_per_person_unknown_travelers']) {
+    assert(!codes.includes(banned), banned);
+  }
+});
+
+Deno.test('kind: una importación de PROPUESTA sigue guardando precios (regresión)', async () => {
+  let askedKind: string | undefined;
+  const h = harness({
+    extract: (args) => {
+      askedKind = args.kind;
+      return Promise.resolve(contractualExtraction());
+    }
+  }, row({ kind: 'proposal' }));
+  assertEquals((await call(h)).status, 202);
+  assertEquals(askedKind, 'proposal');
+  const saved = h.ready[0].extracted;
+  assert(saved.pricing !== null && saved.pricing.lines.length > 0);
+  assertEquals(saved.inclusions, ['Todo incluido']);
+  assert(saved.days.some((d) => d.services.some((s) => s.price !== null)));
+});
+
+Deno.test('kind: el tipo lo decide la FILA, no el cuerpo — un kind en la solicitud se ignora', async () => {
+  let askedKind: string | undefined;
+  const h = harness({ extract: (args) => ((askedKind = args.kind), Promise.resolve(contractualExtraction())) }, row({ kind: 'proposal' }));
+  assertEquals((await call(h, request({ import_id: IMPORT_ID, kind: 'itinerary' }))).status, 202);
+  assertEquals(askedKind, 'proposal');
+  assert(h.ready[0].extracted.pricing !== null, 'una propuesta no se vuelve itinerario por mandar kind');
+});
+
+Deno.test('kind: un kind inválido en la fila se rechaza (409) sin bloquear ni extraer', async () => {
+  for (const bad of ['trip', '', undefined, null]) {
+    const h = harness({}, row({ kind: bad as never }));
+    const res = await call(h);
+    assertEquals(res.status, 409);
+    assertEquals([h.extractCalls, h.lockCalls.length, h.ready.length], [0, 0, 0]);
+  }
+});
+
+Deno.test('kind: un itinerario en modo merge se rechaza antes de procesar', async () => {
+  const h = harness({}, row({ kind: 'itinerary', mode: 'merge', proposal_id: PROPOSAL }));
+  assertEquals((await call(h)).status, 409);
+  assertEquals([h.extractCalls, h.lockCalls.length], [0, 0]);
+});
+
+Deno.test('kind: defensa en el proceso — un itinerario merge que llegara al bloqueo falla sin extraer', async () => {
+  const locked = row({ kind: 'itinerary', mode: 'merge', proposal_id: PROPOSAL });
+  const h = harness({}, locked);
+  await processImport(h.deps, locked);
+  assertEquals([h.extractCalls, h.ready.length, h.failed.length], [0, 0, 1]);
 });

@@ -25,23 +25,30 @@ describe('Viajes — configuración por modo', () => {
     expect(c.tabs.map((t) => t.key)).toEqual(['client-trip', 'cover', 'journey', 'pricing', 'travel-tips', 'terms', 'assistant']);
   });
 
-  it('Itinerarios es privado (código, expiración, documentos) pero sin nada comercial', () => {
+  it('Itinerarios es privado (código, expiración, documentos), con vista previa e importación propias, pero sin nada comercial', () => {
     const c = TRAVEL_CONFIG.itinerary.capabilities;
-    expect([c.privateAccess, c.accessCode, c.expiration, c.documents, c.aiAssistant, c.preview, c.clientEmail, c.shareAccess]).toEqual(Array(8).fill(true));
-    expect([c.pricing, c.terms, c.accept, c.serviceChoices, c.quoteComments, c.pdfImport, c.publish, c.previewPanel]).toEqual(Array(8).fill(false));
+    expect([c.privateAccess, c.accessCode, c.expiration, c.documents, c.aiAssistant, c.preview, c.previewPanel, c.pdfImport, c.clientEmail, c.shareAccess]).toEqual(Array(10).fill(true));
+    expect([c.pricing, c.terms, c.accept, c.serviceChoices, c.quoteComments, c.publish]).toEqual(Array(6).fill(false));
     expect(TRAVEL_CONFIG.itinerary.tabs.map((t) => t.label)).toEqual(['Datos del viaje', 'Portada', 'Itinerario', 'Travel Tips', 'The Edit Assistant']);
   });
 
-  it('Itinerarios no tiene precios, términos, publicación ni importación', () => {
+  it('cada modo declara su vista previa: Propuesta la contractual, Itinerario la suya (nunca la de propuesta)', () => {
+    expect([TRAVEL_CONFIG.proposal.previewMode, TRAVEL_CONFIG.proposal.capabilities.previewPanel]).toEqual(['proposal', true]);
+    expect([TRAVEL_CONFIG.itinerary.previewMode, TRAVEL_CONFIG.itinerary.capabilities.previewPanel]).toEqual(['itinerary', true]);
+  });
+
+  it('Itinerarios no tiene precios, términos ni publicación', () => {
     const c = TRAVEL_CONFIG.itinerary;
-    expect(c.capabilities.publish || c.capabilities.pricing || c.capabilities.terms || c.capabilities.pdfImport).toBe(false);
+    expect(c.capabilities.publish || c.capabilities.pricing || c.capabilities.terms).toBe(false);
     expect(c.tabs.map((t) => t.key)).not.toContain('pricing');
     expect(c.tabs.map((t) => t.key)).not.toContain('terms');
   });
 
-  it('las rutas salen de una sola función: Itinerarios no tiene /import', () => {
+  it('las rutas salen de una sola función: ambos modos tienen su /import, cada uno con su modo', () => {
     expect(travelRoutes('proposal').map((r) => r.path)).toContain('viajes/propuestas/import');
-    expect(travelRoutes('itinerary').map((r) => r.path)).not.toContain('viajes/itinerarios/import');
+    expect(travelRoutes('itinerary').map((r) => r.path)).toContain('viajes/itinerarios/import');
+    expect(travelRoutes('itinerary').find((r) => r.path === 'viajes/itinerarios/import')?.data?.['mode']).toBe('itinerary');
+    expect(travelRoutes('proposal').find((r) => r.path === 'viajes/propuestas/import')?.data?.['mode']).toBe('proposal');
     expect(travelPaths.edit('proposal', 'x')).toEqual(['/viajes/propuestas', 'x', 'edit']);
   });
 

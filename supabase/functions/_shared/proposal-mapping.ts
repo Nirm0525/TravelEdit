@@ -25,6 +25,7 @@ import { incomingPriceLines, incomingServiceFields } from './proposal-diff.ts';
 import { resolvePriceLine, travelersTotal } from './proposal-pricing.ts';
 import { MODALITY_LABEL } from './proposal-extraction.ts';
 import { normalizeName } from './proposal-text.ts';
+import { sanitizeExtractionForKind, type TravelKind } from './travel-kind.ts';
 
 export type MappedServiceType = 'flight' | 'hotel' | 'transfer' | 'activity' | 'other';
 
@@ -91,7 +92,8 @@ export interface MappedProposal {
   startDate: string | null;
   endDate: string | null;
   travelersCount: number | null;
-  currency: string;
+  /** null en un itinerario: no tiene moneda (la base conserva su valor por defecto). */
+  currency: string | null;
   content: MappedContent;
 }
 
@@ -258,10 +260,19 @@ function mapTravelTips(notes: string[], cities: string[], newId: () => string): 
   return ordered.map(([destination, tips]) => ({ id: newId(), destination, tips }));
 }
 
-export function mapExtractionToProposal(input: Extraction, newId: () => string = () => crypto.randomUUID()): MappedProposal {
+/**
+ * @param kind 'proposal' (por defecto) mapea todo; 'itinerary' descarta lo comercial/contractual (ver travel-kind.ts) aunque
+ *   la extracción lo traiga: sin precios, sin moneda y sin términos de partida.
+ */
+export function mapExtractionToProposal(
+  input: Extraction,
+  newId: () => string = () => crypto.randomUUID(),
+  kind: TravelKind = 'proposal'
+): MappedProposal {
+  const clean = sanitizeExtractionForKind(input, kind);
   // Los servicios generales salen de los días ANTES de mapear (así los índices de servicio de los precios siguen alineados).
   // No van a ninguna otra parte: ProposalContent no tiene dónde ponerlos (ver la cabecera).
-  const data: Extraction = { ...input, days: input.days.map((day) => ({ ...day, services: day.services.filter((s) => !isGeneralService(s)) })) };
+  const data: Extraction = { ...clean, days: clean.days.map((day) => ({ ...day, services: day.services.filter((s) => !isGeneralService(s)) })) };
 
   // --- días y servicios ---
   const usedNumbers = new Set<number>();
@@ -322,7 +333,7 @@ export function mapExtractionToProposal(input: Extraction, newId: () => string =
     startDate: data.trip.start_date,
     endDate: data.trip.end_date,
     travelersCount: travelers && travelers > 0 ? travelers : null,
-    currency: data.pricing?.currency ?? DEFAULT_CURRENCY,
+    currency: kind === 'itinerary' ? null : (data.pricing?.currency ?? DEFAULT_CURRENCY),
     content: {
       cover: { title: data.trip.title ?? '', subtitle: '', imagePath: null },
       welcome: { body: '' },
@@ -330,7 +341,7 @@ export function mapExtractionToProposal(input: Extraction, newId: () => string =
       days,
       pricing: { lines, feesLines },
       travelTips: mapTravelTips(data.notes, tipCities, newId),
-      terms: { title: DEFAULT_TERMS_TITLE, body: '' }
+      terms: kind === 'itinerary' ? { title: '', body: '' } : { title: DEFAULT_TERMS_TITLE, body: '' }
     }
   };
 }

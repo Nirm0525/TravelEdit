@@ -28,7 +28,7 @@ function extraction(over: Partial<StoredExtraction> = {}): StoredExtraction {
   };
 }
 
-const row = (over: Partial<ImportStatusRow> = {}): ImportStatusRow => ({ id: 'imp-1', status: 'ready', error: null, extracted: extraction(), proposal_id: null, ...over });
+const row = (over: Partial<ImportStatusRow> = {}): ImportStatusRow => ({ id: 'imp-1', status: 'ready', error: null, extracted: extraction(), proposal_id: null, kind: 'proposal', ...over });
 
 describe('ProposalImport (pantalla "Nueva desde PDF")', () => {
   let service: { upload: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn>; getStatus: ReturnType<typeof vi.fn>; apply: ReturnType<typeof vi.fn>; listLeads: ReturnType<typeof vi.fn> };

@@ -1,4 +1,4 @@
-import { travelPaths } from '../../travel/travel-config';
+import { injectTravelMode, travelConfigOf, travelPaths } from '../../travel/travel-config';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { LeadOption, OriginChannel, ProposalImportService } from '../../../core/services/proposal-import';
@@ -20,8 +20,10 @@ const CHANNEL_OPTIONS: { value: OriginChannel; label: string }[] = [
 ];
 
 /**
- * "Nueva desde PDF": la asesora sube un PDF, ve lo que extrajo The Edit Assistant y crea con un clic una
- * propuesta en borrador. Solo modo "nueva" (importar a una propuesta existente no existe todavía).
+ * "Nueva desde PDF" / "Nuevo desde PDF": la asesora sube un PDF, ve lo que extrajo The Edit Assistant y crea con un clic una
+ * propuesta o un itinerario en borrador, según la ruta. Solo modo "nueva" (importar a un registro existente no existe todavía).
+ * El tipo se envía una sola vez, al subir (proposal_imports.kind); el servidor lo lee de la fila y decide qué se conserva:
+ * un itinerario solo importa contenido operativo (sin precios ni condiciones) y esta pantalla tampoco los muestra.
  * El nombre original del archivo solo se muestra aquí; nunca interviene en la ruta de Storage.
  */
 @Component({
@@ -34,6 +36,17 @@ export class ProposalImport implements OnInit {
   private readonly importService = inject(ProposalImportService);
   private readonly router = inject(Router);
   private destroyed = false;
+
+  /** Propuesta o Itinerario según la ruta (features/travel): textos, vista previa y a dónde se navega salen de la configuración. */
+  readonly mode = injectTravelMode();
+  readonly config = travelConfigOf(this.mode);
+  readonly labels = this.config.labels;
+  readonly listPath = travelPaths.list(this.mode);
+  readonly breadcrumb = [
+    { label: 'Panel', link: '/dashboard' },
+    { label: this.labels.plural, link: this.listPath },
+    { label: this.labels.importButton }
+  ];
 
   readonly channelOptions = CHANNEL_OPTIONS;
   readonly formatMoney = formatMoney;
@@ -55,7 +68,7 @@ export class ProposalImport implements OnInit {
   readonly extracted = signal<StoredExtraction | null>(null);
   readonly preview = computed<ImportPreview | null>(() => {
     const data = this.extracted();
-    return data ? buildPreview(data) : null;
+    return data ? buildPreview(data, this.mode) : null;
   });
 
   // --- creación ---
@@ -71,6 +84,10 @@ export class ProposalImport implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // Vincular una solicitud es de propuestas: un itinerario todavía no se vincula a solicitudes.
+    if (this.mode !== 'proposal') {
+      return;
+    }
     try {
       this.leads.set(await this.importService.listLeads());
     } catch (error) {
@@ -136,7 +153,7 @@ export class ProposalImport implements OnInit {
     this.step.set('uploading');
     this.stage.set('working');
     try {
-      this.importId = await this.importService.upload(file);
+      this.importId = await this.importService.upload(file, this.mode);
     } catch (error) {
       this.fail(error);
       return;
@@ -172,11 +189,17 @@ export class ProposalImport implements OnInit {
         this.stage.set('failed');
         return;
       }
+      // El tipo de la fila (lo guardó la base al subir) debe ser el de esta pantalla: nunca se muestra o aplica el de otro.
+      if (result.kind && result.kind !== this.mode) {
+        this.failureMessage.set('Esta importación es de otro tipo. Vuelve a subir el PDF desde la pantalla correcta.');
+        this.stage.set('failed');
+        return;
+      }
       if (result.status === 'ready' && result.extracted) {
         this.extracted.set(result.extracted);
         this.stage.set('ready');
       } else if (result.status === 'applied' && result.proposal_id) {
-        await this.router.navigate(travelPaths.edit('proposal', result.proposal_id));
+        await this.router.navigate(travelPaths.edit(this.mode, result.proposal_id));
       } else {
         this.failureMessage.set(result.error ?? 'No se pudo leer el PDF. Inténtalo de nuevo.');
         this.stage.set('failed');
@@ -213,11 +236,11 @@ export class ProposalImport implements OnInit {
     this.applying.set(true);
     this.applyError.set(null);
     try {
-      const proposalId = await this.importService.apply(this.importId, channel, this.leadId() || null);
-      await this.router.navigate(travelPaths.edit('proposal', proposalId));
+      const proposalId = await this.importService.apply(this.importId, channel, this.mode === 'proposal' ? this.leadId() || null : null);
+      await this.router.navigate(travelPaths.edit(this.mode, proposalId));
     } catch (error) {
-      console.error('No se pudo crear la propuesta.', error);
-      this.applyError.set(error instanceof Error ? error.message : 'No se pudo crear la propuesta. Inténtalo de nuevo.');
+      console.error('No se pudo crear el registro desde el PDF.', error);
+      this.applyError.set(error instanceof Error ? error.message : this.labels.importCreateError);
     } finally {
       this.applying.set(false);
     }

@@ -3,6 +3,7 @@
 // sql.unsafe ni texto del PDF concatenado en el SQL.
 import type { RetentionSummary } from '../_shared/import-summary.ts';
 import type { MappedProposal } from '../_shared/proposal-mapping.ts';
+import type { TravelKind } from '../_shared/travel-kind.ts';
 
 /** Forma mínima de postgres.js que usa este módulo (permite probarlo con otro cliente). */
 // deno-lint-ignore no-explicit-any
@@ -22,6 +23,8 @@ export type OriginChannel = (typeof ORIGIN_CHANNELS)[number];
 
 export interface ApplyArgs {
   importId: string;
+  /** Tipo de la importación (leído de su fila): el registro creado es de ESTE tipo y la fila solo se aplica si coincide. */
+  kind: TravelKind;
   userId: string;
   originChannel: OriginChannel;
   leadId: string | null;
@@ -38,7 +41,7 @@ class ConflictError extends Error {}
  * la importación sigue en 'ready'.
  */
 export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<string | 'conflict'> {
-  const { importId, userId, originChannel, leadId, mapped, retained } = args;
+  const { importId, kind, userId, originChannel, leadId, mapped, retained } = args;
   try {
     return await sql.begin(async (tx) => {
       // Que auth.uid() sea la asesora dentro de la transacción: así la auditoría y los triggers
@@ -50,15 +53,28 @@ export async function applyImportTx(sql: SqlLike, args: ApplyArgs): Promise<stri
         update public.proposal_imports
            set status = 'applied', applied_at = now(),
                extracted = ${tx.json(retained)}::jsonb, diff = null
-         where id = ${importId}::uuid and mode = 'new' and status = 'ready'
+         where id = ${importId}::uuid and mode = 'new' and status = 'ready' and kind = ${kind}
         returning id`;
       if (applied.length === 0) {
         throw new ConflictError();
       }
 
-      // `kind` va explícito (no se confía en el DEFAULT): la importación de PDF es EXCLUSIVA de Propuestas y nunca debe
-      // poder crear un itinerario. Requiere la migración 0055 (columna `kind`) aplicada ANTES de desplegar esta función.
-      const inserted = await tx`
+      // `kind` va explícito (no se confía en el DEFAULT) y es el de la importación: una propuesta produce propuestas y un
+      // itinerario produce itinerarios. Un itinerario no tiene moneda: no se envía `currency` (la base conserva su valor por
+      // defecto). Requiere las migraciones 0055 (proposals.kind) y 0055b (proposal_imports.kind) aplicadas ANTES de desplegar.
+      const inserted =
+        kind === 'itinerary'
+          ? await tx`
+        insert into public.proposals (
+          kind, status, client_name, client_email, client_phone, destination_text, start_date, end_date,
+          travelers_count, advisor_id, created_by, origin_channel, lead_id, content
+        ) values (
+          'itinerary', 'draft', ${mapped.clientName}, ${mapped.clientEmail}, ${mapped.clientPhone}, ${mapped.destinationText},
+          ${mapped.startDate}::date, ${mapped.endDate}::date, ${mapped.travelersCount}::int,
+          ${userId}::uuid, ${userId}::uuid, ${originChannel}, null, ${tx.json(mapped.content)}::jsonb
+        )
+        returning id`
+          : await tx`
         insert into public.proposals (
           kind, status, client_name, client_email, client_phone, destination_text, start_date, end_date,
           travelers_count, currency, advisor_id, created_by, origin_channel, lead_id, content

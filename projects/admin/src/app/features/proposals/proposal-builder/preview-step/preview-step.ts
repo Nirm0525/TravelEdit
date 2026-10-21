@@ -8,6 +8,7 @@ import { ProposalServiceAttachment } from '../../../../core/models/proposal-serv
 import { resolveViewableUrl } from '../../../../core/utils/open-document';
 import { PreviewServiceDocuments } from './preview-service-documents';
 import { Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
+import type { TravelMode } from '../../../travel/travel-config';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
 import { buildPricingBreakdown } from '../../../../core/data/proposal-pricing-breakdown';
@@ -127,6 +128,12 @@ export class PreviewStep implements OnInit {
   private daysMotion?: gsap.Context;
 
   readonly proposalId = input.required<string>();
+  /**
+   * Qué vista previa pinta (travel-config: previewMode). 'itinerary' = solo contenido operativo: sin inversión, términos,
+   * aceptación, elecciones ni comentarios de cotización. El tipo REAL de la fila manda si difiere (nunca se pinta un
+   * itinerario con la vista contractual).
+   */
+  readonly mode = input<TravelMode>('proposal');
   /** Se monta también como columna persistente (no solo página completa) —
    *  el shell la incrementa cada vez que cualquier paso guarda algo, para
    *  que la vista previa refleje ediciones hechas en otros tabs sin que
@@ -140,6 +147,8 @@ export class PreviewStep implements OnInit {
   });
 
   readonly proposal = signal<Proposal | null>(null);
+  /** Fila cargada → su kind; mientras carga, el modo pedido. Cualquiera de los dos que sea itinerario oculta lo contractual. */
+  readonly isItinerary = computed(() => (this.proposal()?.kind ?? this.mode()) === 'itinerary' || this.mode() === 'itinerary');
 
   /** Documentos de la propuesta, por servicio (todos: aquí se ve cuáles ve el cliente y cuáles son internos). */
   readonly attachments = signal<ProposalServiceAttachment[]>([]);

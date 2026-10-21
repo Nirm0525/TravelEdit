@@ -5,6 +5,7 @@ import { corsHeadersFor } from '../_shared/cors.ts';
 import { buildRetentionSummary, type RetentionSummary } from '../_shared/import-summary.ts';
 import { ExtractionSchema } from '../_shared/proposal-extraction.ts';
 import { mapExtractionToProposal, type MappedProposal } from '../_shared/proposal-mapping.ts';
+import { isTravelKind, sanitizeExtractionForKind, type TravelKind } from '../_shared/travel-kind.ts';
 import { ORIGIN_CHANNELS, type OriginChannel } from './tx.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -12,6 +13,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface ImportRow {
   id: string;
   mode: string;
+  /**
+   * Tipo de la importación (proposal_imports.kind). Lo decide la fila —validada por RLS al subir y fija desde entonces—,
+   * NUNCA el cuerpo de esta solicitud: crea registros de ESE tipo y solo de ese tipo.
+   */
+  kind: TravelKind;
   status: string;
   file_path: string;
   created_by: string;
@@ -23,13 +29,15 @@ export interface Deps {
   getUser(token: string): Promise<{ id: string } | null>;
   /** Lee la fila con el cliente del usuario: si RLS no la devuelve, null. */
   getImportAsUser(token: string, importId: string): Promise<ImportRow | null>;
-  canManageProposals(token: string): Promise<boolean>;
+  /** public.can_travel(kind, acción) con el cliente del usuario: el permiso es el del TIPO de la importación. */
+  canTravel(token: string, kind: TravelKind, action: string): Promise<boolean>;
   /** ¿El usuario puede ver ese lead? (RLS de leads, con el cliente del usuario) */
   canSeeLead(token: string, leadId: string): Promise<boolean>;
   /** Transacción: 'conflict' si la importación ya no estaba 'ready'. Lanza si algo falla (todo revertido). */
   applyImport(args: {
     importId: string;
     userId: string;
+    kind: TravelKind;
     originChannel: OriginChannel;
     leadId: string | null;
     mapped: MappedProposal;
@@ -89,12 +97,24 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
     if (row.mode !== 'new') {
       return json({ error: 'Esta importación no es para crear una propuesta nueva.' }, 409);
     }
+    // El tipo sale de la fila, nunca del cuerpo. Un cuerpo que pretenda otro tipo se rechaza (no se «corrige» en silencio),
+    // y un tipo desconocido cierra por defecto: una propuesta jamás produce un itinerario ni al revés.
+    if (!isTravelKind(row.kind)) {
+      return json({ error: 'Esta importación no tiene un tipo válido.', code: 'kind_invalid' }, 409);
+    }
+    const kind = row.kind;
+    if (body?.kind !== undefined && body.kind !== kind) {
+      return json({ error: 'El tipo indicado no coincide con el de la importación.', code: 'kind_mismatch' }, 409);
+    }
+    if (kind === 'itinerary' && leadId !== null) {
+      return json({ error: 'Los itinerarios todavía no se vinculan a una solicitud.', code: 'lead_not_supported' }, 400);
+    }
     if (row.status !== 'ready') {
       return json({ error: 'Esta importación no está lista o ya se aplicó.' }, 409);
     }
 
-    if (!(await deps.canManageProposals(token))) {
-      return json({ error: 'No tienes permiso para crear propuestas.' }, 403);
+    if (!(await deps.canTravel(token, kind, 'crear'))) {
+      return json({ error: kind === 'itinerary' ? 'No tienes permiso para crear itinerarios.' : 'No tienes permiso para crear propuestas.' }, 403);
     }
 
     // 3) El lead debe ser visible para el usuario.
@@ -107,13 +127,17 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       deps.log('apply.invalid_extracted', { importId });
       return json({ error: 'Los datos extraídos no son válidos. Vuelve a procesar el PDF.' }, 422);
     }
-    const mapped = mapExtractionToProposal(parsed.data);
-    // Al aplicar, `extracted` se reemplaza por un resumen sin datos personales (la propuesta ya lleva los datos).
-    const retained = buildRetentionSummary(parsed.data, row.extracted);
+    // Lo contractual de un itinerario se descarta también AQUÍ (aunque la importación ya lo hubiera filtrado): nunca se confía en
+    // lo que quedó guardado ni en el frontend. Para una propuesta no cambia nada.
+    const extraction = sanitizeExtractionForKind(parsed.data, kind);
+    const mapped = mapExtractionToProposal(extraction, undefined, kind);
+    // Al aplicar, `extracted` se reemplaza por un resumen sin datos personales (el registro ya lleva los datos).
+    const retained = buildRetentionSummary(extraction, row.extracted);
 
     // 4) Una sola transacción.
     const result = await deps.applyImport({
       importId,
+      kind,
       userId: user.id,
       originChannel,
       leadId: leadId as string | null,

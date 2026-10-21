@@ -39,7 +39,7 @@ export function travelRoutes(mode: TravelMode): Route[] {
   if (config.capabilities.pdfImport) {
     routes.splice(2, 0, {
       path: `${base}/import`,
-      data: { title: 'Nueva desde PDF', mode },
+      data: { title: labels.importButton, mode },
       canActivate: guard(config.permissions.create),
       loadComponent: () => import('../proposals/proposal-import/proposal-import').then((m) => m.ProposalImport)
     });

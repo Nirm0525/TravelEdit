@@ -65,7 +65,7 @@ export interface TravelCapabilities {
   pdfImport: boolean;
   /** El modo tiene vista privada del cliente (hoy solo la propuesta; la de itinerario se diseña en Fase 2). */
   preview: boolean;
-  /** Columna y página de vista previa DENTRO del builder (renderiza la vista contractual de propuesta). */
+  /** Columna y página de vista previa DENTRO del builder. Qué se pinta lo decide `previewMode` (nunca la de propuesta en un itinerario). */
   previewPanel: boolean;
   /** Correo del cliente: solo tiene sentido si algo se le envía. */
   clientEmail: boolean;
@@ -86,12 +86,27 @@ export interface TravelLabels {
   deleteTitle: string;
   deleteConfirm: (clientName: string) => string;
   deleteError: string;
+  /** Botón de la lista y título de la ruta de importación: «Nueva desde PDF» / «Nuevo desde PDF». */
+  importButton: string;
+  importTitle: string;
+  importIntro: string;
+  importNotesHint: string;
+  importGeneralHint: string;
+  importCreate: string;
+  importCreateError: string;
   /** «No se pudo crear la propuesta…»: el artículo cambia con el género, por eso va como frase completa. */
   createError: string;
 }
 
+/**
+ * Qué vista previa pinta el builder: 'proposal' = la contractual (inversión, términos, aceptar); 'itinerary' = solo contenido
+ * operativo (portada, bienvenida, días, servicios, documentos y Travel Tips). Se comparte el mismo componente, con otro modo.
+ */
+export type PreviewMode = TravelMode;
+
 export interface TravelModeConfig {
   mode: TravelMode;
+  previewMode: PreviewMode;
   /** Ruta base del modo, sin barra final: '/viajes/propuestas'. */
   routeBase: string;
   labels: TravelLabels;
@@ -109,6 +124,7 @@ export interface TravelModeConfig {
 export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
   proposal: {
     mode: 'proposal',
+    previewMode: 'proposal',
     routeBase: '/viajes/propuestas',
     labels: {
       plural: 'Propuestas',
@@ -122,6 +138,15 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       deleteTitle: 'Eliminar propuesta',
       deleteConfirm: (client) => `¿Eliminar la propuesta de ${client}? Esta acción no se puede deshacer.`,
       deleteError: 'No se pudo eliminar la propuesta. Inténtalo nuevamente.',
+      importButton: 'Nueva desde PDF',
+      importTitle: 'Nueva propuesta desde PDF',
+      importIntro:
+        'Sube el PDF del viaje y The Edit Assistant leerá los datos del cliente, el itinerario y los precios. Verás lo que encontró antes de crear la propuesta en borrador.',
+      importNotesHint: 'Estas notas se agregarán como consejos de viaje en la propuesta.',
+      importGeneralHint:
+        'Información detectada en el PDF. Revísala antes de crear la propuesta; actualmente no se incorpora automáticamente al borrador.',
+      importCreate: 'Crear propuesta en borrador',
+      importCreateError: 'No se pudo crear la propuesta. Inténtalo de nuevo.',
       createError: 'No se pudo crear la propuesta. Intenta de nuevo.'
     },
     tabs: [
@@ -161,6 +186,7 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
   },
   itinerary: {
     mode: 'itinerary',
+    previewMode: 'itinerary',
     routeBase: '/viajes/itinerarios',
     labels: {
       plural: 'Itinerarios',
@@ -174,6 +200,15 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       deleteTitle: 'Eliminar itinerario',
       deleteConfirm: (client) => `¿Eliminar el itinerario de ${client}? Esta acción no se puede deshacer.`,
       deleteError: 'No se pudo eliminar el itinerario. Inténtalo nuevamente.',
+      importButton: 'Nuevo desde PDF',
+      importTitle: 'Nuevo itinerario desde PDF',
+      importIntro:
+        'Sube el PDF del viaje y The Edit Assistant leerá los datos del cliente, el recorrido día a día y los servicios. Verás lo que encontró antes de crear el itinerario en borrador. Los precios y las condiciones del PDF no se importan.',
+      importNotesHint: 'Estas notas se agregarán como consejos de viaje en el itinerario.',
+      importGeneralHint:
+        'Información detectada en el PDF. Revísala antes de crear el itinerario; actualmente no se incorpora automáticamente al borrador.',
+      importCreate: 'Crear itinerario en borrador',
+      importCreateError: 'No se pudo crear el itinerario. Inténtalo de nuevo.',
       createError: 'No se pudo crear el itinerario. Intenta de nuevo.'
     },
     // Fase 1: datos del viaje (cliente simplificado), portada, itinerario, tips y asistente. Sin precios ni términos.
@@ -199,10 +234,12 @@ export const TRAVEL_CONFIG: Record<TravelMode, TravelModeConfig> = {
       quoteComments: false,
       documents: true,
       aiAssistant: true,
-      pdfImport: false,
-      // Tendrá vista privada propia (portada, resumen, itinerario, documentos, Travel Tips). La de propuesta NO se reutiliza.
+      // Importa solo contenido operativo (el servidor descarta precios y condiciones): ver supabase/functions/_shared/travel-kind.ts.
+      pdfImport: true,
+      // Vista previa propia dentro del builder (previewMode 'itinerary'): sin inversión, términos ni aceptación. La vista privada
+      // del cliente (con compartir) llega con 0056.
       preview: true,
-      previewPanel: false,
+      previewPanel: true,
       clientEmail: true
     },
     permissions: {

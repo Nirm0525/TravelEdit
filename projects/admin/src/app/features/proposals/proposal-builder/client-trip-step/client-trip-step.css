@@ -213,3 +213,28 @@
   border-radius: var(--radius-md);
   color: var(--danger-600);
 }
+
+.client-trip-step__stats {
+  display: grid;
+  gap: var(--space-sm);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.client-trip-step__stat {
+  display: grid;
+  grid-template-columns: 7rem 1fr 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.client-trip-step__stat-title {
+  font-size: var(--size-small);
+}
+
+@media (max-width: 40rem) {
+  .client-trip-step__stat {
+    grid-template-columns: 1fr;
+  }
+}

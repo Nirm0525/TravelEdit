@@ -42,7 +42,7 @@ describe('Ruta legacy encadenada: /proposals/:id/edit → /viajes/… según el 
         { provide: APP_BASE_HREF, useValue: '/admin/' },
         { provide: TRAVEL_FEATURES, useValue: { itinerariesEnabled: true } },
         { provide: AuthService, useValue: { ready: async () => undefined, profile: () => ({ role: 'admin', fullName: 'Asesora Demo' }) } },
-        { provide: ProposalsService, useValue: { getById, getPublishReadiness: vi.fn().mockResolvedValue([]), hasAccessCode: vi.fn().mockResolvedValue(false) } },
+        { provide: ProposalsService, useValue: { getById, getPublishReadiness: vi.fn().mockResolvedValue([]), getItineraryShareReadiness: vi.fn().mockResolvedValue([]), hasAccessCode: vi.fn().mockResolvedValue(false) } },
         { provide: ProposalImagesService, useValue: { publicUrl: () => null } },
         { provide: LeadsService, useValue: { getById: vi.fn().mockResolvedValue(null) } }
       ]

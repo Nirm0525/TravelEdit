@@ -54,6 +54,12 @@
   opacity: 0.9;
 }
 
+.preview__cover-for {
+  margin-top: var(--space-md);
+  font-size: var(--size-small);
+  opacity: 0.85;
+}
+
 .preview__cover-meta {
   margin-top: var(--space-sm);
   font-size: var(--size-small);

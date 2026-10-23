@@ -185,6 +185,23 @@
           <span class="client-trip-step__char-count">{{ form.controls.coverSubtitle.value.length }}/120</span>
         </label>
 
+        <fieldset class="client-trip-step__stats">
+          <legend class="client-trip-step__field-label">Datos del resumen</legend>
+          <p class="field__hint">
+            Los cuatro datos con icono del Resumen. Si dejas un campo vacío, se calcula solo con las fechas y los viajeros
+            (lo que ves en gris); escribe para reemplazarlo.
+          </p>
+          @for (stat of coverStatFields; track stat.key) {
+            <div class="client-trip-step__stat">
+              <span class="client-trip-step__stat-title">{{ stat.title }}</span>
+              <input type="text" [formControlName]="stat.value" [attr.aria-label]="stat.title + ': texto principal'"
+                [placeholder]="autoCoverStat(stat.key).value || 'Sin dato'" maxlength="40" (blur)="saveCover()" />
+              <input type="text" [formControlName]="stat.label" [attr.aria-label]="stat.title + ': texto secundario'"
+                [placeholder]="autoCoverStat(stat.key).label || 'Sin texto secundario'" maxlength="40" (blur)="saveCover()" />
+            </div>
+          }
+        </fieldset>
+
         <div class="client-trip-step__section-header">
           <span class="client-trip-step__field-label">
             Mensaje de bienvenida

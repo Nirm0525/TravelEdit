@@ -38,6 +38,8 @@ describe('ProposalBuilder — modo itinerario vs propuesta', () => {
     svc = {
       getById: vi.fn().mockResolvedValue({ ...row, kind: mode }),
       getPublishReadiness: vi.fn().mockResolvedValue([]),
+      // Un itinerario en borrador consulta SU lista de pendientes (compartir), no la de publicación.
+      getItineraryShareReadiness: vi.fn().mockResolvedValue([]),
       hasAccessCode: vi.fn().mockResolvedValue(true)
     };
     await TestBed.configureTestingModule({
@@ -78,6 +80,7 @@ describe('ProposalBuilder — modo itinerario vs propuesta', () => {
       expect(t, banned).not.toContain(banned);
     }
     expect(svc['getPublishReadiness']).not.toHaveBeenCalled();
+    expect(svc['getItineraryShareReadiness']).toHaveBeenCalledWith('p1');
   });
 
   it('itinerario: Datos del viaje con Acceso privado, código y vencimiento', async () => {

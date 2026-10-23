@@ -39,6 +39,7 @@ describe('ProposalBuilder — el kind de la fila manda sobre la ruta', () => {
     svc = {
       getById: vi.fn().mockResolvedValue(row(dbKind)),
       getPublishReadiness: vi.fn().mockResolvedValue([]),
+      getItineraryShareReadiness: vi.fn().mockResolvedValue([]),
       hasAccessCode: vi.fn().mockResolvedValue(true)
     };
     await TestBed.configureTestingModule({

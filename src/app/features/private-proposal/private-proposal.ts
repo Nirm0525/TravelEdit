@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalDocument, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
 import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../core/models/proposal-enums-public';
-import { ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup } from '../../core/models/proposal-content.model';
+import { CoverStatKey, ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup } from '../../core/models/proposal-content.model';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
@@ -39,6 +39,13 @@ interface NavSection {
 
 interface NavItem extends NavSection {
   isDay: boolean;
+}
+
+/** Un dato con icono del Resumen, ya resuelto: lo escrito en la portada manda; si está vacío, se calcula. */
+interface SummaryStat {
+  key: CoverStatKey;
+  value: string;
+  label: string | null;
 }
 
 interface ItineraryDayView {
@@ -463,11 +470,29 @@ export class PrivateProposal implements OnDestroy {
     return `${capitalize(MESES[date.getMonth()])} ${date.getFullYear()}`;
   });
 
-  /** Ninguno de estos 4 datos se inventa si falta — el resumen del viaje
-   *  simplemente omite la fila correspondiente (ver sección 8 de la spec:
-   *  "No inventar noches si no puede calcularse con certeza"). */
+  /** Los 4 datos con icono del Resumen. Cada campo escrito en la portada (Portada → Datos del resumen) reemplaza al calculado;
+   *  vacío = automático (días/noches y estación salen de las fechas, viajeros del número). Nada se inventa si falta: sin valor
+   *  ni override, el dato no se muestra. «Viaje a medida» sigue apareciendo como siempre (si hay algún dato del viaje) o cuando se escribe. */
+  readonly summaryStats = computed<SummaryStat[]>(() => {
+    const overrides = this.data()?.content.cover.stats ?? {};
+    const pick = (key: CoverStatKey, autoValue: string | null, autoLabel: string | null): SummaryStat | null => {
+      const value = overrides[key]?.value?.trim() || autoValue;
+      if (!value) {
+        return null;
+      }
+      return { key, value, label: overrides[key]?.label?.trim() || autoLabel };
+    };
+    const stats = [
+      pick('duration', this.durationDaysLabel(), this.durationNightsLabel()),
+      pick('travelers', this.travelersLabel(), null),
+      pick('season', this.seasonLabel(), this.monthYearLabel())
+    ].filter((s): s is SummaryStat => s !== null);
+    const custom = pick('custom', this.destinationBadge() || this.datesLabel() || this.travelersLabel() || stats.length > 0 ? 'Viaje a medida' : null, 'Experiencias únicas');
+    return custom ? [...stats, custom] : stats;
+  });
+
   readonly hasTripSummary = computed<boolean>(
-    () => !!(this.destinationBadge() || this.datesLabel() || this.durationLabel() || this.travelersLabel())
+    () => !!(this.destinationBadge() || this.datesLabel() || this.durationLabel() || this.travelersLabel() || this.summaryStats().length > 0)
   );
 
   readonly hasTravelTips = computed<boolean>(() => (this.data()?.content.travelTips.length ?? 0) > 0);

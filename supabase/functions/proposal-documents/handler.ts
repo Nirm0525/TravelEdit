@@ -57,8 +57,9 @@ export const isOpen = (kind: string, status: string): boolean => (OPEN_STATUSES_
 
 export async function handleRequest(req: Request, deps: Deps, now: () => number = () => Date.now()): Promise<Response> {
   const cors = corsHeadersFor(req, deps.env('ALLOWED_ORIGINS'));
+  // Lista y URLs dependen de la sesión y cambian cuando la asesora edita: nunca deben servirse desde una caché.
   const json = (body: unknown, status: number) =>
-    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+    new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
   const notFound = () => json({ error: 'No disponible.' }, 404);
 
   if (req.method === 'OPTIONS') {
@@ -93,7 +94,7 @@ export async function handleRequest(req: Request, deps: Deps, now: () => number 
     }
 
     if (body.action === 'list') {
-      // Solo documentos de servicios que siguen existiendo en el contenido publicado.
+      // Solo documentos de servicios que siguen existiendo en el contenido ACTUAL (se lee de la base en cada solicitud, sin snapshot).
       const serviceIds = new Set(
         daysOf(proposal.content).flatMap((d) => (Array.isArray(d.services) ? d.services : []).map((s) => String((s as { id?: unknown })?.id)))
       );

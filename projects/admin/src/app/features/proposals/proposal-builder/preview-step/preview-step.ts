@@ -1,13 +1,13 @@
 import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, input, signal } from '@angular/core';
 import type { gsap } from 'gsap';
-import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { CurrencyPipe, NgTemplateOutlet } from '@angular/common';
 import { ProposalsService } from '../../../../core/services/proposals';
 import { ProposalImagesService } from '../../../../core/services/proposal-images';
 import { ProposalServiceAttachmentsService } from '../../../../core/services/proposal-service-attachments';
 import { ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
 import { resolveViewableUrl } from '../../../../core/utils/open-document';
 import { PreviewServiceDocuments } from './preview-service-documents';
-import { Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
+import { CoverStatKey, Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
 import type { TravelMode } from '../../../travel/travel-config';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
@@ -79,6 +79,13 @@ function nightsBetween(startIso: string, endIso: string): number | null {
   return diffDays > 0 ? diffDays : null;
 }
 
+/** Espejo de SummaryStat en private-proposal.ts. */
+interface SummaryStat {
+  key: CoverStatKey;
+  value: string;
+  label: string | null;
+}
+
 interface ItineraryDayView {
   day: ProposalDay;
   dayLabel: string;
@@ -112,7 +119,7 @@ interface ItinerarySegment {
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments],
+  imports: [CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments],
   templateUrl: './preview-step.html',
   styleUrl: './preview-step.css'
 })
@@ -350,9 +357,38 @@ export class PreviewStep implements OnInit {
     return `${capitalize(MESES[date.getMonth()]!)} ${date.getFullYear()}`;
   });
 
-  readonly hasSummaryStats = computed<boolean>(
-    () => !!(this.durationDaysLabel() || this.travelersLabel() || this.seasonLabel())
-  );
+  /** Espejo de private-proposal.ts: lo escrito en Portada → Datos del resumen manda; vacío = automático. */
+  readonly summaryStats = computed<SummaryStat[]>(() => {
+    const overrides = this.proposal()?.content.cover.stats ?? {};
+    const pick = (key: CoverStatKey, autoValue: string | null, autoLabel: string | null): SummaryStat | null => {
+      const value = overrides[key]?.value?.trim() || autoValue;
+      if (!value) {
+        return null;
+      }
+      return { key, value, label: overrides[key]?.label?.trim() || autoLabel };
+    };
+    const stats = [
+      pick('duration', this.durationDaysLabel(), this.durationNightsLabel()),
+      pick('travelers', this.travelersLabel(), null),
+      pick('season', this.seasonLabel(), this.monthYearLabel())
+    ].filter((s): s is SummaryStat => s !== null);
+    const custom = pick('custom', this.destinationBadge() || this.datesLabel() || this.travelersLabel() || stats.length > 0 ? 'Viaje a medida' : null, 'Experiencias únicas');
+    return custom ? [...stats, custom] : stats;
+  });
+
+  readonly hasSummaryStats = computed<boolean>(() => this.summaryStats().length > 0);
+
+  /** Insignia de destino de la portada ("ROATÁN, HONDURAS"): igual que el enlace del cliente. */
+  readonly destinationBadge = computed<string | null>(() => {
+    const text = this.proposal()?.destinationText;
+    return text ? text.toUpperCase() : null;
+  });
+
+  /** "18–30 noviembre 2026": igual que el enlace del cliente (solo con las dos fechas). */
+  readonly datesLabel = computed<string | null>(() => {
+    const p = this.proposal();
+    return p?.startDate && p?.endDate ? formatDateRange(p.startDate, p.endDate) : null;
+  });
 
   /** Misma agrupación/derivación que itineraryOverview en private-proposal.ts
    *  — días consecutivos con la misma "Ubicación", noches = cantidad de días

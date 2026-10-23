@@ -8,7 +8,19 @@ export interface ProposalCover {
   title: string;
   subtitle: string;
   imagePath: string | null;
+  /** Textos editables del Resumen (ver CoverStats). Ausente = todo automático. */
+  stats?: CoverStats;
 }
+
+/** Los 4 datos con icono del Resumen. Cada campo vacío (o ausente) se calcula solo desde las fechas y los viajeros. */
+export type CoverStatKey = 'duration' | 'travelers' | 'season' | 'custom';
+
+export interface CoverStat {
+  value?: string;
+  label?: string;
+}
+
+export type CoverStats = Partial<Record<CoverStatKey, CoverStat>>;
 
 export interface ProposalIntro {
   headline: string;

@@ -34,7 +34,7 @@ describe('ClientTripStep — capacidades por modo', () => {
   let service: { getById: ReturnType<typeof vi.fn>; hasAccessCode: ReturnType<typeof vi.fn> };
   const text = () => (fixture.nativeElement as HTMLElement).textContent?.replace(/\s+/g, ' ') ?? '';
 
-  async function render(mode: TravelMode) {
+  async function render(mode: TravelMode, section: 'client-trip' | 'cover' = 'client-trip') {
     service = { getById: vi.fn().mockResolvedValue(proposal), hasAccessCode: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       providers: [
@@ -46,6 +46,7 @@ describe('ClientTripStep — capacidades por modo', () => {
     fixture = TestBed.createComponent(ClientTripStep);
     fixture.componentRef.setInput('proposalId', 'p1');
     fixture.componentRef.setInput('capabilities', TRAVEL_CONFIG[mode].capabilities);
+    fixture.componentRef.setInput('activeSection', section);
     fixture.detectChanges();
     for (let i = 0; i < 6; i++) {
       await fixture.whenStable();
@@ -68,5 +69,30 @@ describe('ClientTripStep — capacidades por modo', () => {
     for (const t of ['Correo', 'Moneda', 'Acceso privado', 'Requiere código de acceso', 'Expiración (opcional)']) {
       expect(text()).toContain(t);
     }
+  });
+
+  describe('Portada → Datos del resumen', () => {
+    const inputs = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>('.client-trip-step__stat input'));
+
+    it('muestra los cuatro datos con lo automático como ayuda en gris', async () => {
+      await render('itinerary', 'cover');
+      expect(text()).toContain('Datos del resumen');
+      expect(inputs().map((i) => i.placeholder)).toEqual([
+        '13 días', '12 noches', '2 viajeros', 'Sin texto secundario', 'Otoño', 'Noviembre 2026', 'Viaje a medida', 'Experiencias únicas'
+      ]);
+    });
+
+    it('guarda solo lo escrito dentro de content.cover.stats, sin tocar el resto de la portada', async () => {
+      await render('itinerary', 'cover');
+      const updateContent = vi.fn().mockImplementation(async (_id: string, content: unknown) => ({ ...proposal, content }));
+      (service as unknown as Record<string, unknown>)['updateContent'] = updateContent;
+      const [durationValue] = inputs();
+      durationValue!.value = ' 14 días ';
+      durationValue!.dispatchEvent(new Event('input'));
+      durationValue!.dispatchEvent(new Event('blur'));
+      await fixture.whenStable();
+      const saved = updateContent.mock.calls.at(-1)![1] as { cover: Record<string, unknown> };
+      expect(saved.cover).toEqual({ title: 'T', subtitle: 'S', imagePath: null, stats: { duration: { value: '14 días' } } });
+    });
   });
 });

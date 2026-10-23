@@ -9,6 +9,7 @@ import { DEFAULT_TERMS_HTML, termsHasPlaceholders } from '../../../../core/data/
 import { PROPOSAL_CURRENCY_OPTIONS } from '../../../../core/data/proposal-options';
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { RichTextEditor } from '../../../../shared/ui/rich-text-editor/rich-text-editor';
+import { COVER_STAT_KEYS, autoCoverStats, toCoverStats } from '../../../../core/utils/cover-stats';
 import { fromDatetimeLocal, isPlausibleDatetimeLocal, toDatetimeLocal } from '../../../../core/utils/datetime-local';
 
 type TopLevelField = 'clientName' | 'clientEmail' | 'destinationText' | 'startDate' | 'endDate' | 'travelersCount' | 'expiresAt';
@@ -100,6 +101,15 @@ export class ClientTripStep implements OnInit {
     expiresAt: this.fb.control('', { nonNullable: true }),
     coverTitle: this.fb.control('', { nonNullable: true }),
     coverSubtitle: this.fb.control('', { nonNullable: true }),
+    // Datos con icono del Resumen: vacío = automático (ver core/utils/cover-stats.ts).
+    durationValue: this.fb.control('', { nonNullable: true }),
+    durationLabel: this.fb.control('', { nonNullable: true }),
+    travelersValue: this.fb.control('', { nonNullable: true }),
+    travelersLabel: this.fb.control('', { nonNullable: true }),
+    seasonValue: this.fb.control('', { nonNullable: true }),
+    seasonLabel: this.fb.control('', { nonNullable: true }),
+    customValue: this.fb.control('', { nonNullable: true }),
+    customLabel: this.fb.control('', { nonNullable: true }),
     welcomeBody: this.fb.control('', { nonNullable: true }),
     introHeadline: this.fb.control('', { nonNullable: true }),
     introBody: this.fb.control('', { nonNullable: true }),
@@ -152,6 +162,14 @@ export class ClientTripStep implements OnInit {
         expiresAt: toDatetimeLocal(proposal.expiresAt),
         coverTitle: proposal.content.cover.title,
         coverSubtitle: proposal.content.cover.subtitle,
+        durationValue: proposal.content.cover.stats?.duration?.value ?? '',
+        durationLabel: proposal.content.cover.stats?.duration?.label ?? '',
+        travelersValue: proposal.content.cover.stats?.travelers?.value ?? '',
+        travelersLabel: proposal.content.cover.stats?.travelers?.label ?? '',
+        seasonValue: proposal.content.cover.stats?.season?.value ?? '',
+        seasonLabel: proposal.content.cover.stats?.season?.label ?? '',
+        customValue: proposal.content.cover.stats?.custom?.value ?? '',
+        customLabel: proposal.content.cover.stats?.custom?.label ?? '',
         welcomeBody: proposal.content.welcome.body,
         introHeadline: proposal.content.intro.headline,
         introBody: proposal.content.intro.body,
@@ -276,6 +294,20 @@ export class ClientTripStep implements OnInit {
     });
   }
 
+  /** Datos del Resumen: etiqueta de cada tarjeta y los campos del formulario que la editan. */
+  readonly coverStatFields = COVER_STAT_KEYS.map((key) => ({
+    key,
+    title: { duration: 'Duración', travelers: 'Viajeros', season: 'Temporada', custom: 'Destacado' }[key],
+    value: `${key}Value` as const,
+    label: `${key}Label` as const
+  }));
+
+  /** Lo que verá el cliente si el campo queda vacío (se muestra como texto gris de ayuda). */
+  autoCoverStat(key: (typeof COVER_STAT_KEYS)[number]): { value: string; label: string } {
+    const f = this.form.getRawValue();
+    return autoCoverStats(f.startDate, f.endDate, f.travelersCount)[key];
+  }
+
   saveCover(): Promise<void> {
     return this.enqueueSave(async () => {
       if (!this.content) {
@@ -284,9 +316,11 @@ export class ClientTripStep implements OnInit {
       this.savingField.set('cover');
       this.saveError.set(null);
       const raw = this.form.getRawValue();
+      const { stats: _previous, ...cover } = this.content.cover;
+      const stats = toCoverStats(raw);
       const nextContent: ProposalContent = {
         ...this.content,
-        cover: { ...this.content.cover, title: raw.coverTitle, subtitle: raw.coverSubtitle }
+        cover: { ...cover, title: raw.coverTitle, subtitle: raw.coverSubtitle, ...(stats ? { stats } : {}) }
       };
       try {
         const updated = await this.proposalsService.updateContent(this.proposalId(), nextContent);

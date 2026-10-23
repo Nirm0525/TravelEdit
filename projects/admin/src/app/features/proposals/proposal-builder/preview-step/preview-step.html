@@ -13,17 +13,21 @@
   <article class="preview">
     <section class="preview__cover" [style.background-image]="imageUrl(p.content.cover.imagePath) ? 'url(' + imageUrl(p.content.cover.imagePath) + ')' : null">
       <div class="preview__cover-overlay">
-        <p class="preview__eyebrow">{{ p.clientName }}</p>
+        @if (destinationBadge(); as badge) {
+          <p class="preview__eyebrow">{{ badge }}</p>
+        }
         <h1 class="preview__cover-title">{{ p.content.cover.title || 'Sin título todavía' }}</h1>
         @if (p.content.cover.subtitle) {
           <p class="preview__cover-subtitle">{{ p.content.cover.subtitle }}</p>
         }
-        <p class="preview__cover-meta">
-          @if (p.startDate) {
-            {{ p.startDate | date: 'd MMM y' }}@if (p.endDate) { – {{ p.endDate | date: 'd MMM y' }} }
-          }
-          @if (p.travelersCount) { · {{ p.travelersCount }} viajeros }
-        </p>
+        <p class="preview__cover-for">Una experiencia diseñada para {{ p.clientName }}</p>
+        @if (datesLabel() || travelersLabel()) {
+          <p class="preview__cover-meta">
+            @if (datesLabel(); as dates) { {{ dates }} }
+            @if (datesLabel() && travelersLabel()) { <span aria-hidden="true"> · </span> }
+            @if (travelersLabel(); as travelers) { {{ travelers }} }
+          </p>
+        }
       </div>
     </section>
 
@@ -48,47 +52,34 @@
 
         @if (hasSummaryStats()) {
           <div class="preview__summary">
-            @if (durationDaysLabel(); as days) {
+            @for (stat of summaryStats(); track stat.key) {
               <div class="preview__summary-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                  <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                  @switch (stat.key) {
+                    @case ('duration') {
+                      <path d="M21 3L3 10.5l7 2.5m11-10l-4.5 18-4.5-7.5m9-10.5L11.5 15" stroke-linecap="round" stroke-linejoin="round" />
+                    }
+                    @case ('travelers') {
+                      <circle cx="9" cy="8" r="3" />
+                      <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
+                      <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
+                    }
+                    @case ('season') {
+                      <circle cx="12" cy="12" r="4.5" />
+                      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round" />
+                    }
+                    @default {
+                      <path d="M12 3l2.2 6.8H21l-5.6 4.1 2.2 6.8L12 16.6l-5.6 4.1 2.2-6.8L3 9.8h6.8z" stroke-linejoin="round" />
+                    }
+                  }
                 </svg>
-                <p class="preview__summary-value">{{ days }}</p>
-                @if (durationNightsLabel(); as nights) {
-                  <p class="preview__summary-label">{{ nights }}</p>
+                <p class="preview__summary-value">{{ stat.value }}</p>
+                @if (stat.label) {
+                  <p class="preview__summary-label">{{ stat.label }}</p>
                 }
               </div>
             }
-            @if (travelersLabel(); as travelers) {
-              <div class="preview__summary-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                  <circle cx="9" cy="8" r="3" />
-                  <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M16 8.5a2.5 2.5 0 1 0 0-5" stroke-linecap="round" />
-                  <path d="M18 14.6c2 .5 3.3 2.2 3.3 4.9" stroke-linecap="round" />
-                </svg>
-                <p class="preview__summary-value">{{ travelers }}</p>
-              </div>
-            }
-            @if (seasonLabel(); as season) {
-              <div class="preview__summary-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                  <circle cx="12" cy="12" r="4.5" />
-                  <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round" />
-                </svg>
-                <p class="preview__summary-value">{{ season }}</p>
-                @if (monthYearLabel(); as monthYear) {
-                  <p class="preview__summary-label">{{ monthYear }}</p>
-                }
-              </div>
-            }
-            <div class="preview__summary-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <path d="M12 3l2.2 6.8H21l-5.6 4.1 2.2 6.8L12 16.6l-5.6 4.1 2.2-6.8L3 9.8h6.8z" stroke-linejoin="round" />
-              </svg>
-              <p class="preview__summary-value">Viaje a medida</p>
-              <p class="preview__summary-label">Experiencias únicas</p>
-            </div>
           </div>
         }
       </section>

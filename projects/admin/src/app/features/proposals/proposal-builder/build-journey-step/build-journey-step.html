@@ -160,6 +160,17 @@
                 }
               </div>
             </div>
+
+            <div class="day-card__recommendations">
+              <app-day-recommendations
+                [dayNumber]="day.dayNumber"
+                [value]="day.recommendations"
+                [status]="statusOf(day)"
+                [imageUpload]="recommendationImageUpload"
+                (save)="saveRecommendations(day, $event)"
+                (remove)="removeRecommendations(day)"
+              />
+            </div>
           </article>
         }
       </div>

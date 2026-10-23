@@ -257,6 +257,9 @@
                   }
                 </ul>
               }
+              @if (dayRecommendations(day); as recs) {
+                <app-preview-day-recommendations [headline]="recs.headline" [html]="recs.body" />
+              }
             </div>
           }
         }

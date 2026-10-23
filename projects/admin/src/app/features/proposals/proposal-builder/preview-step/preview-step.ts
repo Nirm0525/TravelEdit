@@ -1,3 +1,5 @@
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { sanitizeRichHtml } from '../../../../core/utils/sanitize-rich-html';
 import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, input, signal } from '@angular/core';
 import type { gsap } from 'gsap';
 import { CurrencyPipe, NgTemplateOutlet } from '@angular/common';
@@ -7,7 +9,8 @@ import { ProposalServiceAttachmentsService } from '../../../../core/services/pro
 import { ProposalServiceAttachment } from '../../../../core/models/proposal-service-attachment.model';
 import { resolveViewableUrl } from '../../../../core/utils/open-document';
 import { PreviewServiceDocuments } from './preview-service-documents';
-import { CoverStatKey, Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup } from '../../../../core/models/proposal.model';
+import { PreviewDayRecommendations } from './preview-day-recommendations';
+import { CoverStatKey, Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup, hasDayRecommendations, isRichTextEmpty } from '../../../../core/models/proposal.model';
 import type { TravelMode } from '../../../travel/travel-config';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_TIP_CATEGORIES } from '../travel-tips-step/travel-tips-step';
@@ -119,7 +122,7 @@ interface ItinerarySegment {
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments],
+  imports: [CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments, PreviewDayRecommendations],
   templateUrl: './preview-step.html',
   styleUrl: './preview-step.css'
 })
@@ -282,6 +285,29 @@ export class PreviewStep implements OnInit {
       }
       refreshPreviewTriggers();
     }, 30);
+  }
+
+  private readonly sanitizer = inject(DomSanitizer);
+  /** Resultado por objeto `recommendations`: la plantilla lo llama en cada ciclo y un SafeHtml nuevo cada vez re-pintaría el HTML. */
+  private readonly recommendationsView = new WeakMap<object, { headline: string; body: SafeHtml | null } | null>();
+
+  /** Recomendaciones del día listas para pintar, o null si no hay contenido (el bloque no se muestra). */
+  dayRecommendations(day: ProposalDay): { headline: string; body: SafeHtml | null } | null {
+    const recommendations = day.recommendations;
+    if (!recommendations || !hasDayRecommendations(day)) {
+      return null;
+    }
+    let view = this.recommendationsView.get(recommendations);
+    if (view === undefined) {
+      const { headline, body } = recommendations;
+      // Mismo saneado que el sitio público (sanitizeRichHtml): lo que se ve aquí es lo que verá el viajero.
+      view = {
+        headline: headline.trim() || 'Recomendaciones del día',
+        body: isRichTextEmpty(body) ? null : this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body))
+      };
+      this.recommendationsView.set(recommendations, view);
+    }
+    return view;
   }
 
   /** "Viernes, 2 de octubre de 2026 – Madrid" — misma regla que dayBandLabel()

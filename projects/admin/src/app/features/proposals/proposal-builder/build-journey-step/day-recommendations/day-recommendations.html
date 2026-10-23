@@ -1,0 +1,50 @@
+@if (!open()) {
+  <button type="button" class="day-recs__add" (click)="show()">+ Añadir recomendaciones</button>
+} @else {
+  <section class="day-recs" [attr.aria-label]="'Recomendaciones del día ' + dayNumber()">
+    <header class="day-recs__header">
+      <h4 class="day-recs__title">Recomendaciones del día</h4>
+      <span class="day-recs__optional">Opcional</span>
+    </header>
+
+    <label class="field">
+      <span>Titular</span>
+      <input type="text" [formControl]="headline" placeholder="Ej. Recomendaciones para tu visita a Londres" />
+    </label>
+
+    <!-- Sin <label> alrededor del editor: un click en el área de texto se iría al <select> del toolbar. -->
+    <div class="field day-recs__rich">
+      <span>Texto de recomendaciones</span>
+      <app-rich-text-editor [formControl]="body" [imageUpload]="imageUpload()" />
+      <span class="field__hint">Ej. qué llevar, vestimenta sugerida, clima, puntualidad o consejos del destino.</span>
+    </div>
+
+    <div class="day-recs__actions">
+      <button type="button" class="btn btn--primary" [disabled]="status().phase === 'saving'" (click)="submit()">
+        {{ status().phase === 'saving' ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+      <button type="button" class="day-recs__remove" [disabled]="status().phase === 'saving'" (click)="requestRemove()">
+        Eliminar recomendaciones
+      </button>
+      <span class="day-recs__status" role="status" aria-live="polite">
+        @if (status().phase === 'saved' && !edited()) {
+          Guardado ✓
+        }
+      </span>
+    </div>
+
+    @if (status().phase === 'error') {
+      <p class="field__hint field__hint--error" role="alert">
+        {{ status().message || 'No se pudieron guardar las recomendaciones.' }} Lo que escribiste sigue aquí.
+      </p>
+    }
+  </section>
+}
+
+<app-confirm-dialog
+  [open]="confirmingRemove()"
+  title="Eliminar recomendaciones"
+  [message]="'¿Eliminar las recomendaciones del día ' + dayNumber() + '? Esta acción no se puede deshacer.'"
+  (confirmed)="confirmRemove()"
+  (cancelled)="cancelRemove()"
+/>

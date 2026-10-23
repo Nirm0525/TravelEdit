@@ -15,7 +15,9 @@ const ALLOWED_TAGS = new Set([
   'ul', 'ol', 'li',
   'blockquote', 'hr', 'figure', 'img',
   'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  'code', 'pre', 'label', 'input'
+  'code', 'pre', 'label', 'input',
+  // Tiptap: el texto de cada tarea de una lista de tareas va dentro de un <div>; sin él el texto desaparecía.
+  'div'
 ]);
 
 const ALLOWED_STYLE_PROPERTIES = new Set([
@@ -32,7 +34,9 @@ const ALLOWED_STYLE_PROPERTIES = new Set([
 
 const ALLOWED_ATTRIBUTES = new Set([
   'href', 'target', 'rel', 'src', 'alt', 'loading', 'decoding',
-  'class', 'id', 'data-type', 'type', 'checked', 'disabled'
+  'class', 'id', 'data-type', 'data-checked', 'type', 'checked', 'disabled',
+  // Celdas combinadas de las tablas del editor.
+  'colspan', 'rowspan'
 ]);
 
 const UNSAFE_STYLE_VALUE = /url\s*\(|expression\s*\(|javascript:|@import/i;

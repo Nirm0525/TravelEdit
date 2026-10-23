@@ -559,6 +559,9 @@
                         <p class="private-proposal__gate-error" role="alert">{{ message }}</p>
                       }
                     }
+                    @if (dayRecommendations()[day.id]; as recs) {
+                      <app-day-recommendations [headline]="recs.headline" [html]="recs.html" />
+                    }
                     </div>
                   }
                 </div>

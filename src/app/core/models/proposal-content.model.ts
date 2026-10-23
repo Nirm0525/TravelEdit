@@ -44,6 +44,11 @@ export interface ProposalServiceItem {
   details?: Record<string, string>;
 }
 
+export interface ProposalDayRecommendations {
+  headline: string;
+  body: string;
+}
+
 export interface ProposalDay {
   id: string;
   dayNumber: number;
@@ -52,6 +57,21 @@ export interface ProposalDay {
   description: string;
   imagePath: string | null;
   services: ProposalServiceItem[];
+  /** Opcional: ausente en los días anteriores a este campo. */
+  recommendations?: ProposalDayRecommendations;
+}
+
+/** Un texto enriquecido vacío (`<p></p>` del editor) cuenta como vacío; una imagen sola sí es contenido. */
+export function isRichTextEmpty(html: string | null | undefined): boolean {
+  if (!html) {
+    return true;
+  }
+  return !/<img\b/i.test(html) && !html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+}
+
+export function hasDayRecommendations(day: Pick<ProposalDay, 'recommendations'>): boolean {
+  const r = day.recommendations;
+  return !!r && (!!r.headline?.trim() || !isRichTextEmpty(r.body));
 }
 
 export interface ProposalPricingLine {

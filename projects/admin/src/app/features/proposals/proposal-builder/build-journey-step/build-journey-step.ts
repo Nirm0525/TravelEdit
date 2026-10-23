@@ -8,9 +8,11 @@ import { AttachmentApiError, ProposalServiceAttachment } from '../../../../core/
 import {
   ProposalContent,
   ProposalDay,
+  ProposalDayRecommendations,
   ProposalServiceItem,
   createProposalDay,
-  createProposalService
+  createProposalService,
+  withDayRecommendations
 } from '../../../../core/models/proposal.model';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_SERVICE_TYPE_OPTIONS } from '../../../../core/data/proposal-options';
@@ -18,13 +20,14 @@ import { PROPOSAL_SERVICE_FIELDS } from '../../../../core/data/proposal-service-
 import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/image-uploader';
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { ServiceDocuments } from './service-documents/service-documents';
+import { DayRecommendations, RecommendationsStatus } from './day-recommendations/day-recommendations';
 
 type DayField = 'title' | 'location' | 'description';
 type ServiceField = 'title' | 'description' | 'notes' | 'time';
 
 @Component({
   selector: 'app-build-journey-step',
-  imports: [DragDropModule, ImageUploader, ConfirmDialog, ServiceDocuments],
+  imports: [DragDropModule, ImageUploader, ConfirmDialog, ServiceDocuments, DayRecommendations],
   templateUrl: './build-journey-step.html',
   styleUrl: './build-journey-step.css'
 })
@@ -56,6 +59,19 @@ export class BuildJourneyStep implements OnInit {
   readonly uploadingDayId = signal<string | null>(null);
   readonly uploadingServiceId = signal<string | null>(null);
   readonly dayPendingDelete = signal<ProposalDay | null>(null);
+
+  /** Estado de guardado del bloque de recomendaciones de cada día (por id de día; ausente = sin actividad). */
+  readonly recommendationStatus = signal<Record<string, RecommendationsStatus>>({});
+  private readonly idleStatus: RecommendationsStatus = { phase: 'idle' };
+  statusOf(day: ProposalDay): RecommendationsStatus {
+    return this.recommendationStatus()[day.id] ?? this.idleStatus;
+  }
+
+  /** Igual que bodyImageUpload de client-trip-step: el editor necesita la URL completa al insertar la imagen. */
+  readonly recommendationImageUpload = async (file: File): Promise<string> => {
+    const path = await this.proposalImages.upload(file);
+    return this.proposalImages.publicUrl(path)!;
+  };
 
   /** Documentos adjuntos de TODA la propuesta (una sola consulta); cada servicio muestra los suyos. */
   readonly attachments = signal<ProposalServiceAttachment[]>([]);
@@ -164,8 +180,13 @@ export class BuildJourneyStep implements OnInit {
   /** mutate() recibe el array YA actualizado por cualquier guardado previo en
    *  la cola — nunca una copia vieja tomada al momento del evento. */
   private enqueueMutation(mutate: (days: ProposalDay[]) => ProposalDay[]): Promise<void> {
+    return this.enqueueMutationResult(mutate).then(() => undefined);
+  }
+
+  /** Igual que enqueueMutation, pero dice si el guardado se logró (persist no lanza: deja el error en saveError). */
+  private enqueueMutationResult(mutate: (days: ProposalDay[]) => ProposalDay[]): Promise<boolean> {
     const run = this.saveChain.then(() => this.persist(mutate(this.days())));
-    this.saveChain = run.catch(() => undefined);
+    this.saveChain = run.then(() => undefined, () => undefined);
     return run;
   }
 
@@ -173,9 +194,9 @@ export class BuildJourneyStep implements OnInit {
    *  PATCH parcial) — content.pricing/terms/intro/cover, cargados en el
    *  paso 01/03, viajan intactos porque `this.content` se cargó entero al
    *  entrar a este paso y solo se muta la porción `days`. */
-  private async persist(nextDays: ProposalDay[]): Promise<void> {
+  private async persist(nextDays: ProposalDay[]): Promise<boolean> {
     if (!this.content) {
-      return;
+      return false;
     }
     this.saving.set(true);
     this.saveError.set(null);
@@ -187,9 +208,11 @@ export class BuildJourneyStep implements OnInit {
       this.refreshDayImageUrls(updated.content.days);
       this.refreshServiceImageUrls(updated.content.days);
       this.saved.emit();
+      return true;
     } catch (error) {
       console.error('No se pudo guardar el itinerario.', error);
       this.saveError.set('No se pudo guardar. Inténtalo nuevamente.');
+      return false;
     } finally {
       this.saving.set(false);
     }
@@ -233,6 +256,28 @@ export class BuildJourneyStep implements OnInit {
   onDayFieldBlur(day: ProposalDay, field: DayField, event: Event): Promise<void> {
     const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value;
     return this.enqueueMutation((days) => days.map((d) => (d.id === day.id ? { ...d, [field]: value } : d)));
+  }
+
+  /** Guarda SOLO las recomendaciones de ese día (undefined = quitarlas); el resto del día y de los demás días no se toca. */
+  async saveRecommendations(day: ProposalDay, recommendations: ProposalDayRecommendations | undefined): Promise<void> {
+    this.setRecommendationStatus(day.id, { phase: 'saving' });
+    const ok = await this.enqueueMutationResult((days) =>
+      days.map((d) => (d.id === day.id ? withDayRecommendations(d, recommendations) : d))
+    );
+    this.setRecommendationStatus(
+      day.id,
+      ok
+        ? { phase: 'saved' }
+        : { phase: 'error', message: 'No se pudieron guardar las recomendaciones. Inténtalo nuevamente.' }
+    );
+  }
+
+  removeRecommendations(day: ProposalDay): Promise<void> {
+    return this.saveRecommendations(day, undefined);
+  }
+
+  private setRecommendationStatus(dayId: string, status: RecommendationsStatus): void {
+    this.recommendationStatus.update((all) => ({ ...all, [dayId]: status }));
   }
 
   async onDayImageSelected(day: ProposalDay, images: ReadyImage[]): Promise<void> {

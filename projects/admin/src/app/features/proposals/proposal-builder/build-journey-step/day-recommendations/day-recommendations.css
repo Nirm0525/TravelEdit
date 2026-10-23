@@ -1,0 +1,69 @@
+:host {
+  display: block;
+}
+
+.day-recs__add {
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px dashed var(--line-200);
+  border-radius: var(--radius-sm);
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+}
+
+.day-recs__add:hover {
+  border-style: solid;
+  border-color: var(--brand-600);
+  color: var(--brand-600);
+}
+
+.day-recs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--line-200);
+  border-left: 3px solid var(--brand-600);
+  border-radius: var(--radius-sm);
+  background: var(--canvas-100);
+}
+
+.day-recs__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.day-recs__title {
+  font-size: var(--size-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-600);
+}
+
+.day-recs__optional {
+  font-size: var(--size-eyebrow);
+  color: var(--text-secondary);
+}
+
+.day-recs__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.day-recs__remove {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.day-recs__remove:hover:not(:disabled) {
+  color: var(--danger-600);
+  text-decoration: underline;
+}
+
+.day-recs__status {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}

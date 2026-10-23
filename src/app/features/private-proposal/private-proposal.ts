@@ -5,13 +5,14 @@ import { RouterLink } from '@angular/router';
 import { DomSanitizer, Meta, SafeHtml, Title } from '@angular/platform-browser';
 import { PROPOSAL_SESSION_PREFIX, PublicProposalService, ProposalAccessResult, ProposalDocument, ProposalGateResponse, PublicProposalData } from '../../core/services/public-proposal';
 import { PROPOSAL_SERVICE_TYPE_LABEL } from '../../core/models/proposal-enums-public';
-import { CoverStatKey, ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup } from '../../core/models/proposal-content.model';
+import { CoverStatKey, ProposalDay, ProposalServiceType, ProposalTravelTip, ProposalTravelTipGroup, hasDayRecommendations, isRichTextEmpty } from '../../core/models/proposal-content.model';
 import { RevealOnScrollDirective } from '../../shared/directives/reveal-on-scroll';
 import { ReducedMotionService } from '../../core/services/reduced-motion';
 import { sanitizeRichHtml } from '../../core/utils/sanitize-rich-html';
 import { Footer } from '../footer/footer';
 import { resolveViewableUrl } from '../../core/utils/open-document';
 import { ProposalServiceDocuments } from './proposal-service-documents/proposal-service-documents';
+import { DayRecommendations } from './day-recommendations/day-recommendations';
 import { serviceDetailRows } from '../../core/data/proposal-service-fields';
 import { buildPricingBreakdown } from '../../core/data/proposal-pricing-breakdown';
 import {
@@ -247,7 +248,7 @@ const NEUTRAL_COPY: PrivateCopy = {
 
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments, DayRecommendations],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })
@@ -386,6 +387,23 @@ export class PrivateProposal implements OnDestroy {
   readonly safeWelcomeBody = computed<SafeHtml | null>(() => {
     const body = this.data()?.content.welcome.body;
     return body && body.replace(/<[^>]*>/g, '').trim() ? this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body)) : null;
+  });
+
+  /** Recomendaciones de cada día (por id de día): solo días que tienen contenido, ya saneado. Sin contenido no hay entrada,
+   *  y la plantilla no pinta el bloque ni deja espacio. */
+  readonly dayRecommendations = computed<Record<string, { headline: string; html: SafeHtml | null }>>(() => {
+    const result: Record<string, { headline: string; html: SafeHtml | null }> = {};
+    for (const day of this.data()?.content.days ?? []) {
+      if (!hasDayRecommendations(day)) {
+        continue;
+      }
+      const { headline, body } = day.recommendations!;
+      result[day.id] = {
+        headline: headline.trim() || 'Recomendaciones del día',
+        html: isRichTextEmpty(body) ? null : this.sanitizer.bypassSecurityTrustHtml(sanitizeRichHtml(body))
+      };
+    }
+    return result;
   });
 
   /** Detalle de costos por día + mezcla por tipo (ver buildPricingBreakdown). */

@@ -1,0 +1,6 @@
+<aside class="day-recs" [attr.aria-label]="headline()">
+  <h4 class="day-recs__title">{{ headline() }}</h4>
+  @if (html(); as body) {
+    <div class="day-recs__body" [innerHTML]="body"></div>
+  }
+</aside>

@@ -43,6 +43,12 @@ export interface ProposalServiceItem {
   details?: Record<string, string>;
 }
 
+/** Recomendaciones opcionales del día (qué llevar, clima, puntualidad…). Rich text, igual que intro.body. */
+export interface ProposalDayRecommendations {
+  headline: string;
+  body: string;
+}
+
 export interface ProposalDay {
   /** UUID estable — nunca el índice del array. */
   id: string;
@@ -52,6 +58,35 @@ export interface ProposalDay {
   description: string;
   imagePath: string | null;
   services: ProposalServiceItem[];
+  /** Contenido ADICIONAL al resumen del día y a las descripciones de servicios. Ausente = el día no las tiene
+   *  (todos los días anteriores a este campo); se guarda solo cuando hay titular o texto. */
+  recommendations?: ProposalDayRecommendations;
+}
+
+/** Un texto enriquecido vacío (`<p></p>` del editor) cuenta como vacío; una imagen sola sí es contenido. */
+export function isRichTextEmpty(html: string | null | undefined): boolean {
+  if (!html) {
+    return true;
+  }
+  return !/<img\b/i.test(html) && !html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+}
+
+/** Normaliza lo que escribió el asesor: sin titular ni texto no se guarda nada (undefined), nunca un objeto vacío. */
+export function normalizeDayRecommendations(headline: string, body: string): ProposalDayRecommendations | undefined {
+  const cleanHeadline = headline.trim();
+  const cleanBody = isRichTextEmpty(body) ? '' : body;
+  return cleanHeadline || cleanBody ? { headline: cleanHeadline, body: cleanBody } : undefined;
+}
+
+export function hasDayRecommendations(day: Pick<ProposalDay, 'recommendations'>): boolean {
+  const r = day.recommendations;
+  return !!r && (!!r.headline?.trim() || !isRichTextEmpty(r.body));
+}
+
+/** Copia del día con las recomendaciones puestas o quitadas (la clave se elimina, no queda en null). */
+export function withDayRecommendations(day: ProposalDay, recommendations: ProposalDayRecommendations | undefined): ProposalDay {
+  const { recommendations: _previous, ...rest } = day;
+  return recommendations ? { ...rest, recommendations } : rest;
 }
 
 // Fuente única de verdad del pricing: content.pricing.lines/feesLines. Las

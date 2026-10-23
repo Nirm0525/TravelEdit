@@ -1,0 +1,98 @@
+:host {
+  display: block;
+}
+
+/* Recomendaciones del día (espejo del bloque público). */
+.day-recs {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-left: 3px solid var(--brand-600);
+  background: var(--canvas-100);
+  overflow-wrap: anywhere;
+}
+
+.day-recs__body ::ng-deep > * {
+  margin-block: 0;
+}
+
+.day-recs__body ::ng-deep > * + * {
+  margin-top: var(--space-xs);
+}
+
+/* Mismos formatos que el bloque del sitio público (day-recommendations.css del sitio). */
+.day-recs__body ::ng-deep strong,
+.day-recs__body ::ng-deep b,
+.day-recs__body ::ng-deep th {
+  font-weight: 700;
+}
+
+.day-recs__body ::ng-deep ul,
+.day-recs__body ::ng-deep ol {
+  padding-left: 1.25rem;
+}
+
+.day-recs__body ::ng-deep ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.day-recs__body ::ng-deep li[data-type='taskItem'] {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.day-recs__body ::ng-deep li[data-type='taskItem'] input {
+  pointer-events: none;
+  margin-top: 0.4rem;
+}
+
+.day-recs__body ::ng-deep blockquote {
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--brand-600);
+  font-style: italic;
+}
+
+.day-recs__body ::ng-deep hr {
+  border: 0;
+  border-top: 1px solid var(--line-200);
+}
+
+.day-recs__body ::ng-deep a {
+  color: var(--brand-600);
+  text-decoration: underline;
+}
+
+.day-recs__body ::ng-deep code {
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: var(--line-200);
+  font-size: 0.9em;
+}
+
+.day-recs__body ::ng-deep img {
+  max-width: 100%;
+  height: auto;
+}
+
+.day-recs__body ::ng-deep table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.day-recs__body ::ng-deep th,
+.day-recs__body ::ng-deep td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line-200);
+  text-align: left;
+}
+
+.day-recs__title {
+  margin-bottom: var(--space-xs);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--size-section-title);
+  color: var(--brand-600);
+}

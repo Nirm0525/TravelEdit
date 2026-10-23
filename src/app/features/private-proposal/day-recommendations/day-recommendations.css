@@ -1,0 +1,111 @@
+/* Cierra el día, después de sus servicios. Mismo lenguaje que el resto (filete dorado, beige suave, título en cursiva). */
+:host {
+  display: block;
+}
+
+.day-recs {
+  padding: var(--space-lg);
+  border-left: 3px solid var(--color-gold);
+  background: color-mix(in srgb, var(--color-warm-beige) 28%, var(--color-cream));
+  overflow-wrap: anywhere;
+}
+
+.day-recs__title {
+  margin-bottom: var(--space-sm);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.6rem);
+  color: var(--color-burgundy);
+}
+
+.day-recs__body {
+  font-size: var(--size-body);
+  line-height: 1.7;
+}
+
+/* El HTML llega por [innerHTML]: sus elementos no llevan el atributo de Angular, de ahí ::ng-deep. Estos formatos son los
+   que ofrece el editor; la vista previa del admin los replica (preview-step.css, .preview__day-recs-body). */
+.day-recs__body ::ng-deep > * {
+  margin-block: 0;
+}
+
+.day-recs__body ::ng-deep > * + * {
+  margin-top: var(--space-sm);
+}
+
+/* El texto base del sitio es Light (300): sin esto la negrita quedaría en 400, casi igual al texto. */
+.day-recs__body ::ng-deep strong,
+.day-recs__body ::ng-deep b,
+.day-recs__body ::ng-deep th {
+  font-weight: 700;
+}
+
+.day-recs__body ::ng-deep ul,
+.day-recs__body ::ng-deep ol {
+  padding-left: 1.25rem;
+}
+
+.day-recs__body ::ng-deep ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.day-recs__body ::ng-deep li[data-type='taskItem'] {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.day-recs__body ::ng-deep li[data-type='taskItem'] input {
+  pointer-events: none;
+  margin-top: 0.4rem;
+}
+
+.day-recs__body ::ng-deep blockquote {
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--color-gold);
+  font-style: italic;
+}
+
+.day-recs__body ::ng-deep hr {
+  border: 0;
+  border-top: 1px solid var(--color-warm-beige);
+}
+
+.day-recs__body ::ng-deep a {
+  color: var(--color-burgundy);
+  text-decoration: underline;
+}
+
+.day-recs__body ::ng-deep code {
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-warm-beige) 40%, transparent);
+  font-size: 0.9em;
+}
+
+.day-recs__body ::ng-deep img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tablas anchas se desplazan dentro del bloque en vez de ensanchar la página. */
+.day-recs__body ::ng-deep table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.day-recs__body ::ng-deep th,
+.day-recs__body ::ng-deep td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-warm-beige);
+  text-align: left;
+}
+
+@media (max-width: 40rem) {
+  .day-recs {
+    padding: var(--space-md);
+  }
+}

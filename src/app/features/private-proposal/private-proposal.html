@@ -411,7 +411,7 @@
                           <h3 class="proposal__day-title">{{ day.title }}</h3>
                         }
                         @if (day.description) {
-                          <p class="proposal__day-description">{{ day.description }}</p>
+                          <p class="proposal__day-description plain-text">{{ day.description }}</p>
                         }
                       </div>
                     @if (day.services.length > 0) {
@@ -493,7 +493,7 @@
                             }
 
                             @if (service.description) {
-                              <p class="proposal__service-description">{{ service.description }}</p>
+                              <p class="proposal__service-description plain-text">{{ service.description }}</p>
                             }
 
                             <app-proposal-service-documents
@@ -650,7 +650,7 @@
                                   <h4>{{ tip.title }}</h4>
                                 }
                                 @if (tip.body) {
-                                  <p>{{ tip.body }}</p>
+                                  <p class="plain-text">{{ tip.body }}</p>
                                 }
                               </div>
                             }

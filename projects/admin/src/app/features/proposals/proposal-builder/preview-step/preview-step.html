@@ -208,7 +208,7 @@
                 <h3 class="preview__day-title">{{ day.title }}</h3>
               }
               @if (day.description) {
-                <p class="preview__day-description">{{ day.description }}</p>
+                <p class="preview__day-description plain-text">{{ day.description }}</p>
               }
               @if (day.services.length > 0) {
                 <ul class="preview__services">
@@ -243,7 +243,7 @@
                         <p class="preview__service-comment"><strong>Comentario del cliente:</strong> {{ comment }}</p>
                       }
                       @if (service.description) {
-                        <p>{{ service.description }}</p>
+                        <p class="plain-text">{{ service.description }}</p>
                       }
                       @if (documentsByService()[service.id]; as docs) {
                         <app-preview-service-documents
@@ -346,7 +346,7 @@
                         <div class="preview__tip-item">
                           <strong>{{ tip.title || 'Sin título' }}</strong>
                           @if (tip.body) {
-                            <p>{{ tip.body }}</p>
+                            <p class="plain-text">{{ tip.body }}</p>
                           }
                         </div>
                       }

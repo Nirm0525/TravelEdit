@@ -526,3 +526,10 @@ table {
   overflow: hidden;
   opacity: 0;
 }
+
+/* Texto plano escrito en un <textarea> (descripciones de días y servicios, consejos): respeta los saltos de línea y las líneas
+   en blanco que escribió el asesor; las palabras largas se parten en vez de desbordar. NO usar en contenido HTML enriquecido. */
+.plain-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

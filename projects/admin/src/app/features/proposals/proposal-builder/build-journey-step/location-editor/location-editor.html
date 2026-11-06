@@ -1,0 +1,194 @@
+@if (!open()) {
+  <button type="button" class="loc__add" (click)="show()">+ Añadir ubicación</button>
+} @else {
+  <section class="loc" [attr.aria-label]="'Ubicación ' + subject()">
+    <header class="loc__header">
+      <h4 class="loc__title">Ubicación</h4>
+      <span class="loc__optional">Opcional</span>
+    </header>
+
+    <div class="loc__search">
+      <div class="field loc__combo" #combo (focusout)="onComboboxFocusOut($event, combo)">
+        <label [for]="listboxId + '-input'">Buscar un lugar</label>
+        <div class="loc__box">
+        <input
+          type="text"
+          [id]="listboxId + '-input'"
+          [formControl]="query"
+          maxlength="200"
+          placeholder="Ej. Torre de Belém, Lisboa"
+          role="combobox"
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="suggestOpen() && (suggestions().length > 0 || suggestEmpty() || !!suggestError()) ? 'true' : 'false'"
+          [attr.aria-controls]="listboxId"
+          [attr.aria-activedescendant]="activeIndex() >= 0 && suggestOpen() ? optionId(activeIndex()) : null"
+          [attr.aria-describedby]="listboxId + '-hint'"
+          (input)="onQueryInput($any($event.target).value)"
+          (focus)="onQueryFocus()"
+          (keydown)="onQueryKeydown($event)"
+        />
+        @if (suggestOpen() && (suggestions().length > 0 || suggestEmpty() || suggestLoading() || suggestError())) {
+          <div class="loc__popup">
+            @if (suggestions().length > 0) {
+              <ul class="loc__suggestions" role="listbox" [id]="listboxId" [attr.aria-label]="'Sugerencias de lugares ' + subject()">
+                @for (candidate of suggestions(); track $index) {
+                  <li
+                    role="option"
+                    class="loc__option"
+                    [id]="optionId($index)"
+                    [class.loc__option--active]="activeIndex() === $index"
+                    [attr.aria-selected]="activeIndex() === $index ? 'true' : 'false'"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="pickSuggestion($index)"
+                    (mouseenter)="activeIndex.set($index)"
+                  >
+                    <span class="loc__option-name">{{ candidate.name }}</span>
+                    <span class="loc__option-detail">{{ suggestionDetail(candidate) }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <ul role="listbox" [id]="listboxId" class="loc__suggestions loc__suggestions--empty" [attr.aria-label]="'Sugerencias de lugares ' + subject()"></ul>
+              @if (suggestLoading()) {
+                <p class="loc__popup-note">Buscando sugerencias…</p>
+              } @else if (suggestError(); as message) {
+                <p class="loc__popup-note loc__popup-note--error">{{ message }}</p>
+              } @else {
+                <p class="loc__popup-note">
+                  No encontramos sugerencias. Sigue escribiendo (añade la ciudad o el país) o pega el código de Google Maps más abajo.
+                </p>
+              }
+            }
+          </div>
+        } @else {
+          <ul role="listbox" [id]="listboxId" class="loc__suggestions loc__suggestions--empty" hidden [attr.aria-label]="'Sugerencias de lugares ' + subject()"></ul>
+        }
+        </div>
+        <span class="field__hint" [id]="listboxId + '-hint'">
+          Las sugerencias aparecen al escribir (desde 4 letras). También puedes pulsar «Buscar ubicación». Incluye el nombre, la ciudad y, si la tienes, la dirección.
+        </span>
+        <span class="loc__sr" role="status" aria-live="polite">{{ suggestStatus() }}</span>
+        @if (suggestPausedMessage(); as paused) {
+          <span class="field__hint field__hint--error" role="status">{{ paused }}</span>
+        }
+      </div>
+
+      @if (pending(); as chosen) {
+        <div class="loc__pending">
+          <span class="loc__preview-label">Lugar elegido: {{ chosen.name }}</span>
+          <app-map-location [location]="pendingLocation()" />
+          <button type="button" class="btn btn--primary" (click)="confirmPending()">Confirmar ubicación</button>
+        </div>
+      }
+      <button type="button" class="btn btn--secondary loc__search-button" [disabled]="searching() || cooldownSeconds() > 0" (click)="search()">
+        {{ searching() ? 'Buscando…' : cooldownSeconds() > 0 ? 'Disponible en ' + cooldownLabel() : 'Buscar ubicación' }}
+      </button>
+
+      <p class="field__hint loc__credit">
+        Búsqueda con <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer">Geoapify</a> · datos de
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>
+      </p>
+
+      @if (searchError(); as message) {
+        <p class="field__hint field__hint--error" role="alert">{{ message }}</p>
+      }
+
+      @if (candidates(); as list) {
+        @if (list.length === 0) {
+          <p class="field__hint" role="status">
+            No encontramos resultados para «{{ searchedFor() }}». Corrige la búsqueda (añade la ciudad o el país, o quita palabras) o
+            pega el código de Google Maps más abajo.
+          </p>
+        } @else {
+          <fieldset class="loc__results">
+            <legend>Elige el lugar correcto ({{ list.length }} {{ list.length === 1 ? 'resultado' : 'resultados' }})</legend>
+            @for (candidate of list; track $index) {
+              <div class="loc__result" [class.loc__result--selected]="selectedIndex() === $index">
+                <label class="loc__result-pick">
+                  <input type="radio" [name]="groupName" [checked]="selectedIndex() === $index" (change)="select($index)" />
+                  <span>Elegir este lugar</span>
+                </label>
+                <app-map-location [location]="candidateLocation(candidate)" />
+              </div>
+            }
+            <button type="button" class="btn btn--primary" [disabled]="selectedIndex() === null" (click)="confirmSelection()">
+              Confirmar esta ubicación
+            </button>
+          </fieldset>
+        }
+      }
+    </div>
+
+    <label class="field">
+      <span>Nombre del lugar</span>
+      <input type="text" [formControl]="name" [attr.maxlength]="maxName" placeholder="Ej. Torre de Belém" />
+      @if (nameError(); as message) {
+        <span class="field__hint field__hint--error" role="alert">{{ message }}</span>
+      }
+    </label>
+
+    <label class="field">
+      <span>Dirección (opcional)</span>
+      <input type="text" [formControl]="address" [attr.maxlength]="maxAddress" placeholder="Ej. Av. Brasília, 1400-038 Lisboa" />
+    </label>
+
+    <label class="field">
+      <span>Alternativa manual: código de inserción de Google Maps (opcional)</span>
+      <textarea
+        rows="3"
+        [formControl]="embed"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="Pega aquí el iframe o la URL de inserción"
+        [attr.aria-invalid]="embedError() ? 'true' : null"
+      ></textarea>
+      <span class="field__hint">
+        En Google Maps, abre el lugar, pulsa Compartir → Insertar un mapa → Copiar HTML y pégalo aquí. Un enlace normal o
+        corto de Google Maps (maps.app.goo.gl, google.com/maps/place…) no es un código de inserción.
+      </span>
+      @if (embedError(); as message) {
+        <span class="field__hint field__hint--error" role="alert">{{ message }}</span>
+      }
+    </label>
+
+    @if (previewLocation(); as preview) {
+      <div class="loc__preview">
+        <span class="loc__preview-label">Vista previa</span>
+        <app-map-location [location]="preview" />
+        @if (place()) {
+          <button type="button" class="loc__remove" (click)="clearPlace()">Quitar el mapa elegido</button>
+        }
+      </div>
+    }
+
+    <div class="loc__actions">
+      <button type="button" class="btn btn--primary" [disabled]="!canSave()" (click)="submit()">
+        {{ status().phase === 'saving' ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+      <button type="button" class="loc__remove" [disabled]="status().phase === 'saving'" (click)="requestRemove()">
+        Eliminar ubicación
+      </button>
+      <span class="loc__status" role="status" aria-live="polite">
+        @if (status().phase === 'saved' && !edited()) {
+          Guardado ✓
+        }
+      </span>
+    </div>
+
+    @if (status().phase === 'error') {
+      <p class="field__hint field__hint--error" role="alert">
+        {{ status().message || 'No se pudo guardar la ubicación.' }} Lo que escribiste sigue aquí.
+      </p>
+    }
+  </section>
+}
+
+<app-confirm-dialog
+  [open]="confirmingRemove()"
+  title="Eliminar ubicación"
+  [message]="'¿Eliminar la ubicación ' + subject() + '? Esta acción no se puede deshacer.'"
+  (confirmed)="confirmRemove()"
+  (cancelled)="cancelRemove()"
+/>

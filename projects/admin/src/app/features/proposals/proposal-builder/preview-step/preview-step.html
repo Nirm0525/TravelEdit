@@ -210,6 +210,9 @@
               @if (day.description) {
                 <p class="preview__day-description plain-text">{{ day.description }}</p>
               }
+              @if (day.mapLocation) {
+                <app-map-location [location]="day.mapLocation" />
+              }
               @if (day.services.length > 0) {
                 <ul class="preview__services">
                   @for (service of day.services; track service.id) {
@@ -244,6 +247,9 @@
                       }
                       @if (service.description) {
                         <p class="plain-text">{{ service.description }}</p>
+                      }
+                      @if (service.mapLocation) {
+                        <app-map-location [location]="service.mapLocation" />
                       }
                       @if (documentsByService()[service.id]; as docs) {
                         <app-preview-service-documents

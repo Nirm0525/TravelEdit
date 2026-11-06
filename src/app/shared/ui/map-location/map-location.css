@@ -1,0 +1,92 @@
+:host {
+  display: block;
+}
+
+/* Mismo lenguaje que las recomendaciones del día: filete dorado y beige suave. */
+.map-location {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: var(--space-sm);
+  padding: 1.5rem;
+  border-left: 3px solid var(--color-gold);
+  background: color-mix(in srgb, var(--color-warm-beige) 22%, var(--color-cream));
+  overflow-wrap: anywhere;
+}
+
+.map-location__name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.15rem, 1rem + 0.6vw, 1.45rem);
+  color: var(--color-burgundy);
+}
+
+.map-location__address {
+  margin-top: 0.25rem;
+  font-size: var(--size-body);
+  color: var(--color-stone);
+}
+
+.map-location__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin-top: var(--space-xs);
+}
+
+.map-location__link {
+  display: inline-block;
+  font-size: var(--size-body);
+  color: var(--color-burgundy);
+  text-decoration: underline;
+}
+
+.map-location__link:focus-visible,
+.map-location__attribution a:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Atribución exigida por OpenStreetMap (ODbL): siempre visible bajo el mapa, aunque el mapa externo no cargue. */
+.map-location__attribution {
+  font-size: var(--size-small, 0.875rem);
+  color: var(--color-stone);
+}
+
+.map-location__attribution a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* El mapa conserva la atribución y los controles del proveedor (no se recorta ni se cubre). */
+.map-location__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 14rem;
+  background: var(--color-cream);
+}
+
+.map-location__frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 40rem) {
+  .map-location {
+    padding: 1rem;
+  }
+
+  .map-location__frame {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media print {
+  .map-location__frame {
+    display: none;
+  }
+}

@@ -12,8 +12,10 @@ import {
   ProposalServiceItem,
   createProposalDay,
   createProposalService,
-  withDayRecommendations
+  withDayRecommendations,
+  withMapLocation
 } from '../../../../core/models/proposal.model';
+import { ProposalMapLocation } from '../../../../core/models/proposal-location';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
 import { PROPOSAL_SERVICE_TYPE_OPTIONS } from '../../../../core/data/proposal-options';
 import { PROPOSAL_SERVICE_FIELDS } from '../../../../core/data/proposal-service-fields';
@@ -21,13 +23,14 @@ import { ImageUploader, ReadyImage } from '../../../../shared/ui/image-uploader/
 import { ConfirmDialog } from '../../../../shared/ui/confirm-dialog/confirm-dialog';
 import { ServiceDocuments } from './service-documents/service-documents';
 import { DayRecommendations, RecommendationsStatus } from './day-recommendations/day-recommendations';
+import { LocationEditor, LocationStatus } from './location-editor/location-editor';
 
 type DayField = 'title' | 'location' | 'description';
 type ServiceField = 'title' | 'description' | 'notes' | 'time';
 
 @Component({
   selector: 'app-build-journey-step',
-  imports: [DragDropModule, ImageUploader, ConfirmDialog, ServiceDocuments, DayRecommendations],
+  imports: [DragDropModule, ImageUploader, ConfirmDialog, ServiceDocuments, DayRecommendations, LocationEditor],
   templateUrl: './build-journey-step.html',
   styleUrl: './build-journey-step.css'
 })
@@ -65,6 +68,39 @@ export class BuildJourneyStep implements OnInit {
   private readonly idleStatus: RecommendationsStatus = { phase: 'idle' };
   statusOf(day: ProposalDay): RecommendationsStatus {
     return this.recommendationStatus()[day.id] ?? this.idleStatus;
+  }
+
+  /** Estado de guardado del bloque «Ubicación» de cada día o servicio (por id; los UUID de días y servicios no chocan). */
+  readonly locationStatus = signal<Record<string, LocationStatus>>({});
+  /** Consulta precargada de «Buscar ubicación» para un día: su ciudad (o el título si no tiene). */
+  locationQueryForDay(day: ProposalDay): string {
+    return (day.location || day.title || '').trim();
+  }
+
+  /** Consulta precargada para un servicio: su nombre, la dirección de su ficha (si la hay) y la ciudad del día. */
+  locationQueryForService(day: ProposalDay, service: ProposalServiceItem): string {
+    const details = service.details ?? {};
+    const address = details['address'] || details['meetingPoint'] || details['location'] || details['pickupLocation'] || '';
+    const parts = [service.title, address, day.location].map((part) => (part ?? '').trim()).filter(Boolean);
+    return parts.filter((part, index) => parts.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === index).join(', ');
+  }
+
+  /**
+   * Preferencia geográfica del autocompletado: SOLO coordenadas ya guardadas y fiables (el lugar del servicio o, si no tiene, el del día).
+   * Es una preferencia, nunca un filtro: no limita el país. Sin lugar guardado no hay preferencia (la ciudad ya va en el texto).
+   */
+  biasForDay(day: ProposalDay): { lat: number; lon: number } | undefined {
+    const place = day.mapLocation?.place;
+    return place ? { lat: place.lat, lon: place.lon } : undefined;
+  }
+
+  biasForService(day: ProposalDay, service: ProposalServiceItem): { lat: number; lon: number } | undefined {
+    const place = service.mapLocation?.place ?? day.mapLocation?.place;
+    return place ? { lat: place.lat, lon: place.lon } : undefined;
+  }
+
+  locationStatusOf(id: string): LocationStatus {
+    return this.locationStatus()[id] ?? this.idleStatus;
   }
 
   /** Igual que bodyImageUpload de client-trip-step: el editor necesita la URL completa al insertar la imagen. */
@@ -274,6 +310,34 @@ export class BuildJourneyStep implements OnInit {
 
   removeRecommendations(day: ProposalDay): Promise<void> {
     return this.saveRecommendations(day, undefined);
+  }
+
+  /** Guarda SOLO la ubicación de ese día (undefined = quitarla); el resto del día y de los demás días no se toca. */
+  saveDayLocation(day: ProposalDay, location: ProposalMapLocation | undefined): Promise<void> {
+    return this.runLocationSave(day.id, (days) => days.map((d) => (d.id === day.id ? withMapLocation(d, location) : d)));
+  }
+
+  saveServiceLocation(day: ProposalDay, service: ProposalServiceItem, location: ProposalMapLocation | undefined): Promise<void> {
+    return this.runLocationSave(service.id, (days) =>
+      days.map((d) =>
+        d.id === day.id
+          ? { ...d, services: d.services.map((s) => (s.id === service.id ? withMapLocation(s, location) : s)) }
+          : d
+      )
+    );
+  }
+
+  private async runLocationSave(id: string, mutate: (days: ProposalDay[]) => ProposalDay[]): Promise<void> {
+    this.setLocationStatus(id, { phase: 'saving' });
+    const ok = await this.enqueueMutationResult(mutate);
+    this.setLocationStatus(
+      id,
+      ok ? { phase: 'saved' } : { phase: 'error', message: 'No se pudo guardar la ubicación. Inténtalo nuevamente.' }
+    );
+  }
+
+  private setLocationStatus(id: string, status: LocationStatus): void {
+    this.locationStatus.update((all) => ({ ...all, [id]: status }));
   }
 
   private setRecommendationStatus(dayId: string, status: RecommendationsStatus): void {

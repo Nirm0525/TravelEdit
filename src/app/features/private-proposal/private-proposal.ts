@@ -13,6 +13,7 @@ import { Footer } from '../footer/footer';
 import { resolveViewableUrl } from '../../core/utils/open-document';
 import { ProposalServiceDocuments } from './proposal-service-documents/proposal-service-documents';
 import { DayRecommendations } from './day-recommendations/day-recommendations';
+import { MapLocation } from '../../shared/ui/map-location/map-location';
 import { serviceDetailRows } from '../../core/data/proposal-service-fields';
 import { buildPricingBreakdown } from '../../core/data/proposal-pricing-breakdown';
 import {
@@ -248,7 +249,7 @@ const NEUTRAL_COPY: PrivateCopy = {
 
 @Component({
   selector: 'app-private-proposal',
-  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments, DayRecommendations],
+  imports: [DatePipe, CurrencyPipe, NgTemplateOutlet, RouterLink, RevealOnScrollDirective, Footer, ProposalServiceDocuments, DayRecommendations, MapLocation],
   templateUrl: './private-proposal.html',
   styleUrl: './private-proposal.css'
 })

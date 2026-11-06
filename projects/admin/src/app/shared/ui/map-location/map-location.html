@@ -1,0 +1,39 @@
+@if (safe(); as place) {
+  <section class="map-location" [attr.aria-label]="'Ubicación: ' + place.name">
+    <div class="map-location__text">
+      <p class="map-location__name">{{ place.name }}</p>
+      @if (place.address) {
+        <p class="map-location__address">{{ place.address }}</p>
+      }
+      <p class="map-location__links">
+        <a class="map-location__link" [href]="link()" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a>
+        @if (osmLink(); as osm) {
+          <a class="map-location__link" [href]="osm" target="_blank" rel="noopener noreferrer">Abrir en OpenStreetMap</a>
+        }
+      </p>
+    </div>
+    @if (embedSrc(); as src) {
+      <div class="map-location__frame">
+        <iframe
+          [src]="src"
+          [title]="'Mapa de ' + place.name"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+        ></iframe>
+      </div>
+    }
+    @if (isOsm()) {
+      <p class="map-location__attribution">
+        <a [href]="copyrightUrl" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+        @if (credits().geoapify) {
+          · <a [href]="geoapifyUrl" target="_blank" rel="noopener noreferrer">Powered by Geoapify</a>
+        }
+        @if (credits().dataAttribution; as extra) {
+          · <span class="map-location__data">Datos: {{ extra }}</span>
+        }
+      </p>
+    }
+  </section>
+}

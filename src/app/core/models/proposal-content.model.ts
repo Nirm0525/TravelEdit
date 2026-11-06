@@ -4,6 +4,8 @@
 // lee este contenido, nunca lo escribe, así que no duplica los factory
 // helpers (createProposalDay, etc.) del lado admin.
 
+import type { ProposalMapLocation } from './proposal-location';
+
 export type ProposalServiceType = 'hotel' | 'activity' | 'transfer' | 'flight' | 'other';
 
 export interface ProposalCover {
@@ -42,6 +44,7 @@ export interface ProposalServiceItem {
   time: string;
   imagePath: string | null;
   details?: Record<string, string>;
+  mapLocation?: ProposalMapLocation;
 }
 
 export interface ProposalDayRecommendations {
@@ -59,6 +62,8 @@ export interface ProposalDay {
   services: ProposalServiceItem[];
   /** Opcional: ausente en los días anteriores a este campo. */
   recommendations?: ProposalDayRecommendations;
+  /** Ubicación opcional con mapa; se valida con toSafeMapLocation antes de mostrarla. */
+  mapLocation?: ProposalMapLocation;
 }
 
 /** Un texto enriquecido vacío (`<p></p>` del editor) cuenta como vacío; una imagen sola sí es contenido. */

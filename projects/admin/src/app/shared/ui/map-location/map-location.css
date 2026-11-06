@@ -1,0 +1,71 @@
+:host {
+  display: block;
+}
+
+.map-location {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--line-200);
+  border-left: 3px solid var(--brand-600);
+  background: var(--surface-000);
+  overflow-wrap: anywhere;
+}
+
+.map-location__name {
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.map-location__address {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.map-location__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-md);
+  margin-top: var(--space-2xs);
+}
+
+.map-location__link {
+  display: inline-block;
+  font-size: var(--size-small);
+  color: var(--brand-600);
+  text-decoration: underline;
+}
+
+.map-location__attribution {
+  font-size: var(--size-small);
+  color: var(--text-secondary);
+}
+
+.map-location__attribution a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.map-location__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 14rem;
+  background: var(--canvas-100);
+}
+
+.map-location__frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media print {
+  .map-location__frame {
+    display: none;
+  }
+}

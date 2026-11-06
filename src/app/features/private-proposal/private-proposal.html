@@ -413,6 +413,9 @@
                         @if (day.description) {
                           <p class="proposal__day-description plain-text">{{ day.description }}</p>
                         }
+                        @if (day.mapLocation) {
+                          <app-map-location [location]="day.mapLocation" />
+                        }
                       </div>
                     @if (day.services.length > 0) {
                       <ul class="proposal__services">
@@ -494,6 +497,10 @@
 
                             @if (service.description) {
                               <p class="proposal__service-description plain-text">{{ service.description }}</p>
+                            }
+
+                            @if (service.mapLocation) {
+                              <app-map-location [location]="service.mapLocation" />
                             }
 
                             <app-proposal-service-documents

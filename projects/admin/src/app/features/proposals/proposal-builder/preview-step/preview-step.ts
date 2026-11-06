@@ -10,6 +10,7 @@ import { ProposalServiceAttachment } from '../../../../core/models/proposal-serv
 import { resolveViewableUrl } from '../../../../core/utils/open-document';
 import { PreviewServiceDocuments } from './preview-service-documents';
 import { PreviewDayRecommendations } from './preview-day-recommendations';
+import { MapLocation } from '../../../../shared/ui/map-location/map-location';
 import { CoverStatKey, Proposal, ProposalDay, ProposalTravelTip, ProposalTravelTipGroup, hasDayRecommendations, isRichTextEmpty } from '../../../../core/models/proposal.model';
 import type { TravelMode } from '../../../travel/travel-config';
 import { PROPOSAL_SERVICE_TYPE_LABEL, ProposalServiceType } from '../../../../core/models/proposal-enums';
@@ -122,7 +123,7 @@ interface ItinerarySegment {
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments, PreviewDayRecommendations],
+  imports: [CurrencyPipe, NgTemplateOutlet, PreviewServiceDocuments, PreviewDayRecommendations, MapLocation],
   templateUrl: './preview-step.html',
   styleUrl: './preview-step.css'
 })

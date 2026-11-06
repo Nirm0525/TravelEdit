@@ -1,5 +1,6 @@
 import { Database } from './database.types';
 import { ProposalServiceType, ProposalStatus, TravelKind } from './proposal-enums';
+import { ProposalMapLocation } from './proposal-location';
 import { DEFAULT_TERMS_HTML, DEFAULT_TERMS_TITLE } from '../data/proposal-default-terms';
 
 type ProposalRow = Database['public']['Tables']['proposals']['Row'];
@@ -41,6 +42,8 @@ export interface ProposalServiceItem {
   /** Ficha del servicio según su tipo (ver core/data/proposal-service-fields.ts),
    *  por clave. Ausente en propuestas anteriores a este campo. */
   details?: Record<string, string>;
+  /** Ubicación opcional con mapa (ver proposal-location.ts). Ausente en los servicios anteriores a este campo. */
+  mapLocation?: ProposalMapLocation;
 }
 
 /** Recomendaciones opcionales del día (qué llevar, clima, puntualidad…). Rich text, igual que intro.body. */
@@ -61,6 +64,8 @@ export interface ProposalDay {
   /** Contenido ADICIONAL al resumen del día y a las descripciones de servicios. Ausente = el día no las tiene
    *  (todos los días anteriores a este campo); se guarda solo cuando hay titular o texto. */
   recommendations?: ProposalDayRecommendations;
+  /** Ubicación opcional con mapa del día (distinta de `location`, el texto libre de la ciudad). Ausente = sin ubicación. */
+  mapLocation?: ProposalMapLocation;
 }
 
 /** Un texto enriquecido vacío (`<p></p>` del editor) cuenta como vacío; una imagen sola sí es contenido. */
@@ -87,6 +92,12 @@ export function hasDayRecommendations(day: Pick<ProposalDay, 'recommendations'>)
 export function withDayRecommendations(day: ProposalDay, recommendations: ProposalDayRecommendations | undefined): ProposalDay {
   const { recommendations: _previous, ...rest } = day;
   return recommendations ? { ...rest, recommendations } : rest;
+}
+
+/** Copia del elemento (día o servicio) con la ubicación puesta o quitada (la clave se elimina, no queda en null). */
+export function withMapLocation<T extends { mapLocation?: ProposalMapLocation }>(item: T, mapLocation: ProposalMapLocation | undefined): T {
+  const { mapLocation: _previous, ...rest } = item;
+  return (mapLocation ? { ...rest, mapLocation } : rest) as T;
 }
 
 // Fuente única de verdad del pricing: content.pricing.lines/feesLines. Las

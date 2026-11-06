@@ -72,6 +72,18 @@
               </div>
             </div>
 
+            <div class="day-card__map-location">
+              <app-location-editor
+                [subject]="'del día ' + day.dayNumber"
+                [value]="day.mapLocation"
+                [queryHint]="locationQueryForDay(day)"
+                [biasPlace]="biasForDay(day)"
+                [status]="locationStatusOf(day.id)"
+                (save)="saveDayLocation(day, $event)"
+                (remove)="saveDayLocation(day, undefined)"
+              />
+            </div>
+
             <div class="day-card__services">
               @if (day.services.length > 0) {
                 <div cdkDropList class="day-card__service-list" (cdkDropListDropped)="dropService(day, $event)">
@@ -128,6 +140,16 @@
                           }
                         </div>
                       </div>
+
+                      <app-location-editor
+                        [subject]="'del servicio ' + (service.title || serviceTypeLabel[service.type].toLowerCase())"
+                        [value]="service.mapLocation"
+                        [queryHint]="locationQueryForService(day, service)"
+                        [biasPlace]="biasForService(day, service)"
+                        [status]="locationStatusOf(service.id)"
+                        (save)="saveServiceLocation(day, service, $event)"
+                        (remove)="saveServiceLocation(day, service, undefined)"
+                      />
 
                       <div class="service-card__image">
                         @if (serviceImageUrls()[service.id]; as url) {

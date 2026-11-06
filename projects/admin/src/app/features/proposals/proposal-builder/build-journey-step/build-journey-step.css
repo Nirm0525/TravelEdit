@@ -186,6 +186,10 @@
   margin-bottom: var(--space-md);
 }
 
+.day-card__map-location {
+  padding: 0 var(--space-lg) var(--space-lg);
+}
+
 .day-card__recommendations {
   padding: 0 var(--space-lg) var(--space-lg);
 }
